@@ -48,7 +48,7 @@
       "status": "completed",
       "started_at": "2026-06-10T10:43:47+0900",
       "summary": "CollectionView를 LazyVGrid(adaptive 110) 그리드로 구현. 외부 주입 init(creatures: [Creature] = MockData.populated.creatures)로 검수 가능. 각 셀은 AppCard 안에 CreatureImage(placeholder 경유) + 이름 + RarityBadge(Rarity 색/라벨, 레어 이상 색 강조). creatures가 비면 빈 상태 뷰('아직 부화한 생명체가 없어요' + square.grid.2x2 심볼). 셀 탭 시 CreatureDetailSheet(.medium)로 이름·레어도·부화일 더미 표시. #Preview populated/empty 2케이스. 빌드 성공.",
-      "completed_at": "2026-06-09T18:45:30+0900"
+      "completed_at": "2026-06-10T10:45:34+0900"
     },
     {
       "step": 6,
