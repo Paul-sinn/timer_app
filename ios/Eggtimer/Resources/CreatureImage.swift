@@ -2,45 +2,56 @@
 //  CreatureImage.swift
 //  Eggtimer
 //
-//  캐릭터 이미지 placeholder (ADR-006: 정식 에셋 전까지 mock으로 자리 확보).
-//  모든 생명체/알 이미지 렌더는 이 View 한 곳만 거친다 → 추후 한 곳에서 실제 에셋 교체.
-//  지금은 SF Symbol + 레어도 색 배경으로 placeholder를 그린다.
+//  생명체/알 이미지 렌더의 단일 경로. 픽셀아트 에셋을 보간 없이(.none) 선명하게 그린다.
+//  - 일반 모드: 실제 캐릭터 에셋을 레어도 색 카드 위에 표시.
+//  - 실루엣 모드: 미발견 생명체를 검은 실루엣 + 가운데 "?" 로 표시(픽셀 톤).
 //
 
 import SwiftUI
 
 struct CreatureImage: View {
-    /// 추후 실제 에셋명으로 교체될 placeholder 키.
+    /// 렌더할 에셋명.
     let imageName: String
-    /// 배경/심볼 색을 결정하는 레어도.
+    /// 배경/테두리 색을 결정하는 레어도.
     let rarity: Rarity
     /// 렌더 한 변 크기(pt).
     var size: CGFloat = 96
-
-    /// imageName을 안정적인 SF Symbol로 매핑(에셋 부재 시 placeholder 심볼).
-    private var symbolName: String {
-        let symbols = [
-            "hare.fill", "tortoise.fill", "bird.fill",
-            "ant.fill", "ladybug.fill", "fish.fill", "pawprint.fill"
-        ]
-        let index = abs(imageName.hashValue) % symbols.count
-        return symbols[index]
-    }
+    /// 미발견 실루엣 모드.
+    var silhouette: Bool = false
 
     var body: some View {
-        RoundedRectangle(cornerRadius: AppSpacing.cardCornerRadius)
-            .fill(rarity.color.opacity(0.18))
-            .overlay(
-                RoundedRectangle(cornerRadius: AppSpacing.cardCornerRadius)
-                    .stroke(rarity.color.opacity(0.5), lineWidth: AppSpacing.borderWidth)
-            )
-            .overlay(
-                Image(systemName: symbolName)
-                    .font(.system(size: size * 0.4, weight: .regular))
-                    .foregroundStyle(rarity.color)
-            )
-            .frame(width: size, height: size)
-            .accessibilityLabel(Text("\(rarity.label) 생명체 이미지"))
+        ZStack {
+            // 카드 배경(실루엣일 때는 거의 비어 보이는 어두운 톤).
+            RoundedRectangle(cornerRadius: AppSpacing.cardCornerRadius)
+                .fill(silhouette ? Color.white.opacity(0.03) : rarity.color.opacity(0.14))
+                .overlay(
+                    RoundedRectangle(cornerRadius: AppSpacing.cardCornerRadius)
+                        .stroke(silhouette ? AppColor.border : rarity.color.opacity(0.45),
+                                lineWidth: AppSpacing.borderWidth)
+                )
+
+            if silhouette {
+                // 캐릭터 윤곽을 검은 실루엣으로 + 가운데 "?"
+                Image(imageName)
+                    .interpolation(.none)
+                    .resizable()
+                    .renderingMode(.template)
+                    .scaledToFit()
+                    .foregroundStyle(Color.black.opacity(0.78))
+                    .padding(size * 0.14)
+                Text("?")
+                    .font(.system(size: size * 0.34, weight: .heavy, design: .rounded))
+                    .foregroundStyle(AppColor.textSecondary)
+            } else {
+                Image(imageName)
+                    .interpolation(.none)
+                    .resizable()
+                    .scaledToFit()
+                    .padding(size * 0.1)
+            }
+        }
+        .frame(width: size, height: size)
+        .accessibilityLabel(Text(silhouette ? "미발견 생명체" : "\(rarity.label) 생명체 이미지"))
     }
 }
 
@@ -49,8 +60,11 @@ struct CreatureImage: View {
         AppColor.pageBackground.ignoresSafeArea()
         LazyVGrid(columns: [GridItem(.adaptive(minimum: 96), spacing: AppSpacing.element)],
                   spacing: AppSpacing.element) {
-            ForEach(Rarity.allCases) { rarity in
-                CreatureImage(imageName: "creature_\(rarity.rawValue)", rarity: rarity)
+            ForEach(CreatureSpecies.allCases) { species in
+                CreatureImage(imageName: species.silhouetteImageName, rarity: species.rarity)
+            }
+            ForEach(CreatureSpecies.allCases) { species in
+                CreatureImage(imageName: species.silhouetteImageName, rarity: species.rarity, silhouette: true)
             }
         }
         .padding(AppSpacing.element)

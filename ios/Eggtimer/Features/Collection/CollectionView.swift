@@ -2,10 +2,11 @@
 //  CollectionView.swift
 //  Eggtimer
 //
-//  컬렉션 탭. 다크+골드 톤. "발견한 친구들 n/12" + 3열 그리드.
-//  발견한 생명체는 카드로, 미발견 슬롯은 잠금 실루엣(자물쇠 + ???)으로 표시한다.
-//  Phase 0(UI 더미): 데이터는 주입된 [Creature](기본 populated)만 사용한다.
-//  검수를 위해 빈 상태(empty)와 채움 상태(populated)를 모두 렌더한다.
+//  컬렉션 탭. 다크+골드 톤. "발견한 친구들 n/7" + 3열 그리드.
+//  도감 전체 7종(CreatureSpecies)을 항상 나열한다.
+//  - 발견한 종: 실제 캐릭터 카드(진화 종은 진화 이미지).
+//  - 미발견 종: 검은 실루엣 + "?" (픽셀 톤).
+//  데이터는 주입된 [Creature](기본 populated)에서 발견 종을 도출한다.
 //
 
 import SwiftUI
@@ -13,12 +14,22 @@ import SwiftUI
 struct CollectionView: View {
     /// 발견한 생명체 목록. 외부 주입(기본값 = populated)으로 검수 가능.
     private let creatures: [Creature]
-    /// 전체 도감 슬롯 수(미발견은 잠금 표시).
-    private let totalSlots = 12
     @State private var selected: Creature?
+
+    /// 도감 전체 종(등급 오름차순으로 표시).
+    private let allSpecies = CreatureSpecies.allCases.sorted {
+        $0.rarity != $1.rarity ? $0.rarity < $1.rarity : $0.weight > $1.weight
+    }
 
     init(creatures: [Creature] = MockData.populated.creatures) {
         self.creatures = creatures
+    }
+
+    /// 종 → 가장 최근 발견 개체.
+    private var discovered: [CreatureSpecies: Creature] {
+        var map: [CreatureSpecies: Creature] = [:]
+        for c in creatures where map[c.species] == nil { map[c.species] = c }
+        return map
     }
 
     private let columns = [GridItem(.flexible(), spacing: 12),
@@ -49,39 +60,39 @@ struct CollectionView: View {
             Text("Collection")
                 .font(.title.weight(.bold))
                 .foregroundStyle(AppColor.textPrimary)
-            Text("발견한 친구들 \(creatures.count)/\(totalSlots)")
+            Text("발견한 친구들 \(discovered.count)/\(allSpecies.count)")
                 .font(AppFont.cardTitle)
                 .foregroundStyle(AppColor.textSecondary)
         }
     }
 
-    // MARK: - 그리드 (발견 + 잠금 슬롯)
+    // MARK: - 그리드 (발견 + 미발견 실루엣)
 
     private var grid: some View {
         LazyVGrid(columns: columns, spacing: 12) {
-            ForEach(0..<totalSlots, id: \.self) { i in
-                if i < creatures.count {
-                    Button { selected = creatures[i] } label: {
-                        CreatureSlot(creature: creatures[i])
+            ForEach(allSpecies) { species in
+                if let creature = discovered[species] {
+                    Button { selected = creature } label: {
+                        CreatureSlot(creature: creature)
                     }
                     .buttonStyle(.plain)
                 } else {
-                    LockedSlot()
+                    LockedSlot(species: species)
                 }
             }
         }
     }
 }
 
-/// 발견한 생명체 슬롯. 레어 이상은 골드 테두리로 강조.
+/// 발견한 생명체 슬롯. 전설은 골드 테두리로 강조.
 private struct CreatureSlot: View {
     let creature: Creature
 
-    private var highlighted: Bool { creature.rarity == .epic || creature.rarity == .legendary }
+    private var highlighted: Bool { creature.rarity == .legendary }
 
     var body: some View {
         VStack(spacing: 8) {
-            CreatureImage(imageName: creature.imageName, rarity: creature.rarity, size: 64)
+            CreatureImage(imageName: creature.displayImageName, rarity: creature.rarity, size: 64)
             Text(creature.name)
                 .font(.caption2)
                 .foregroundStyle(AppColor.textBody)
@@ -100,18 +111,14 @@ private struct CreatureSlot: View {
     }
 }
 
-/// 미발견 잠금 슬롯(실루엣 + 자물쇠 + ???).
+/// 미발견 슬롯(검은 실루엣 + "?").
 private struct LockedSlot: View {
+    let species: CreatureSpecies
+
     var body: some View {
         VStack(spacing: 8) {
-            ZStack {
-                RoundedRectangle(cornerRadius: AppSpacing.cardCornerRadius)
-                    .fill(Color.white.opacity(0.03))
-                    .frame(width: 64, height: 64)
-                Image(systemName: "lock.fill")
-                    .font(.system(size: 20))
-                    .foregroundStyle(AppColor.textDisabled)
-            }
+            CreatureImage(imageName: species.silhouetteImageName,
+                          rarity: species.rarity, size: 64, silhouette: true)
             Text("???")
                 .font(.caption2)
                 .foregroundStyle(AppColor.textDisabled)
@@ -128,19 +135,11 @@ private struct LockedSlot: View {
     }
 }
 
-/// 카드 하단 레어도 점 표시(레어도 등급만큼 골드 점, 나머지는 회색).
+/// 카드 하단 레어도 점 표시(등급만큼 골드 점, 나머지는 회색).
 private struct RarityDots: View {
     let rarity: Rarity?
 
-    private var filled: Int {
-        switch rarity {
-        case .common: return 1
-        case .rare: return 2
-        case .epic: return 3
-        case .legendary: return 4
-        case nil: return 0
-        }
-    }
+    private var filled: Int { rarity?.dots ?? 0 }
 
     var body: some View {
         HStack(spacing: 4) {
@@ -153,7 +152,7 @@ private struct RarityDots: View {
     }
 }
 
-/// 셀 탭 시 표시되는 더미 상세 시트(이미지 · 이름 · 레어도 · 부화일).
+/// 셀 탭 시 표시되는 상세 시트(이미지 · 이름 · 레어도 · 부화일 · 진화 여부).
 private struct CreatureDetailSheet: View {
     let creature: Creature
 
@@ -165,7 +164,7 @@ private struct CreatureDetailSheet: View {
         ZStack {
             AppColor.pageBackground.ignoresSafeArea()
             VStack(spacing: AppSpacing.section) {
-                CreatureImage(imageName: creature.imageName, rarity: creature.rarity, size: 160)
+                CreatureImage(imageName: creature.displayImageName, rarity: creature.rarity, size: 160)
                 VStack(spacing: AppSpacing.elementTight) {
                     Text(creature.name)
                         .font(AppFont.screenTitle)
@@ -173,6 +172,15 @@ private struct CreatureDetailSheet: View {
                     Text(creature.rarity.label)
                         .font(AppFont.cardTitle)
                         .foregroundStyle(creature.rarity.color)
+                    if creature.isEvolved {
+                        Text("진화 완료 ✨")
+                            .font(AppFont.cardTitle)
+                            .foregroundStyle(AppColor.eggAccent)
+                    } else if creature.canEvolve {
+                        Text("20분 집중하면 진화해요")
+                            .font(AppFont.cardTitle)
+                            .foregroundStyle(AppColor.textSecondary)
+                    }
                     Text("부화일 · \(hatchedText)")
                         .font(AppFont.body)
                         .foregroundStyle(AppColor.textSecondary)

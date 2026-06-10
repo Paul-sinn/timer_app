@@ -11,6 +11,8 @@ import SwiftUI
 struct RootView: View {
     /// 현재 선택된 탭. 검수 편의를 위해 환경변수 START_TAB로 초기 탭 지정 가능.
     @State private var selection: RootTab
+    /// 탭 간 공유되는 도감 스토어(홈에서 부화 → 컬렉션에 반영).
+    @State private var store = CollectionStore()
 
     init() {
         Self.configureTabBarAppearance()
@@ -20,10 +22,10 @@ struct RootView: View {
 
     var body: some View {
         TabView(selection: $selection) {
-            HomeView()
+            HomeView(store: store)
                 .tabItem { Label(RootTab.home.title, systemImage: RootTab.home.systemImage) }
                 .tag(RootTab.home)
-            CollectionView()
+            CollectionView(creatures: store.creatures)
                 .tabItem { Label(RootTab.collection.title, systemImage: RootTab.collection.systemImage) }
                 .tag(RootTab.collection)
             ProgressScreen()

@@ -12,9 +12,21 @@ import SwiftUI
 struct HomeView: View {
     @State private var viewModel: HomeViewModel
     @State private var isRunning = false
+    /// 부화 결과 시트로 띄울 새 생명체.
+    @State private var hatchedCreature: Creature?
+    /// 부화한 생명체가 쌓이는 공유 도감 스토어.
+    private let store: CollectionStore
 
-    init(viewModel: HomeViewModel = HomeViewModel(snapshot: MockData.populated)) {
+    init(viewModel: HomeViewModel = HomeViewModel(snapshot: MockData.populated),
+         store: CollectionStore = CollectionStore()) {
         _viewModel = State(initialValue: viewModel)
+        self.store = store
+    }
+
+    /// 확률표에 따라 부화 → 컬렉션 추가 → 결과 시트 표시.
+    /// (Phase 2에서는 타이머 완료 시 자동 호출. 지금은 알 탭으로 시험한다.)
+    private func hatch() {
+        hatchedCreature = store.hatch()
     }
 
     var body: some View {
@@ -33,6 +45,13 @@ struct HomeView: View {
 
                 EggView(stageIndex: viewModel.stageIndex)
                     .padding(.vertical, AppSpacing.section)
+                    .onTapGesture { hatch() }
+                    .accessibilityAddTraits(.isButton)
+                    .accessibilityHint("탭하면 알을 부화시켜요")
+
+                Text("알을 탭하면 부화해요")
+                    .font(AppFont.body)
+                    .foregroundStyle(AppColor.textSecondary)
 
                 Spacer(minLength: 0)
 
@@ -43,6 +62,7 @@ struct HomeView: View {
             }
             .padding(.horizontal, AppSpacing.section)
         }
+        .sheet(item: $hatchedCreature) { HatchResultSheet(creature: $0) }
     }
 
     // MARK: - 상단 헤더

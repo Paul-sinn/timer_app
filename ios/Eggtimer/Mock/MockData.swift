@@ -35,15 +35,15 @@ enum MockData {
     )
 
     // MARK: - 더미 컬렉션
+    // 7종 중 일부만 발견(나머지는 컬렉션에서 미발견 실루엣으로 노출).
+    // 백호는 daysAgo(3)으로 부화 → 진화(20분 경과) 상태로 보인다.
 
     private static let sampleCreatures: [Creature] = [
-        Creature(name: "이끼 달팽이",   rarity: .common,    imageName: "creature_moss_snail",   hatchedAt: daysAgo(1)),
-        Creature(name: "조약돌 거북",   rarity: .common,    imageName: "creature_pebble_turtle", hatchedAt: daysAgo(2)),
-        Creature(name: "안개 여우",     rarity: .rare,      imageName: "creature_mist_fox",      hatchedAt: daysAgo(4)),
-        Creature(name: "달빛 올빼미",   rarity: .rare,      imageName: "creature_moon_owl",      hatchedAt: daysAgo(7)),
-        Creature(name: "수정 사슴",     rarity: .epic,      imageName: "creature_crystal_deer",  hatchedAt: daysAgo(12)),
-        Creature(name: "불씨 도롱뇽",   rarity: .epic,      imageName: "creature_ember_newt",    hatchedAt: daysAgo(20)),
-        Creature(name: "별가루 용",     rarity: .legendary, imageName: "creature_stardust_dragon", hatchedAt: daysAgo(31))
+        Creature(species: .chicken,    imageName: "ChickenBro", hatchedAt: daysAgo(1)),
+        Creature(species: .slime,                               hatchedAt: daysAgo(2)),
+        Creature(species: .dino,                                hatchedAt: daysAgo(4)),
+        Creature(species: .blackCat,                            hatchedAt: daysAgo(7)),
+        Creature(species: .whiteTiger,                          hatchedAt: daysAgo(3))
     ]
 
     // MARK: - 더미 세션
