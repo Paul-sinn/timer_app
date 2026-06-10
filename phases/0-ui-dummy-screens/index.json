@@ -7,7 +7,8 @@
       "name": "project-foundation",
       "status": "completed",
       "started_at": "2026-06-10T10:31:59+0900",
-      "summary": "SwiftData 데모(Item.swift/ContentView.swift) 제거, EggtimerApp을 RootView+다크모드 고정으로 단순화, App/RootView.swift 임시 플레이스홀더 생성. 빌드 성공."
+      "summary": "SwiftData 데모(Item.swift/ContentView.swift) 제거, EggtimerApp을 RootView+다크모드 고정으로 단순화, App/RootView.swift 임시 플레이스홀더 생성. 빌드 성공.",
+      "completed_at": "2026-06-10T10:33:42+0900"
     },
     {
       "step": 1,
