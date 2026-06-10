@@ -69,7 +69,10 @@
     {
       "step": 8,
       "name": "review-gallery",
-      "status": "pending"
+      "status": "completed",
+      "started_at": "2026-06-10T10:49:12+0900",
+      "summary": "Features/Review/ReviewGalleryView.swift(#if DEBUG)를 NavigationStack+List로 추가. 앞 step들의 주입 init을 활용해 Home(초기 focusedMinutes:0/부화 임박 58)·Collection(populated/empty)·Progress(populated/empty)·MyPage(로그인 전 populated) 상태로 각각 점프. 진입점은 MyPageView 설정 맨 아래 '🛠 화면 검수 갤러리(DEBUG)' 행→fullScreenCover(닫기 버튼), #if DEBUG 가드로 릴리스 비노출·RootView 4탭 플로우 무변경. 각 화면 #Preview 빈/채움 핵심 상태 점검(누락 없음). 빌드 성공.",
+      "completed_at": "2026-06-09T18:51:00+0900"
     }
   ],
   "created_at": "2026-06-10T10:31:59+0900"

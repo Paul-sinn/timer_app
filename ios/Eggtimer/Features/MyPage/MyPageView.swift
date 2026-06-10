@@ -19,6 +19,11 @@ struct MyPageView: View {
     @State private var notificationsOn = true
     @State private var soundOn = true
 
+    #if DEBUG
+    /// 화면 검수 갤러리(개발 전용) 표시 여부.
+    @State private var showReviewGallery = false
+    #endif
+
     init(user: AppSnapshot = MockData.populated) {
         self.user = user
     }
@@ -107,9 +112,23 @@ struct MyPageView: View {
                     SettingInfoRow(title: "다크모드", systemImage: "moon", value: "고정")
                     SettingDivider()
                     SettingInfoRow(title: "버전", systemImage: "info.circle", value: "0.1.0")
+                    #if DEBUG
+                    SettingDivider()
+                    Button {
+                        showReviewGallery = true
+                    } label: {
+                        SettingInfoRow(title: "🛠 화면 검수 갤러리(DEBUG)", systemImage: "wrench.and.screwdriver", value: "")
+                    }
+                    .buttonStyle(.plain)
+                    #endif
                 }
             }
         }
+        #if DEBUG
+        .fullScreenCover(isPresented: $showReviewGallery) {
+            ReviewGalleryView()
+        }
+        #endif
     }
 }
 
