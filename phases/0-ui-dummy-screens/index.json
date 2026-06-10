@@ -2,14 +2,53 @@
   "project": "Eggtimer",
   "phase": "0-ui-dummy-screens",
   "steps": [
-    { "step": 0, "name": "project-foundation", "status": "pending" },
-    { "step": 1, "name": "design-system", "status": "pending" },
-    { "step": 2, "name": "mock-data", "status": "pending" },
-    { "step": 3, "name": "app-shell-nav", "status": "pending" },
-    { "step": 4, "name": "home-screen", "status": "pending" },
-    { "step": 5, "name": "collection-screen", "status": "pending" },
-    { "step": 6, "name": "progress-screen", "status": "pending" },
-    { "step": 7, "name": "mypage-screen", "status": "pending" },
-    { "step": 8, "name": "review-gallery", "status": "pending" }
-  ]
+    {
+      "step": 0,
+      "name": "project-foundation",
+      "status": "completed",
+      "started_at": "2026-06-10T10:31:59+0900",
+      "summary": "SwiftData 데모(Item.swift/ContentView.swift) 제거, EggtimerApp을 RootView+다크모드 고정으로 단순화, App/RootView.swift 임시 플레이스홀더 생성. 빌드 성공."
+    },
+    {
+      "step": 1,
+      "name": "design-system",
+      "status": "pending"
+    },
+    {
+      "step": 2,
+      "name": "mock-data",
+      "status": "pending"
+    },
+    {
+      "step": 3,
+      "name": "app-shell-nav",
+      "status": "pending"
+    },
+    {
+      "step": 4,
+      "name": "home-screen",
+      "status": "pending"
+    },
+    {
+      "step": 5,
+      "name": "collection-screen",
+      "status": "pending"
+    },
+    {
+      "step": 6,
+      "name": "progress-screen",
+      "status": "pending"
+    },
+    {
+      "step": 7,
+      "name": "mypage-screen",
+      "status": "pending"
+    },
+    {
+      "step": 8,
+      "name": "review-gallery",
+      "status": "pending"
+    }
+  ],
+  "created_at": "2026-06-10T10:31:59+0900"
 }
