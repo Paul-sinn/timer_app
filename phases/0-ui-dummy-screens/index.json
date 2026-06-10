@@ -21,7 +21,10 @@
     {
       "step": 2,
       "name": "mock-data",
-      "status": "pending"
+      "status": "completed",
+      "started_at": "2026-06-10T10:35:13+0900",
+      "summary": "순수 값 타입 도메인 모델(Creature, Rarity[색/라벨→AppColor], FocusSession, EggState[15분/crack·progress·remaining 계산 프로퍼티])과 Mock 진입점 MockData.populated/MockData.empty(AppSnapshot: displayName·creatures·sessions·egg) 추가. 캐릭터 이미지는 CreatureImage(View) placeholder 한 곳에서만 렌더(SF Symbol+레어도 색). 빌드 성공.",
+      "completed_at": "2026-06-10T18:37:00+0900"
     },
     {
       "step": 3,
