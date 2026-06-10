@@ -1,0 +1,15 @@
+{
+  "project": "Eggtimer",
+  "phase": "0-ui-dummy-screens",
+  "steps": [
+    { "step": 0, "name": "project-foundation", "status": "pending" },
+    { "step": 1, "name": "design-system", "status": "pending" },
+    { "step": 2, "name": "mock-data", "status": "pending" },
+    { "step": 3, "name": "app-shell-nav", "status": "pending" },
+    { "step": 4, "name": "home-screen", "status": "pending" },
+    { "step": 5, "name": "collection-screen", "status": "pending" },
+    { "step": 6, "name": "progress-screen", "status": "pending" },
+    { "step": 7, "name": "mypage-screen", "status": "pending" },
+    { "step": 8, "name": "review-gallery", "status": "pending" }
+  ]
+}

@@ -4,6 +4,12 @@ out/
 next-env.d.ts
 tsconfig.tsbuildinfo
 
+# Xcode
+**/xcuserdata/
+**/*.xcuserstate
+DerivedData/
+.DS_Store
+
 # phase execution outputs
 phases/**/phase*-output.json
 phases/**/step*-output.json
