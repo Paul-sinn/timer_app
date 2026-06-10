@@ -53,7 +53,10 @@
     {
       "step": 6,
       "name": "progress-screen",
-      "status": "pending"
+      "status": "completed",
+      "started_at": "2026-06-10T10:45:34+0900",
+      "summary": "ProgressScreen(+ProgressViewModel 분리, MockData 주입·기본 populated)을 구현. 상단 AppCard 요약 통계 3종(총 집중 시간 시/분 환산·세션 수·화면 유지 비율 keptScreenOn 비율%, 각각 시맨틱 색 강조) + 최신순 세션 목록(AppCard 행: 집중 시간·날짜 + KeptScreenOnBadge[유지=success/꺼짐=danger]). 세션 없으면 빈 상태('아직 기록이 없어요' + chart.bar 심볼). 추이 시각화는 선택이라 생략. #Preview populated/empty 2케이스. 빌드 성공.",
+      "completed_at": "2026-06-09T18:47:00+0900"
     },
     {
       "step": 7,
