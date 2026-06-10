@@ -9,20 +9,29 @@
 import SwiftUI
 
 struct RootView: View {
+    /// 현재 선택된 탭. 검수 편의를 위해 환경변수 START_TAB로 초기 탭 지정 가능.
+    @State private var selection: RootTab
+
     init() {
         Self.configureTabBarAppearance()
+        let env = ProcessInfo.processInfo.environment["START_TAB"]
+        _selection = State(initialValue: RootTab(envKey: env) ?? .home)
     }
 
     var body: some View {
-        TabView {
+        TabView(selection: $selection) {
             HomeView()
                 .tabItem { Label(RootTab.home.title, systemImage: RootTab.home.systemImage) }
+                .tag(RootTab.home)
             CollectionView()
                 .tabItem { Label(RootTab.collection.title, systemImage: RootTab.collection.systemImage) }
+                .tag(RootTab.collection)
             ProgressScreen()
                 .tabItem { Label(RootTab.progress.title, systemImage: RootTab.progress.systemImage) }
+                .tag(RootTab.progress)
             MyPageView()
                 .tabItem { Label(RootTab.myPage.title, systemImage: RootTab.myPage.systemImage) }
+                .tag(RootTab.myPage)
         }
         .tint(AppColor.eggAccent)
     }

@@ -41,4 +41,12 @@ final class HomeViewModel {
     var crackCaption: String {
         "균열 \(egg.crackStage)단계"
     }
+
+    /// 알 이미지 단계 인덱스(0...5).
+    var stageIndex: Int { egg.stageIndex }
+
+    /// 부화 진행도 스텝 캡션. 예: "3/6".
+    var stageCaption: String {
+        "\(egg.stageIndex + 1)/\(EggState.visualStages)"
+    }
 }

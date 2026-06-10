@@ -52,6 +52,32 @@ final class ProgressViewModel {
         "\(Int((keptScreenOnRatio * 100).rounded()))%"
     }
 
+    /// 현재 연속 집중 일수(더미 — Phase 2에서 실제 계산).
+    let currentStreakDisplay = "12일"
+
+    /// 최고 기록(더미 — Phase 2에서 실제 계산).
+    let bestRecordDisplay = "23회"
+
+    // MARK: - 주간 막대그래프
+
+    /// 요일 라벨(월~일).
+    let weekdayLabels = ["월", "화", "수", "목", "금", "토", "일"]
+
+    /// 요일별 집중 시간(시간 단위, 월=0 ... 일=6). 주입 세션에서 집계.
+    var weeklyHours: [Double] {
+        var arr = [Double](repeating: 0, count: 7)
+        let cal = Calendar.current
+        for s in sessions {
+            let wd = cal.component(.weekday, from: s.date) // 1=일 ... 7=토
+            let idx = (wd + 5) % 7                          // 월=0 ... 일=6
+            arr[idx] += Double(s.durationMinutes) / 60.0
+        }
+        return arr
+    }
+
+    /// 그래프 Y축 상한(가장 큰 막대 기준, 최소 1).
+    var weeklyMax: Double { max(weeklyHours.max() ?? 0, 1) }
+
     // MARK: - 세션 기록(최신순)
 
     /// 최신순으로 정렬된 세션 목록.

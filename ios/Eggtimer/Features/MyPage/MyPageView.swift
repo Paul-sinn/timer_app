@@ -34,7 +34,10 @@ struct MyPageView: View {
 
             ScrollView {
                 VStack(alignment: .leading, spacing: AppSpacing.section) {
-                    SectionHeader("마이")
+                    Text("MyPage")
+                        .font(.title.weight(.bold))
+                        .foregroundStyle(AppColor.textPrimary)
+                        .frame(maxWidth: .infinity, alignment: .leading)
 
                     profileHeader
 

@@ -2,8 +2,8 @@
 //  HomeView.swift
 //  Eggtimer
 //
-//  홈 탭 화면. UI_GUIDE "알이 주인공" 원칙대로 중앙 알을 시각적 중심에 두고,
-//  그 위에 대형 모노스페이스 타이머를, 아래에 부화 진행/컨트롤을 배치한다.
+//  홈 탭. 다크+골드 톤. 상단 헤더(Home + 설정) / 집중 모드 칩 / 대형 타이머 /
+//  중앙 픽셀 알(골드 글로우) / 6단계 부화 진행도 / 시작·중단 버튼.
 //  Phase 0(UI 더미): 시작/중단은 isRunning(@State)만 토글하며 실제 타이머는 없다.
 //
 
@@ -11,7 +11,6 @@ import SwiftUI
 
 struct HomeView: View {
     @State private var viewModel: HomeViewModel
-    /// 실제 카운트다운 없이 UI 상태만 토글하는 진행 플래그.
     @State private var isRunning = false
 
     init(viewModel: HomeViewModel = HomeViewModel(snapshot: MockData.populated)) {
@@ -22,22 +21,62 @@ struct HomeView: View {
         ZStack {
             AppColor.pageBackground.ignoresSafeArea()
 
-            VStack(spacing: AppSpacing.sectionLoose) {
+            VStack(spacing: 0) {
+                header
+
                 Spacer(minLength: 0)
 
-                timerHeader
+                focusModeChip
 
-                EggView(crackStage: viewModel.egg.crackStage)
+                timerHeader
+                    .padding(.top, AppSpacing.element)
+
+                EggView(stageIndex: viewModel.stageIndex)
+                    .padding(.vertical, AppSpacing.section)
+
+                Spacer(minLength: 0)
 
                 progressSection
 
-                Spacer(minLength: 0)
-
-                controlButton
+                controlButtons
+                    .padding(.top, AppSpacing.element)
             }
             .padding(.horizontal, AppSpacing.section)
-            .padding(.vertical, AppSpacing.section)
         }
+    }
+
+    // MARK: - 상단 헤더
+
+    private var header: some View {
+        HStack {
+            Text("Home")
+                .font(.title.weight(.bold))
+                .foregroundStyle(AppColor.textPrimary)
+            Spacer()
+            Image(systemName: "gearshape")
+                .font(.title3)
+                .foregroundStyle(AppColor.textSecondary)
+        }
+        .padding(.top, AppSpacing.elementTight)
+    }
+
+    // MARK: - 집중 모드 칩
+
+    private var focusModeChip: some View {
+        HStack(spacing: 6) {
+            Image(systemName: "leaf")
+                .font(.caption)
+            Text("집중 모드")
+                .font(AppFont.cardTitle)
+            Image(systemName: "chevron.down")
+                .font(.caption2)
+        }
+        .foregroundStyle(AppColor.textBody)
+        .padding(.horizontal, AppSpacing.elementTight)
+        .padding(.vertical, 7)
+        .background(AppColor.cardBackground)
+        .clipShape(Capsule())
+        .overlay(Capsule().stroke(AppColor.border, lineWidth: AppSpacing.borderWidth))
     }
 
     // MARK: - 타이머 표시
@@ -48,57 +87,61 @@ struct HomeView: View {
                 .font(AppFont.timer)
                 .foregroundStyle(AppColor.textPrimary)
                 .monospacedDigit()
-            Text(isRunning ? "집중하는 중이에요" : "집중을 시작해 알을 부화시켜요")
+            Text(isRunning ? "집중하는 중이에요" : "집중할 준비가 되었나요?")
                 .font(AppFont.body)
                 .foregroundStyle(AppColor.textSecondary)
         }
     }
 
-    // MARK: - 부화 진행 표시
+    // MARK: - 부화 진행도 (6단계 스텝퍼)
 
     private var progressSection: some View {
-        VStack(spacing: AppSpacing.elementTight) {
-            ProgressBar(progress: viewModel.egg.progress)
-                .frame(height: 8)
-
+        VStack(alignment: .leading, spacing: AppSpacing.elementTight) {
             HStack {
-                Text(viewModel.crackCaption)
+                Text("부화 진행도")
+                    .font(AppFont.cardTitle)
+                    .foregroundStyle(AppColor.textSecondary)
                 Spacer()
-                Text(viewModel.progressCaption)
+                Text(viewModel.stageCaption)
+                    .font(AppFont.cardTitle)
+                    .foregroundStyle(AppColor.textSecondary)
             }
-            .font(AppFont.cardTitle)
-            .foregroundStyle(AppColor.textSecondary)
+            StageStepper(current: viewModel.stageIndex, total: EggState.visualStages)
         }
     }
 
     // MARK: - 시작/중단 컨트롤
 
     @ViewBuilder
-    private var controlButton: some View {
-        if isRunning {
+    private var controlButtons: some View {
+        VStack(spacing: AppSpacing.elementTight) {
+            PrimaryButton(isRunning ? "일시정지" : "시작") {
+                isRunning.toggle()
+            }
             DangerButton("중단") { isRunning = false }
-        } else {
-            PrimaryButton("집중 시작") { isRunning = true }
         }
+        .padding(.bottom, AppSpacing.element)
     }
 }
 
-/// 부화 진행도(0...1) 가로 막대. eggAccent 채움.
-private struct ProgressBar: View {
-    let progress: Double
+/// 6단계 부화 진행 스텝퍼. 채워진 단계는 골드 점, 사이는 연결선.
+private struct StageStepper: View {
+    let current: Int
+    let total: Int
 
     var body: some View {
-        GeometryReader { geo in
-            ZStack(alignment: .leading) {
-                Capsule()
-                    .fill(AppColor.border)
-                Capsule()
-                    .fill(AppColor.eggAccent)
-                    .frame(width: geo.size.width * min(max(progress, 0), 1))
+        HStack(spacing: 6) {
+            ForEach(0..<total, id: \.self) { i in
+                Circle()
+                    .fill(i <= current ? AppColor.eggAccent : AppColor.border)
+                    .frame(width: i == current ? 12 : 9, height: i == current ? 12 : 9)
+                if i < total - 1 {
+                    Rectangle()
+                        .fill(i < current ? AppColor.eggAccent : AppColor.border)
+                        .frame(height: 2)
+                }
             }
         }
-        .accessibilityLabel(Text("부화 진행도"))
-        .accessibilityValue(Text("\(Int((progress * 100).rounded()))퍼센트"))
     }
 }
 
@@ -113,7 +156,7 @@ private struct ProgressBar: View {
 #Preview("부화 임박") {
     HomeView(viewModel: HomeViewModel(
         displayName: "집중하는 너구리",
-        egg: EggState(targetMinutes: 60, focusedMinutes: 58)
+        egg: EggState(targetMinutes: 60, focusedMinutes: 56)
     ))
     .preferredColorScheme(.dark)
 }

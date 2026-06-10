@@ -44,4 +44,18 @@ struct EggState: Hashable {
     var isHatched: Bool {
         focusedMinutes >= targetMinutes
     }
+
+    // MARK: - 시각 단계 (알 이미지 6종 매핑)
+
+    /// 알 이미지 단계 수. 에셋 Egg0(온전) ~ Egg5(부화 직전) 6종.
+    static let visualStages = 6
+
+    /// 진행도(0...1)를 0...5 알 이미지 인덱스로 매핑.
+    var stageIndex: Int {
+        let i = Int(progress * Double(EggState.visualStages))
+        return min(max(i, 0), EggState.visualStages - 1)
+    }
+
+    /// 현재 단계 에셋 이름 (Egg0 ~ Egg5).
+    var eggAssetName: String { "Egg\(stageIndex)" }
 }
