@@ -61,7 +61,10 @@
     {
       "step": 7,
       "name": "mypage-screen",
-      "status": "pending"
+      "status": "completed",
+      "started_at": "2026-06-10T10:47:20+0900",
+      "summary": "MyPageView를 프로필/계정/설정 3섹션으로 구현(더미 유저 AppSnapshot 주입·기본 populated). 프로필 헤더(아바타 심볼 + displayName + 더미 가입일/누적 부화 수). 계정 섹션은 로그인 전 가정 UI 껍데기만: AuthButton 2종(Apple=흰 채움/흑 텍스트+applelogo, Google=보더+g.circle), action은 print + // TODO: Phase 2 auth 주석으로 실제 인증 미연동. 설정 섹션 AppCard 리스트(알림/사운드 로컬 @State Toggle + 다크모드 '고정' 안내·버전 정보 행). 로그인 게이트 없음. #Preview 로그인 전/새 사용자 2케이스. 빌드 성공.",
+      "completed_at": "2026-06-09T18:49:00+0900"
     },
     {
       "step": 8,
