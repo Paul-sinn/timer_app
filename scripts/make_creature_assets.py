@@ -20,21 +20,21 @@ ASSETS = os.path.join(ROOT, "ios", "Eggtimer", "Assets.xcassets")
 # 원본 파일 → 에셋 이름 매핑
 MAPPING = {
     # 빨간 토종닭 (Common) — 여러 표정 중 랜덤으로 출현
-    "ChatGPT Image 2026년 6월 9일 오후 07_10_31 (1).png": "Chicken1",  # 기본 귀여움
-    "angrychick.png": "ChickenAngry",       # 화남
-    "annoyedchick.png": "ChickenAnnoyed",   # 시크
-    "brochick.png": "ChickenBro",           # 근육
-    "sleepychick.png": "ChickenSleepy",     # 졸림
-    "smartchick.png": "ChickenSmart",       # 안경
+    "cutechick.png": "Chicken1",          # 기본 귀여움
+    "angrychick.png": "ChickenAngry",     # 화남
+    "annoyedchick.png": "ChickenAnnoyed",  # 시크
+    "brochick.png": "ChickenBro",         # 근육
+    "sleepychick.png": "ChickenSleepy",   # 졸림
+    "smartchick.png": "ChickenSmart",     # 안경
     # 나머지 종
-    "ChatGPT Image 2026년 6월 9일 오후 07_10_32 (2).png": "Slime",            # 슬라임
-    "ChatGPT Image 2026년 6월 9일 오후 07_10_32 (3).png": "Dino",             # 아기 공룡
-    "ChatGPT Image 2026년 6월 9일 오후 07_10_32 (4).png": "BlackCat",         # 검은 고양이
-    "ChatGPT Image 2026년 6월 9일 오후 07_10_33 (5).png": "GoldChick",        # 황금 병아리
-    "ChatGPT Image 2026년 6월 9일 오후 07_10_33 (6).png": "WhiteTiger",       # 백호 (귀여움)
-    "ChatGPT Image 2026년 6월 9일 오후 07_10_39 (2).png": "WhiteTigerEvolved",  # 백호 (진화/간지)
-    "ChatGPT Image 2026년 6월 9일 오후 07_10_33 (7).png": "Phoenix",          # 피닉스 (귀여움)
-    "ChatGPT Image 2026년 6월 9일 오후 07_10_39 (3).png": "PhoenixEvolved",   # 피닉스 (진화/간지)
+    "slime.png": "Slime",                          # 슬라임
+    "dino.png": "Dino",                            # 아기 공룡
+    "blackcat.png": "BlackCat",                    # 검은 고양이
+    "goldchick.png": "GoldChick",                  # 황금 병아리
+    "whitetiger.png": "WhiteTiger",                # 백호 (귀여움)
+    "whitetiger_evolved.png": "WhiteTigerEvolved",  # 백호 (진화/간지)
+    "phoenix.png": "Phoenix",                      # 피닉스 (귀여움)
+    "phoenix_evolved.png": "PhoenixEvolved",       # 피닉스 (진화/간지)
 }
 
 TOLERANCE = 38      # 배경색으로 간주할 색 거리(제곱 비교)
