@@ -2,23 +2,38 @@
 //  RootView.swift
 //  Eggtimer
 //
-//  앱 루트 화면. step3에서 TabView(Home/Collection/Progress/MyPage)로 교체된다.
-//  현재는 다크 배경 위에 앱 이름만 보여주는 임시 플레이스홀더.
+//  앱 루트. 로그인 게이트 없이 곧장 4탭 TabView로 진입한다
+//  (요구사항: 로그인 없이 모든 화면 접근). 각 탭 화면은 step4~7에서 채운다.
 //
 
 import SwiftUI
 
 struct RootView: View {
-    var body: some View {
-        ZStack {
-            Color(red: 0.039, green: 0.039, blue: 0.039) // #0A0A0A 페이지 배경
-                .ignoresSafeArea()
+    init() {
+        Self.configureTabBarAppearance()
+    }
 
-            Text("Eggtimer")
-                .font(.title2)
-                .fontWeight(.semibold)
-                .foregroundStyle(.white)
+    var body: some View {
+        TabView {
+            HomeView()
+                .tabItem { Label(RootTab.home.title, systemImage: RootTab.home.systemImage) }
+            CollectionView()
+                .tabItem { Label(RootTab.collection.title, systemImage: RootTab.collection.systemImage) }
+            ProgressScreen()
+                .tabItem { Label(RootTab.progress.title, systemImage: RootTab.progress.systemImage) }
+            MyPageView()
+                .tabItem { Label(RootTab.myPage.title, systemImage: RootTab.myPage.systemImage) }
         }
+        .tint(AppColor.eggAccent)
+    }
+
+    /// 탭바를 다크 톤(AppColor.tabBarBackground)으로 고정한다.
+    private static func configureTabBarAppearance() {
+        let appearance = UITabBarAppearance()
+        appearance.configureWithOpaqueBackground()
+        appearance.backgroundColor = UIColor(AppColor.tabBarBackground)
+        UITabBar.appearance().standardAppearance = appearance
+        UITabBar.appearance().scrollEdgeAppearance = appearance
     }
 }
 

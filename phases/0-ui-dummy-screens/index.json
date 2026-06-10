@@ -29,7 +29,10 @@
     {
       "step": 3,
       "name": "app-shell-nav",
-      "status": "pending"
+      "status": "completed",
+      "started_at": "2026-06-10T10:38:37+0900",
+      "summary": "로그인 게이트 없이 곧장 진입하는 4탭 TabView로 RootView 교체(App/RootView.swift). 탭 정의는 RootTab enum(App/RootTab.swift, Lucide→SF Symbol: house/square.grid.2x2/chart.bar/person.crop.circle), 탭바는 AppColor.tabBarBackground 다크 톤·tint eggAccent. 각 탭 화면 placeholder 4개: Features/Home/HomeView, Features/Collection/CollectionView, Features/Progress/ProgressScreen(내장 ProgressView 충돌 회피), Features/MyPage/MyPageView. 빌드 성공.",
+      "completed_at": "2026-06-09T18:40:30+0900"
     },
     {
       "step": 4,
