@@ -1,0 +1,18 @@
+//
+//  EggtimerTests.swift
+//  EggtimerTests
+//
+//  Created by 신경하 on 6/9/26.
+//
+
+import Testing
+
+struct EggtimerTests {
+
+    @Test func example() async throws {
+        // Write your test here and use APIs like `#expect(...)` to check expected conditions.
+        // Swift Testing Documentation
+        // https://developer.apple.com/documentation/testing
+    }
+
+}

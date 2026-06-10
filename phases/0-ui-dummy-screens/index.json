@@ -1,0 +1,80 @@
+{
+  "project": "Eggtimer",
+  "phase": "0-ui-dummy-screens",
+  "steps": [
+    {
+      "step": 0,
+      "name": "project-foundation",
+      "status": "completed",
+      "started_at": "2026-06-10T10:31:59+0900",
+      "summary": "SwiftData 데모(Item.swift/ContentView.swift) 제거, EggtimerApp을 RootView+다크모드 고정으로 단순화, App/RootView.swift 임시 플레이스홀더 생성. 빌드 성공.",
+      "completed_at": "2026-06-10T10:33:42+0900"
+    },
+    {
+      "step": 1,
+      "name": "design-system",
+      "status": "completed",
+      "started_at": "2026-06-10T10:33:42+0900",
+      "summary": "DesignSystem 토큰(AppColor 색상, AppFont 타이포, AppSpacing 간격, Color+Hex 헬퍼)과 공용 컴포넌트(AppCard, PrimaryButton, DangerButton, SectionHeader) 추가. 모두 UI_GUIDE.md 값 토큰화·다크 #Preview 포함. 빌드 성공.",
+      "completed_at": "2026-06-10T10:35:13+0900"
+    },
+    {
+      "step": 2,
+      "name": "mock-data",
+      "status": "completed",
+      "started_at": "2026-06-10T10:35:13+0900",
+      "summary": "순수 값 타입 도메인 모델(Creature, Rarity[색/라벨→AppColor], FocusSession, EggState[15분/crack·progress·remaining 계산 프로퍼티])과 Mock 진입점 MockData.populated/MockData.empty(AppSnapshot: displayName·creatures·sessions·egg) 추가. 캐릭터 이미지는 CreatureImage(View) placeholder 한 곳에서만 렌더(SF Symbol+레어도 색). 빌드 성공.",
+      "completed_at": "2026-06-10T18:37:00+0900"
+    },
+    {
+      "step": 3,
+      "name": "app-shell-nav",
+      "status": "completed",
+      "started_at": "2026-06-10T10:38:37+0900",
+      "summary": "로그인 게이트 없이 곧장 진입하는 4탭 TabView로 RootView 교체(App/RootView.swift). 탭 정의는 RootTab enum(App/RootTab.swift, Lucide→SF Symbol: house/square.grid.2x2/chart.bar/person.crop.circle), 탭바는 AppColor.tabBarBackground 다크 톤·tint eggAccent. 각 탭 화면 placeholder 4개: Features/Home/HomeView, Features/Collection/CollectionView, Features/Progress/ProgressScreen(내장 ProgressView 충돌 회피), Features/MyPage/MyPageView. 빌드 성공.",
+      "completed_at": "2026-06-10T10:40:31+0900"
+    },
+    {
+      "step": 4,
+      "name": "home-screen",
+      "status": "completed",
+      "started_at": "2026-06-10T10:40:31+0900",
+      "summary": "HomeView를 '알이 주인공' 레이아웃으로 구현(MVVM): HomeViewModel(MockData.AppSnapshot 주입, 더미 타이머 25:00·진행/균열 캡션), 중앙 EggView(eggAccent 타원 알 + EggCracks로 crackStage만큼 균열 획 + idle 미세 흔들림 루프), 상단 대형 모노스페이스 타이머 헤더, ProgressBar로 egg.progress 표시, 시작↔중단 컨트롤은 isRunning(@State)만 토글(실제 카운트다운 없음). #Preview 초기 알/부화 임박 2상태. 빌드 성공.",
+      "completed_at": "2026-06-10T10:43:46+0900"
+    },
+    {
+      "step": 5,
+      "name": "collection-screen",
+      "status": "completed",
+      "started_at": "2026-06-10T10:43:47+0900",
+      "summary": "CollectionView를 LazyVGrid(adaptive 110) 그리드로 구현. 외부 주입 init(creatures: [Creature] = MockData.populated.creatures)로 검수 가능. 각 셀은 AppCard 안에 CreatureImage(placeholder 경유) + 이름 + RarityBadge(Rarity 색/라벨, 레어 이상 색 강조). creatures가 비면 빈 상태 뷰('아직 부화한 생명체가 없어요' + square.grid.2x2 심볼). 셀 탭 시 CreatureDetailSheet(.medium)로 이름·레어도·부화일 더미 표시. #Preview populated/empty 2케이스. 빌드 성공.",
+      "completed_at": "2026-06-10T10:45:34+0900"
+    },
+    {
+      "step": 6,
+      "name": "progress-screen",
+      "status": "completed",
+      "started_at": "2026-06-10T10:45:34+0900",
+      "summary": "ProgressScreen(+ProgressViewModel 분리, MockData 주입·기본 populated)을 구현. 상단 AppCard 요약 통계 3종(총 집중 시간 시/분 환산·세션 수·화면 유지 비율 keptScreenOn 비율%, 각각 시맨틱 색 강조) + 최신순 세션 목록(AppCard 행: 집중 시간·날짜 + KeptScreenOnBadge[유지=success/꺼짐=danger]). 세션 없으면 빈 상태('아직 기록이 없어요' + chart.bar 심볼). 추이 시각화는 선택이라 생략. #Preview populated/empty 2케이스. 빌드 성공.",
+      "completed_at": "2026-06-10T10:47:20+0900"
+    },
+    {
+      "step": 7,
+      "name": "mypage-screen",
+      "status": "completed",
+      "started_at": "2026-06-10T10:47:20+0900",
+      "summary": "MyPageView를 프로필/계정/설정 3섹션으로 구현(더미 유저 AppSnapshot 주입·기본 populated). 프로필 헤더(아바타 심볼 + displayName + 더미 가입일/누적 부화 수). 계정 섹션은 로그인 전 가정 UI 껍데기만: AuthButton 2종(Apple=흰 채움/흑 텍스트+applelogo, Google=보더+g.circle), action은 print + // TODO: Phase 2 auth 주석으로 실제 인증 미연동. 설정 섹션 AppCard 리스트(알림/사운드 로컬 @State Toggle + 다크모드 '고정' 안내·버전 정보 행). 로그인 게이트 없음. #Preview 로그인 전/새 사용자 2케이스. 빌드 성공.",
+      "completed_at": "2026-06-10T10:49:12+0900"
+    },
+    {
+      "step": 8,
+      "name": "review-gallery",
+      "status": "completed",
+      "started_at": "2026-06-10T10:49:12+0900",
+      "summary": "Features/Review/ReviewGalleryView.swift(#if DEBUG)를 NavigationStack+List로 추가. 앞 step들의 주입 init을 활용해 Home(초기 focusedMinutes:0/부화 임박 58)·Collection(populated/empty)·Progress(populated/empty)·MyPage(로그인 전 populated) 상태로 각각 점프. 진입점은 MyPageView 설정 맨 아래 '🛠 화면 검수 갤러리(DEBUG)' 행→fullScreenCover(닫기 버튼), #if DEBUG 가드로 릴리스 비노출·RootView 4탭 플로우 무변경. 각 화면 #Preview 빈/채움 핵심 상태 점검(누락 없음). 빌드 성공.",
+      "completed_at": "2026-06-10T10:51:18+0900"
+    }
+  ],
+  "created_at": "2026-06-10T10:31:59+0900",
+  "completed_at": "2026-06-10T10:51:18+0900"
+}
