@@ -15,9 +15,12 @@ struct RootView: View {
     @State private var store: CollectionStore
     /// 집중 세션 단일 소스(타이머·성장·부화 트리거).
     @State private var session = SessionManager()
+    /// 끝난 세션 이력 스토어(통계 원자료). App에서 영속 주입.
+    @State private var history: FocusHistoryStore
 
-    init(store: CollectionStore = CollectionStore()) {
+    init(store: CollectionStore = CollectionStore(), history: FocusHistoryStore = FocusHistoryStore()) {
         _store = State(initialValue: store)
+        _history = State(initialValue: history)
         Self.configureTabBarAppearance()
         let env = ProcessInfo.processInfo.environment["START_TAB"]
         _selection = State(initialValue: RootTab(envKey: env) ?? .home)
@@ -25,13 +28,13 @@ struct RootView: View {
 
     var body: some View {
         TabView(selection: $selection) {
-            HomeView(session: session, store: store)
+            HomeView(session: session, store: store, history: history)
                 .tabItem { Label(RootTab.home.title, systemImage: RootTab.home.systemImage) }
                 .tag(RootTab.home)
             CollectionView(creatures: store.creatures)
                 .tabItem { Label(RootTab.collection.title, systemImage: RootTab.collection.systemImage) }
                 .tag(RootTab.collection)
-            ProgressScreen()
+            ProgressScreen(sessions: history.sessions)
                 .tabItem { Label(RootTab.progress.title, systemImage: RootTab.progress.systemImage) }
                 .tag(RootTab.progress)
             MyPageView()

@@ -11,11 +11,15 @@
 import SwiftUI
 
 struct ProgressScreen: View {
-    @State private var viewModel: ProgressViewModel
+    /// 끝난 세션(실데이터는 FocusHistoryStore.sessions 주입, 프리뷰는 더미).
+    private let sessions: [FocusSessionResult]
 
-    init(viewModel: ProgressViewModel = ProgressViewModel(snapshot: MockData.populated)) {
-        _viewModel = State(initialValue: viewModel)
+    init(sessions: [FocusSessionResult] = MockData.sampleResults) {
+        self.sessions = sessions
     }
+
+    /// 세션에서 통계를 파생(렌더마다 재계산 — sessions 변경 시 자동 갱신).
+    private var viewModel: ProgressViewModel { ProgressViewModel(sessions: sessions) }
 
     var body: some View {
         ZStack {
@@ -64,8 +68,8 @@ struct ProgressScreen: View {
             HStack(spacing: AppSpacing.elementTight) {
                 StatCard(icon: "flame.fill", iconColor: AppColor.danger,
                          value: viewModel.currentStreakDisplay, label: "현재 연속")
-                StatCard(icon: "trophy.fill", iconColor: AppColor.eggAccent,
-                         value: viewModel.bestRecordDisplay, label: "최고 기록")
+                StatCard(icon: "target", iconColor: AppColor.eggAccent,
+                         value: viewModel.averageScoreDisplay, label: "평균 집중 점수")
             }
         }
     }
@@ -184,49 +188,69 @@ private struct WeeklyBarChart: View {
     }
 }
 
-/// 세션 한 건 행(상태 점 + 날짜 + 집중 시간 + 화면 유지 배지).
+/// 세션 한 건 행(집중 점수 점 + 집중 시간 + 날짜 + 점수/중단 배지).
 private struct SessionRow: View {
-    let session: FocusSession
+    let session: FocusSessionResult
 
     private var dateText: String {
-        session.date.formatted(date: .abbreviated, time: .shortened)
+        session.startedAt.formatted(date: .abbreviated, time: .shortened)
     }
     private var durationText: String {
-        let h = session.durationMinutes / 60, m = session.durationMinutes % 60
+        let h = session.activeMinutes / 60, m = session.activeMinutes % 60
         if h > 0 && m > 0 { return "\(h)시간 \(m)분" }
         if h > 0 { return "\(h)시간" }
         return "\(m)분"
+    }
+    /// 점수 기반 상태색.
+    private var statusColor: Color {
+        if session.focusScore >= 80 { return AppColor.success }
+        if session.focusScore >= 50 { return AppColor.eggAccent }
+        return AppColor.danger
     }
 
     var body: some View {
         AppCard {
             HStack(spacing: AppSpacing.elementTight) {
                 Circle()
-                    .fill(session.keptScreenOn ? AppColor.success : AppColor.danger)
+                    .fill(statusColor)
                     .frame(width: 8, height: 8)
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(durationText)
-                        .font(AppFont.body.weight(.semibold))
-                        .foregroundStyle(AppColor.textPrimary)
+                    HStack(spacing: 6) {
+                        Text(durationText)
+                            .font(AppFont.body.weight(.semibold))
+                            .foregroundStyle(AppColor.textPrimary)
+                        if !session.completed {
+                            Text("중단")
+                                .font(.caption2)
+                                .foregroundStyle(AppColor.danger)
+                        }
+                    }
                     Text(dateText)
                         .font(AppFont.cardTitle)
                         .foregroundStyle(AppColor.textSecondary)
                 }
                 Spacer(minLength: 0)
-                Image(systemName: "clock")
-                    .font(.caption)
-                    .foregroundStyle(AppColor.textSecondary)
+                VStack(alignment: .trailing, spacing: 2) {
+                    Text("\(session.focusScore)점")
+                        .font(AppFont.body.weight(.semibold))
+                        .foregroundStyle(statusColor)
+                    if session.interruptionCount > 0 {
+                        Text("이탈 \(session.interruptionCount)")
+                            .font(.caption2)
+                            .foregroundStyle(AppColor.textSecondary)
+                    }
+                }
             }
         }
     }
 }
 
 #Preview("populated") {
-    ProgressScreen(viewModel: ProgressViewModel(sessions: MockData.populated.sessions))
+    ProgressScreen(sessions: MockData.sampleResults)
         .preferredColorScheme(.dark)
 }
 
 #Preview("empty") {
-    ProgressScreen(viewModel: ProgressViewModel(sessions: MockData.empty.sessions))
+    ProgressScreen(sessions: [])
         .preferredColorScheme(.dark)
 }

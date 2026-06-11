@@ -37,6 +37,14 @@ final class SessionManager {
     private let persists: Bool
     private static let persistKey = "active_session_v1"
 
+    /// 세션이 끝날 때(완료/중단) 결과를 전달(영속/통계 기록용). HomeView가 주입.
+    var onSessionEnd: ((FocusSessionResult) -> Void)?
+
+    // 이탈 추적(Feature 6) — 현재 세션 누적.
+    private var interruptionCount = 0
+    private var distracted = false
+    private var leftAt: Date?
+
     init(plannedSeconds: Int = 25 * 60,
          displayName: String = "집중하는 너구리",
          clock: @escaping () -> Date = { Date() },
@@ -100,6 +108,9 @@ final class SessionManager {
         s.phase = .running
         session = s
         activeSecondsLive = 0
+        interruptionCount = 0
+        distracted = false
+        leftAt = nil
         ScreenAwake.set(true)
         startTicker()
         persist()
@@ -127,8 +138,12 @@ final class SessionManager {
         persist()
     }
 
-    /// 중단(세션 폐기, 부화 없음).
+    /// 중단(부화 없음). 의미 있는 집중이 있었으면 미완료 세션으로 기록.
     func stop() {
+        recompute()
+        if let s = session, activeSecondsLive > 0 {
+            onSessionEnd?(buildResult(from: s, completed: false))
+        }
         clearSession()
     }
 
@@ -150,12 +165,21 @@ final class SessionManager {
     }
 
     /// 백그라운드 진입 시(화면 유지 해제). 진행은 타임스탬프로 보존되므로 멈추지 않는다.
+    /// running 중 이탈이면 이탈 시작 시각을 기록(복귀 시 분류).
     func handleBackground() {
+        if session?.phase == .running { leftAt = clock() }
         ScreenAwake.set(false)
     }
 
-    /// 포그라운드 복귀 시(재계산 + 화면 유지 재적용).
+    /// 포그라운드 복귀 시: 이탈 시간 분류 → 재계산 → 화면 유지 재적용.
     func handleForeground() {
+        if let left = leftAt, session?.phase == .running {
+            let away = max(0, Int(clock().timeIntervalSince(left)))
+            let severity = Interruption.severity(awaySeconds: away)
+            if severity.counts { interruptionCount += 1 }
+            if severity == .distracted { distracted = true }
+        }
+        leftAt = nil
         recompute()
         if session?.phase == .running { ScreenAwake.set(true) }
     }
@@ -169,7 +193,20 @@ final class SessionManager {
         activeSecondsLive = s.plannedSeconds
         stopTicker()
         ScreenAwake.set(false)
+        onSessionEnd?(buildResult(from: s, completed: true))
         persist()
+    }
+
+    /// 현재 누적 상태로 세션 결과 값을 만든다.
+    private func buildResult(from s: ActiveSession, completed: Bool) -> FocusSessionResult {
+        FocusSessionResult(
+            startedAt: s.startedAt,
+            plannedSeconds: s.plannedSeconds,
+            activeSeconds: activeSecondsLive,
+            interruptionCount: interruptionCount,
+            distracted: distracted,
+            completed: completed
+        )
     }
 
     private func clearSession() {

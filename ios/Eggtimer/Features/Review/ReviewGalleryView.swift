@@ -38,10 +38,10 @@ struct ReviewGalleryView: View {
 
                 Section("Progress") {
                     GalleryLink(title: "populated") {
-                        ProgressScreen(viewModel: ProgressViewModel(sessions: MockData.populated.sessions))
+                        ProgressScreen(sessions: MockData.sampleResults)
                     }
                     GalleryLink(title: "empty") {
-                        ProgressScreen(viewModel: ProgressViewModel(sessions: MockData.empty.sessions))
+                        ProgressScreen(sessions: [])
                     }
                 }
 

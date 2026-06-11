@@ -59,9 +59,29 @@ enum MockData {
         FocusSession(date: daysAgo(6), durationMinutes: 90, keptScreenOn: true)
     ]
 
+    // MARK: - 더미 세션 결과(프리뷰/검수용 — 실데이터는 FocusHistoryStore)
+
+    static let sampleResults: [FocusSessionResult] = [
+        result(daysAgo(0), minutes: 25, interruptions: 0, distracted: false, completed: true),
+        result(daysAgo(0), minutes: 50, interruptions: 1, distracted: false, completed: true),
+        result(daysAgo(1), minutes: 15, interruptions: 0, distracted: false, completed: false),
+        result(daysAgo(1), minutes: 45, interruptions: 2, distracted: true,  completed: true),
+        result(daysAgo(2), minutes: 30, interruptions: 0, distracted: false, completed: true),
+        result(daysAgo(3), minutes: 60, interruptions: 1, distracted: false, completed: true),
+        result(daysAgo(4), minutes: 20, interruptions: 3, distracted: true,  completed: false),
+        result(daysAgo(6), minutes: 50, interruptions: 0, distracted: false, completed: true)
+    ]
+
     // MARK: - 헬퍼
 
     private static func daysAgo(_ days: Int) -> Date {
         Calendar.current.date(byAdding: .day, value: -days, to: Date()) ?? Date()
+    }
+
+    private static func result(_ date: Date, minutes: Int, interruptions: Int,
+                               distracted: Bool, completed: Bool) -> FocusSessionResult {
+        FocusSessionResult(startedAt: date, plannedSeconds: minutes * 60,
+                           activeSeconds: minutes * 60, interruptionCount: interruptions,
+                           distracted: distracted, completed: completed)
     }
 }

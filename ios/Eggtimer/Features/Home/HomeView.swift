@@ -14,14 +14,18 @@ struct HomeView: View {
     @Environment(\.scenePhase) private var scenePhase
     @State private var session: SessionManager
     private let store: CollectionStore
+    private let history: FocusHistoryStore
     /// 부화 결과 시트로 띄울 새 생명체.
     @State private var hatchedCreature: Creature?
     /// 부화 후 알 자리를 대체해 표시 중인 생명체(idle 상태에서만 노출).
     @State private var hatchling: Creature?
 
-    init(session: SessionManager, store: CollectionStore = CollectionStore()) {
+    init(session: SessionManager,
+         store: CollectionStore = CollectionStore(),
+         history: FocusHistoryStore = FocusHistoryStore()) {
         _session = State(initialValue: session)
         self.store = store
+        self.history = history
     }
 
     /// 집중 시간 선택지(초). DEBUG에서는 빠른 검수용 10초 포함.
@@ -72,6 +76,10 @@ struct HomeView: View {
             case .background: session.handleBackground()
             default:          break
             }
+        }
+        .onAppear {
+            // 세션 종료(완료/중단) 시 이력에 기록(영속 + 통계).
+            session.onSessionEnd = { history.record($0) }
         }
     }
 
