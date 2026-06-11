@@ -100,6 +100,23 @@ enum CreatureSpecies: String, CaseIterable, Identifiable {
         imageVariants.randomElement(using: &generator) ?? silhouetteImageName
     }
 
+    /// 성격별 대사 풀 식별자(dialoguesystem.md). 닭은 표정 변형(imageName)이 성격에 대응한다.
+    func personality(imageName: String) -> CreaturePersonality {
+        switch self {
+        case .chicken:
+            switch imageName {
+            case "ChickenSleepy": return .sleepyChicken
+            case "ChickenSmart":  return .nerdChicken
+            case "ChickenBro":    return .gymChicken
+            case "ChickenAngry":  return .angryChicken
+            default:              return .redChicken   // Chicken1, ChickenAnnoyed
+            }
+        case .whiteTiger: return .whiteTiger
+        case .phoenix:    return .phoenix
+        case .slime, .dino, .blackCat, .goldChick: return .generic
+        }
+    }
+
     // MARK: - 가중 랜덤 추첨
 
     /// 확률표(weight)에 따라 한 종을 뽑는다. 주입형 RNG로 테스트 가능.

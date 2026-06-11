@@ -37,20 +37,21 @@ final class DialogueManager {
     }
 
     /// 트리거 발생 → 후보 선정 → 가중 랜덤으로 currentLine 갱신(시스템 RNG).
-    func fire(_ trigger: DialogueTrigger, streak: Int = 0) {
+    func fire(_ trigger: DialogueTrigger, speaker: DialogueSpeaker = .egg) {
         var generator = SystemRandomNumberGenerator()
-        fire(trigger, streak: streak, using: &generator)
+        fire(trigger, speaker: speaker, using: &generator)
     }
 
-    func fire<G: RandomNumberGenerator>(_ trigger: DialogueTrigger, streak: Int = 0, using generator: inout G) {
+    func fire<G: RandomNumberGenerator>(_ trigger: DialogueTrigger, speaker: DialogueSpeaker = .egg,
+                                        using generator: inout G) {
         let now = clock()
-        // 전역 쿨다운(완료 축하는 항상 통과).
-        if trigger != .sessionComplete,
+        // 전역 쿨다운은 ambient한 idle에만 적용(맥락 대사는 항상 통과; 줄별 cooldown이 스팸 방지).
+        if trigger == .idle,
            let last = lastChangeAt, now.timeIntervalSince(last) < globalCooldown {
             return
         }
 
-        let byTrigger = lines.filter { $0.trigger == trigger && $0.minStreak <= streak }
+        let byTrigger = lines.filter { $0.trigger == trigger && $0.speaker == speaker }
         // 1순위: 최근 표시 제외 + 쿨다운 경과. 비면 폴백으로 완화.
         let fresh = byTrigger.filter { !recentIDs.contains($0.id) && cooldownElapsed($0, now: now) }
         let pool = !fresh.isEmpty ? fresh

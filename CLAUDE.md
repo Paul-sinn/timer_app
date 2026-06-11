@@ -46,3 +46,8 @@ npm run test     # 테스트
 - **2026-06-11 · 멈춘 빌드/테스트를 kill -9 남발 → 빌드 산출물/결과번들 손상**
   - 증상: `swiftStdLibTool` 행으로 보여 반복 kill → DerivedData/result bundle 손상(`mkstemp: No such file or directory`).
   - 교훈: 행으로 보여도 성급히 kill 말 것. 필요하면 DerivedData 클린 + `-resultBundlePath`를 깨끗한 경로로 지정.
+
+- **2026-06-11 · @MainActor 클래스의 deinit에서 격리 프로퍼티 접근 → 컴파일 에러**
+  - 증상: AuthService(`@Observable @MainActor`)에서 `deinit { observationTask?.cancel() }`가 "main actor-isolated property can not be referenced from a nonisolated context"로 빌드 실패.
+  - 원인: 프로젝트가 `SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor`라 타입이 기본 MainActor 격리되는데, deinit은 nonisolated → 격리 저장 프로퍼티 접근 불가.
+  - 교훈: 격리 클래스 deinit에서 격리 상태 만지지 말 것. 무한 AsyncStream 구독은 **루프 안에서 self를 약참조**(`guard let self else { break }`)해 self 해제 시 자연 종료시키면 task 저장·deinit 취소가 불필요. 네트워크/데이터 레이어 타입은 `nonisolated`로 선언해 MainActor 격리 전파를 끊는다(기본격리 경고도 해소).

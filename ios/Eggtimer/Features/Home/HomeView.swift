@@ -21,6 +21,15 @@ struct HomeView: View {
     @State private var hatchling: Creature?
     /// 캐릭터 말풍선 대사 선택기(Feature 4).
     @State private var dialogue = DialogueManager()
+    /// 이번 세션에서 마지막으로 발화한 집중 마일스톤(분). 중복 발화 방지.
+    @State private var lastMilestone = 0
+
+    /// 집중 경과 대사 마일스톤(분). 알의 톤이 의심→존중→자부심으로 진화하는 지점.
+    private static let focusMilestones = [5, 10, 15, 30, 45, 60]
+    /// 연속일에 해당하는 가장 높은 스트릭 임계값(없으면 nil).
+    private static func streakThreshold(for streak: Int) -> Int? {
+        [100, 30, 7, 3].first { streak >= $0 }
+    }
 
     init(session: SessionManager,
          store: CollectionStore = CollectionStore(),
@@ -72,20 +81,37 @@ struct HomeView: View {
                 let born = store.hatch()          // 목표 도달 → 확률 부화 + 컬렉션 반영
                 hatchedCreature = born            // 결과 시트
                 hatchling = born                  // 알 자리를 태어난 캐릭터로 대체
-                dialogue.fire(.sessionComplete, streak: StatsEngine.currentStreak(history.sessions))
+                // 태어난 생명체가 자기 성격대로 인사한다.
+                dialogue.fire(.greeting, speaker: .creature(born.personality))
             }
         }
         .onChange(of: session.isRunning) { _, running in
-            if running { dialogue.fire(.focusing) }   // 세션 시작 격려
+            // 새 시작(activeSecondsLive == 0)에만 시작/스트릭 대사. resume에는 발화 안 함.
+            guard running, session.activeSecondsLive == 0 else { return }
+            lastMilestone = 0
+            let streak = StatsEngine.currentStreak(history.sessions)
+            if let t = Self.streakThreshold(for: streak) {
+                dialogue.fire(.streak(days: t))       // 스트릭 인정(의심→존중→자부심)
+            } else {
+                dialogue.fire(.sessionStart)
+            }
         }
-        .onChange(of: session.stageIndex) { _, _ in
-            if session.isRunning { dialogue.fire(.focusing) }  // 성장 단계마다(쿨다운으로 스팸 방지)
+        .onChange(of: session.activeSecondsLive) { _, secs in
+            // 집중 경과 마일스톤(5·10·15·30·45·60분) 도달 시 1회 발화.
+            guard session.isRunning else { return }
+            let minutes = secs / 60
+            if let m = Self.focusMilestones.last(where: { $0 <= minutes && $0 > lastMilestone }) {
+                lastMilestone = m
+                dialogue.fire(.focusMilestone(minutes: m))
+            }
         }
         .onChange(of: scenePhase) { _, phase in
             switch phase {
             case .active:
                 session.handleForeground()
-                dialogue.fire(.appReturn)
+                if session.lastAwaySeconds > 0 {   // 집중 중 이탈했다가 복귀
+                    dialogue.fire(.appReturn(ReturnBucket.from(awaySeconds: session.lastAwaySeconds)))
+                }
             case .background:
                 session.handleBackground()
             default:

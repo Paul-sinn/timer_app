@@ -2,7 +2,7 @@
 //  DialogueTests.swift
 //  EggtimerTests
 //
-//  대사 선택 로직 검증(트리거 필터 / 비반복 / 쿨다운 / 조건 / 가중치).
+//  대사 선택 엔진 검증(트리거+화자 필터 / 비반복 / 쿨다운 / 가중치). dialoguesystem.md 신모델.
 //
 
 import Testing
@@ -32,11 +32,13 @@ struct DialogueTests {
 
     private func sampleLines() -> [DialogueLine] {
         [
-            .init(id: "i1", text: "idle1", trigger: .idle, weight: 10, cooldown: 100),
-            .init(id: "i2", text: "idle2", trigger: .idle, weight: 10, cooldown: 100),
-            .init(id: "i3", text: "idle3", trigger: .idle, weight: 10, cooldown: 100),
-            .init(id: "d1", text: "done", trigger: .sessionComplete, weight: 10, cooldown: 100),
-            .init(id: "s3", text: "streak3", trigger: .sessionComplete, weight: 10, minStreak: 3, cooldown: 100)
+            .init(id: "i1", text: "idle1", trigger: .idle, cooldown: 100),
+            .init(id: "i2", text: "idle2", trigger: .idle, cooldown: 100),
+            .init(id: "i3", text: "idle3", trigger: .idle, cooldown: 100),
+            .init(id: "s1", text: "start1", trigger: .sessionStart, cooldown: 100),
+            .init(id: "s2", text: "start2", trigger: .sessionStart, cooldown: 100),
+            .init(id: "c1", text: "redA", speaker: .creature(.redChicken), trigger: .greeting, cooldown: 100),
+            .init(id: "c2", text: "redB", speaker: .creature(.redChicken), trigger: .greeting, cooldown: 100),
         ]
     }
 
@@ -44,22 +46,21 @@ struct DialogueTests {
         let clock = Clock()
         let m = DialogueManager(lines: sampleLines(), clock: { clock.now })
         var g = SeededGen(1)
-        m.fire(.sessionComplete, streak: 0, using: &g)
-        #expect(m.currentLine?.trigger == .sessionComplete)
-        #expect(m.currentLine?.id == "d1")     // streak3는 조건 미달로 제외
+        m.fire(.sessionStart, using: &g)
+        #expect(m.currentLine?.trigger == .sessionStart)
+        #expect(m.currentLine?.id.hasPrefix("s") == true)
     }
 
-    @Test func streakConditionGatesLines() {
+    @Test func speakerFiltersPool() {
         let clock = Clock()
         let m = DialogueManager(lines: sampleLines(), clock: { clock.now })
-        // streak 0 → s3 불가
-        for seed in UInt64(0)..<20 {
-            var g = SeededGen(seed)
-            let m2 = DialogueManager(lines: sampleLines(), clock: { clock.now })
-            m2.fire(.sessionComplete, streak: 0, using: &g)
-            #expect(m2.currentLine?.id != "s3")
-        }
-        _ = m
+        var g = SeededGen(2)
+        // greeting을 egg로 쏘면 후보 없음 → 변화 없음.
+        m.fire(.greeting, speaker: .egg, using: &g)
+        #expect(m.currentLine == nil)
+        // creature(.redChicken)으로 쏘면 그 풀에서만.
+        m.fire(.greeting, speaker: .creature(.redChicken), using: &g)
+        #expect(m.currentLine?.speaker == .creature(.redChicken))
     }
 
     @Test func avoidsImmediateRepetition() {
@@ -73,26 +74,26 @@ struct DialogueTests {
         m.fire(.idle, using: &g)
         let second = m.currentLine?.id
         #expect(first != nil && second != nil)
-        #expect(first != second)               // 최근 표시는 다시 안 뽑힘
+        #expect(first != second)
     }
 
-    @Test func globalCooldownBlocksNonComplete() {
+    @Test func globalCooldownBlocksIdle() {
         let clock = Clock()
         let m = DialogueManager(lines: sampleLines(), globalCooldown: 10, clock: { clock.now })
         var g = SeededGen(3)
         m.fire(.idle, using: &g)
         let first = m.currentLine?.id
-        m.fire(.idle, using: &g)               // 즉시 재호출 → 전역 쿨다운으로 무시
+        m.fire(.idle, using: &g)               // 즉시 재호출 → idle 전역 쿨다운으로 무시
         #expect(m.currentLine?.id == first)
     }
 
-    @Test func sessionCompleteBypassesGlobalCooldown() {
+    @Test func contextTriggerBypassesGlobalCooldown() {
         let clock = Clock()
         let m = DialogueManager(lines: sampleLines(), globalCooldown: 10, clock: { clock.now })
         var g = SeededGen(5)
         m.fire(.idle, using: &g)
-        m.fire(.sessionComplete, streak: 0, using: &g)  // 완료는 쿨다운 무시
-        #expect(m.currentLine?.trigger == .sessionComplete)
+        m.fire(.sessionStart, using: &g)       // 맥락 대사는 쿨다운 무시
+        #expect(m.currentLine?.trigger == .sessionStart)
     }
 
     @Test func noCandidatesLeavesLineUnchanged() {
@@ -101,7 +102,7 @@ struct DialogueTests {
         var g = SeededGen(9)
         m.fire(.idle, using: &g)
         let before = m.currentLine?.id
-        m.fire(.focusing, using: &g)           // focusing 줄 없음 → 변화 없음(크래시 X)
+        m.fire(.focusMilestone(minutes: 30), using: &g)   // 해당 줄 없음 → 변화 없음
         #expect(m.currentLine?.id == before)
     }
 }

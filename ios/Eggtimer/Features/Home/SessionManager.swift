@@ -44,6 +44,8 @@ final class SessionManager {
     private var interruptionCount = 0
     private var distracted = false
     private var leftAt: Date?
+    /// 직전 포그라운드 복귀 시 이탈했던 시간(초). 복귀 대사 버킷 판정용. 0 = 이탈 없음.
+    private(set) var lastAwaySeconds: Int = 0
 
     init(plannedSeconds: Int = 25 * 60,
          displayName: String = "집중하는 너구리",
@@ -175,9 +177,12 @@ final class SessionManager {
     func handleForeground() {
         if let left = leftAt, session?.phase == .running {
             let away = max(0, Int(clock().timeIntervalSince(left)))
+            lastAwaySeconds = away
             let severity = Interruption.severity(awaySeconds: away)
             if severity.counts { interruptionCount += 1 }
             if severity == .distracted { distracted = true }
+        } else {
+            lastAwaySeconds = 0
         }
         leftAt = nil
         recompute()

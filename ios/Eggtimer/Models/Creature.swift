@@ -39,6 +39,8 @@ struct Creature: Identifiable, Hashable {
 
     var name: String { species.name }
     var rarity: Rarity { species.rarity }
+    /// 대사 성격(종 + 부화 시 확정 이미지 변형에서 파생).
+    var personality: CreaturePersonality { species.personality(imageName: imageName) }
 
     /// 진화 가능한 종인지(진화 이미지 보유 여부).
     var canEvolve: Bool { species.evolvedImageName != nil }
