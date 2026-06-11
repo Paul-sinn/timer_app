@@ -26,8 +26,12 @@ struct MyPageView: View {
     @State private var showReviewGallery = false
     #endif
 
-    init(user: AppSnapshot = MockData.populated) {
+    /// 실제 누적 부화 수(주입). nil이면 더미(user.creatures.count) 사용.
+    private let hatchedCount: Int?
+
+    init(user: AppSnapshot = MockData.populated, hatchedCount: Int? = nil) {
         self.user = user
+        self.hatchedCount = hatchedCount
     }
 
     var body: some View {
@@ -70,7 +74,7 @@ struct MyPageView: View {
                     Text("가입일 · 2026.05.01")
                         .font(AppFont.cardTitle)
                         .foregroundStyle(AppColor.textSecondary)
-                    Text("누적 부화 \(user.creatures.count)마리")
+                    Text("누적 부화 \(hatchedCount ?? user.creatures.count)마리")
                         .font(AppFont.cardTitle)
                         .foregroundStyle(AppColor.eggAccent)
                 }

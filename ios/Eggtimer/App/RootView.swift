@@ -37,7 +37,7 @@ struct RootView: View {
             ProgressScreen(sessions: history.sessions)
                 .tabItem { Label(RootTab.progress.title, systemImage: RootTab.progress.systemImage) }
                 .tag(RootTab.progress)
-            MyPageView()
+            MyPageView(hatchedCount: store.creatures.count)
                 .tabItem { Label(RootTab.myPage.title, systemImage: RootTab.myPage.systemImage) }
                 .tag(RootTab.myPage)
         }
