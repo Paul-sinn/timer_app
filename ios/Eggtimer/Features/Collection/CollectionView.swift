@@ -155,6 +155,8 @@ private struct RarityDots: View {
 /// 셀 탭 시 표시되는 상세 시트(이미지 · 이름 · 레어도 · 부화일 · 진화 여부).
 private struct CreatureDetailSheet: View {
     let creature: Creature
+    /// 이 개체의 성격 대사 한 줄(시트 표시 동안 고정).
+    @State private var quote: String?
 
     private var hatchedText: String {
         creature.hatchedAt.formatted(date: .abbreviated, time: .omitted)
@@ -165,6 +167,18 @@ private struct CreatureDetailSheet: View {
             AppColor.pageBackground.ignoresSafeArea()
             VStack(spacing: AppSpacing.section) {
                 CreatureImage(imageName: creature.displayImageName, rarity: creature.rarity, size: 160)
+                if let quote {
+                    Text("“\(quote)”")
+                        .font(AppFont.cardTitle)
+                        .foregroundStyle(AppColor.textBody)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal, AppSpacing.element)
+                        .padding(.vertical, 8)
+                        .background(AppColor.cardBackground)
+                        .clipShape(RoundedRectangle(cornerRadius: AppSpacing.cardCornerRadius))
+                        .overlay(RoundedRectangle(cornerRadius: AppSpacing.cardCornerRadius)
+                            .stroke(AppColor.border, lineWidth: AppSpacing.borderWidth))
+                }
                 VStack(spacing: AppSpacing.elementTight) {
                     Text(creature.name)
                         .font(AppFont.screenTitle)
@@ -190,6 +204,9 @@ private struct CreatureDetailSheet: View {
         }
         .presentationDetents([.medium])
         .preferredColorScheme(.dark)
+        .onAppear {
+            quote = DialogueCatalog.greetingLines(for: creature.personality).randomElement()?.text
+        }
     }
 }
 

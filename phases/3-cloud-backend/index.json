@@ -34,6 +34,14 @@
       "record": "step4-sync-service.md",
       "summary": "SyncModels(Codable snake_case DTO: FocusSessionRow/HatchedCreatureRow/ProfileRow ↔ 도메인) + SyncService(upsert push / select pull). 매핑 단위 테스트 6/6 통과. 라이브 동기화·UI 연결은 로그인 공급자 설정 이후.",
       "completed_at": "2026-06-11T11:27:00+0900"
+    },
+    {
+      "step": 5,
+      "name": "sync-merge-and-polish",
+      "status": "completed",
+      "record": "step5-sync-merge-polish.md",
+      "summary": "인증 대기 중 진행: SyncMerge(id 기준 양방향 합집합 머지, 순수+테스트), 앱 표시이름 Studymon, 컬렉션 상세에 생명체 성격 대사 노출. 앱 데이터 흐름 미변경(무해). push/pull 실연결·로그인 UI는 인증 후.",
+      "completed_at": "2026-06-11T12:10:00+0900"
     }
   ]
 }

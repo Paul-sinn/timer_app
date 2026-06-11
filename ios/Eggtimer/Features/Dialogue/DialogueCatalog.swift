@@ -30,6 +30,11 @@ enum DialogueCatalog {
 
     static let all: [DialogueLine] = egg + creatures
 
+    /// 특정 성격의 등장 대사 풀(컬렉션 상세 등에서 한 줄 뽑아 쓰기).
+    static func greetingLines(for personality: CreaturePersonality) -> [DialogueLine] {
+        all.filter { $0.speaker == .creature(personality) && $0.trigger == .greeting }
+    }
+
     // MARK: - 알 (의심 → 존중 → 자부심)
 
     static let egg: [DialogueLine] =
