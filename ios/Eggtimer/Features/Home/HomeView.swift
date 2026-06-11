@@ -16,6 +16,8 @@ struct HomeView: View {
     private let store: CollectionStore
     /// 부화 결과 시트로 띄울 새 생명체.
     @State private var hatchedCreature: Creature?
+    /// 부화 후 알 자리를 대체해 표시 중인 생명체(idle 상태에서만 노출).
+    @State private var hatchling: Creature?
 
     init(session: SessionManager, store: CollectionStore = CollectionStore()) {
         _session = State(initialValue: session)
@@ -45,10 +47,10 @@ struct HomeView: View {
                 focusModeChip
                 timerHeader
                     .padding(.top, AppSpacing.element)
-                EggView(stageIndex: session.stageIndex)
+                centerStage
                     .padding(.vertical, AppSpacing.section)
                 Spacer(minLength: 0)
-                progressSection
+                if !showingHatchling { progressSection }
                 controlButtons
                     .padding(.top, AppSpacing.element)
             }
@@ -59,7 +61,9 @@ struct HomeView: View {
         }
         .onChange(of: session.isCompleted) { _, completed in
             if completed && hatchedCreature == nil {
-                hatchedCreature = store.hatch()   // 목표 도달 → 확률 부화 + 컬렉션 반영
+                let born = store.hatch()          // 목표 도달 → 확률 부화 + 컬렉션 반영
+                hatchedCreature = born            // 결과 시트
+                hatchling = born                  // 알 자리를 태어난 캐릭터로 대체
             }
         }
         .onChange(of: scenePhase) { _, phase in
@@ -110,6 +114,20 @@ struct HomeView: View {
         .opacity(session.isIdle ? 1 : 0.5)
     }
 
+    // MARK: - 중앙 무대 (알 ↔ 부화한 캐릭터)
+
+    /// idle 상태에서 부화한 캐릭터를 알 자리에 표시 중인지.
+    private var showingHatchling: Bool { session.isIdle && hatchling != nil }
+
+    @ViewBuilder
+    private var centerStage: some View {
+        if showingHatchling, let hatchling {
+            HatchedCenter(creature: hatchling)
+        } else {
+            EggView(stageIndex: session.stageIndex)
+        }
+    }
+
     // MARK: - 타이머 표시
 
     private var timerHeader: some View {
@@ -118,9 +136,10 @@ struct HomeView: View {
                 .font(AppFont.timer)
                 .foregroundStyle(AppColor.textPrimary)
                 .monospacedDigit()
-            Text(session.statusText)
+                .opacity(showingHatchling ? 0.3 : 1)
+            Text(showingHatchling ? "\(hatchling?.name ?? "")이(가) 태어났어요! 🎉" : session.statusText)
                 .font(AppFont.body)
-                .foregroundStyle(AppColor.textSecondary)
+                .foregroundStyle(showingHatchling ? AppColor.eggAccent : AppColor.textSecondary)
         }
     }
 
@@ -148,7 +167,11 @@ struct HomeView: View {
         VStack(spacing: AppSpacing.elementTight) {
             switch session.phase {
             case nil:
-                PrimaryButton("시작") { session.start() }
+                if hatchling != nil {
+                    PrimaryButton("새 알 받기") { hatchling = nil }
+                } else {
+                    PrimaryButton("시작") { session.start() }
+                }
             case .running:
                 PrimaryButton("일시정지") { session.pause() }
                 DangerButton("중단") { session.stop() }
@@ -162,6 +185,37 @@ struct HomeView: View {
             }
         }
         .padding(.bottom, AppSpacing.element)
+    }
+}
+
+/// 부화 직후 알 자리를 대체해 표시되는 생명체. 알과 동일한 footprint + 등급색 글로우.
+private struct HatchedCenter: View {
+    let creature: Creature
+    var height: CGFloat = 240
+    @State private var appeared = false
+
+    var body: some View {
+        ZStack {
+            Circle()
+                .fill(
+                    RadialGradient(
+                        colors: [creature.rarity.color.opacity(0.30), .clear],
+                        center: .center, startRadius: 4, endRadius: height * 0.62
+                    )
+                )
+                .frame(width: height * 1.25, height: height * 1.25)
+
+            Image(creature.displayImageName)
+                .interpolation(.none)            // 픽셀아트 선명하게
+                .resizable()
+                .scaledToFit()
+                .frame(height: height * 0.82)
+                .scaleEffect(appeared ? 1 : 0.7)
+                .animation(.spring(response: 0.5, dampingFraction: 0.6), value: appeared)
+        }
+        .frame(height: height)
+        .onAppear { appeared = true }
+        .accessibilityLabel(Text("\(creature.rarity.label) \(creature.name)"))
     }
 }
 

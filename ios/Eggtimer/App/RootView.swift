@@ -11,12 +11,13 @@ import SwiftUI
 struct RootView: View {
     /// 현재 선택된 탭. 검수 편의를 위해 환경변수 START_TAB로 초기 탭 지정 가능.
     @State private var selection: RootTab
-    /// 탭 간 공유되는 도감 스토어(홈에서 부화 → 컬렉션에 반영).
-    @State private var store = CollectionStore()
+    /// 탭 간 공유되는 도감 스토어(홈에서 부화 → 컬렉션에 반영). App에서 영속 store 주입.
+    @State private var store: CollectionStore
     /// 집중 세션 단일 소스(타이머·성장·부화 트리거).
     @State private var session = SessionManager()
 
-    init() {
+    init(store: CollectionStore = CollectionStore()) {
+        _store = State(initialValue: store)
         Self.configureTabBarAppearance()
         let env = ProcessInfo.processInfo.environment["START_TAB"]
         _selection = State(initialValue: RootTab(envKey: env) ?? .home)
