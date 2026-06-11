@@ -19,6 +19,8 @@ struct HomeView: View {
     @State private var hatchedCreature: Creature?
     /// 부화 후 알 자리를 대체해 표시 중인 생명체(idle 상태에서만 노출).
     @State private var hatchling: Creature?
+    /// 캐릭터 말풍선 대사 선택기(Feature 4).
+    @State private var dialogue = DialogueManager()
 
     init(session: SessionManager,
          store: CollectionStore = CollectionStore(),
@@ -51,8 +53,10 @@ struct HomeView: View {
                 focusModeChip
                 timerHeader
                     .padding(.top, AppSpacing.element)
+                dialogueBubble
+                    .padding(.top, AppSpacing.elementTight)
                 centerStage
-                    .padding(.vertical, AppSpacing.section)
+                    .padding(.vertical, AppSpacing.elementTight)
                 Spacer(minLength: 0)
                 if !showingHatchling { progressSection }
                 controlButtons
@@ -68,18 +72,30 @@ struct HomeView: View {
                 let born = store.hatch()          // 목표 도달 → 확률 부화 + 컬렉션 반영
                 hatchedCreature = born            // 결과 시트
                 hatchling = born                  // 알 자리를 태어난 캐릭터로 대체
+                dialogue.fire(.sessionComplete, streak: StatsEngine.currentStreak(history.sessions))
             }
+        }
+        .onChange(of: session.isRunning) { _, running in
+            if running { dialogue.fire(.focusing) }   // 세션 시작 격려
+        }
+        .onChange(of: session.stageIndex) { _, _ in
+            if session.isRunning { dialogue.fire(.focusing) }  // 성장 단계마다(쿨다운으로 스팸 방지)
         }
         .onChange(of: scenePhase) { _, phase in
             switch phase {
-            case .active:     session.handleForeground()
-            case .background: session.handleBackground()
-            default:          break
+            case .active:
+                session.handleForeground()
+                dialogue.fire(.appReturn)
+            case .background:
+                session.handleBackground()
+            default:
+                break
             }
         }
         .onAppear {
             // 세션 종료(완료/중단) 시 이력에 기록(영속 + 통계).
             session.onSessionEnd = { history.record($0) }
+            if session.isIdle { dialogue.fire(.idle) }
         }
     }
 
@@ -134,6 +150,29 @@ struct HomeView: View {
         } else {
             EggView(stageIndex: session.stageIndex)
         }
+    }
+
+    // MARK: - 캐릭터 말풍선 (Feature 4)
+
+    @ViewBuilder
+    private var dialogueBubble: some View {
+        // 레이아웃 점프 방지를 위해 높이를 확보하고, 대사 유무로 내용만 토글.
+        ZStack {
+            if let line = dialogue.currentLine {
+                Text(line.text)
+                    .font(AppFont.cardTitle)
+                    .foregroundStyle(AppColor.textBody)
+                    .padding(.horizontal, AppSpacing.element)
+                    .padding(.vertical, 8)
+                    .background(AppColor.cardBackground)
+                    .clipShape(Capsule())
+                    .overlay(Capsule().stroke(AppColor.border, lineWidth: AppSpacing.borderWidth))
+                    .transition(.opacity.combined(with: .scale(scale: 0.9)))
+                    .id(line.id)
+            }
+        }
+        .frame(height: 36)
+        .animation(.easeInOut(duration: 0.25), value: dialogue.currentLine?.id)
     }
 
     // MARK: - 타이머 표시
