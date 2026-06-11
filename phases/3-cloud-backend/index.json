@@ -1,0 +1,15 @@
+{
+  "project": "Eggtimer",
+  "phase": "3-cloud-backend",
+  "summary": "Supabase 클라우드 백엔드 도입: 스키마/RLS → iOS SDK 연동 → 인증 → 로컬↔원격 동기화. 인증 공급자(Apple/Google) 실제 설정은 사용자 권한이라 보류, 코드 스캐폴딩까지만.",
+  "steps": [
+    {
+      "step": 1,
+      "name": "supabase-schema-rls",
+      "status": "completed",
+      "record": "step1-schema-rls.md",
+      "summary": "원격 Supabase에 profiles/focus_sessions/hatched_creatures 테이블 + 인덱스 + RLS(정책 12) + handle_new_user/set_updated_at 트리거 생성. 마이그레이션 2건 기록, security advisor 경고 0. PK는 클라 생성 UUID(idempotent 동기화 대비). iOS는 RLS 보호 하 Supabase 직접 접근(ADR-004 FastAPI는 AI 도입까지 보류).",
+      "completed_at": "2026-06-11T09:12:00+0900"
+    }
+  ]
+}
