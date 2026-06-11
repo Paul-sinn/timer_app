@@ -16,8 +16,8 @@ enum SupabaseConfig {
     static let publishableKey = "sb_publishable_pMgHElqXKGInvytE53OJ7A_nXdKMXiO"
 }
 
-/// 앱 전역에서 공유하는 SupabaseClient 래퍼.
-final class SupabaseService {
+/// 앱 전역에서 공유하는 SupabaseClient 래퍼. 네트워크 레이어이므로 MainActor에 묶지 않는다(nonisolated).
+nonisolated final class SupabaseService {
     static let shared = SupabaseService()
 
     let client: SupabaseClient

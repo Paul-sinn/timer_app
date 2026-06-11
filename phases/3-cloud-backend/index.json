@@ -18,6 +18,22 @@
       "record": "step2-ios-sdk.md",
       "summary": "supabase-swift 2.47.0 SPM 의존성을 pbxproj 수동 편집으로 추가(+Package.resolved 핀). Services/SupabaseService.swift에 SupabaseClient 단일 진입점 + publishable 키 설정. iOS 시뮬레이터 빌드 성공.",
       "completed_at": "2026-06-11T11:22:00+0900"
+    },
+    {
+      "step": 3,
+      "name": "auth-service",
+      "status": "completed",
+      "record": "step3-auth-service.md",
+      "summary": "AuthService(@Observable @MainActor): authStateChanges 구독으로 currentUserID 노출 + signInWithIdToken(Apple/Google OIDC) + signOut. SupabaseService nonisolated화. 실제 공급자 설정/로그인 UI/게이트는 사용자 권한이라 보류.",
+      "completed_at": "2026-06-11T11:25:00+0900"
+    },
+    {
+      "step": 4,
+      "name": "sync-service",
+      "status": "completed",
+      "record": "step4-sync-service.md",
+      "summary": "SyncModels(Codable snake_case DTO: FocusSessionRow/HatchedCreatureRow/ProfileRow ↔ 도메인) + SyncService(upsert push / select pull). 매핑 단위 테스트 6/6 통과. 라이브 동기화·UI 연결은 로그인 공급자 설정 이후.",
+      "completed_at": "2026-06-11T11:27:00+0900"
     }
   ]
 }
