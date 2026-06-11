@@ -6,6 +6,10 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		BB0000000000000000000003 /* Supabase in Frameworks */ = {isa = PBXBuildFile; productRef = BB0000000000000000000002 /* Supabase */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXContainerItemProxy section */
 		A0EFC7EF2FD8A49C0018DC5C /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -52,6 +56,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				BB0000000000000000000003 /* Supabase in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -112,6 +117,7 @@
 			);
 			name = Eggtimer;
 			packageProductDependencies = (
+				BB0000000000000000000002 /* Supabase */,
 			);
 			productName = Eggtimer;
 			productReference = A0EFC7DF2FD8A49A0018DC5C /* Eggtimer.app */;
@@ -195,6 +201,9 @@
 			);
 			mainGroup = A0EFC7D62FD8A49A0018DC5C;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				BB0000000000000000000001 /* XCRemoteSwiftPackageReference "supabase-swift" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = A0EFC7E02FD8A49A0018DC5C /* Products */;
 			projectDirPath = "";
@@ -605,6 +614,25 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		BB0000000000000000000001 /* XCRemoteSwiftPackageReference "supabase-swift" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/supabase/supabase-swift.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 2.0.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		BB0000000000000000000002 /* Supabase */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = BB0000000000000000000001 /* XCRemoteSwiftPackageReference "supabase-swift" */;
+			productName = Supabase;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = A0EFC7D72FD8A49A0018DC5C /* Project object */;
 }

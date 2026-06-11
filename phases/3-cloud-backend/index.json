@@ -10,6 +10,14 @@
       "record": "step1-schema-rls.md",
       "summary": "원격 Supabase에 profiles/focus_sessions/hatched_creatures 테이블 + 인덱스 + RLS(정책 12) + handle_new_user/set_updated_at 트리거 생성. 마이그레이션 2건 기록, security advisor 경고 0. PK는 클라 생성 UUID(idempotent 동기화 대비). iOS는 RLS 보호 하 Supabase 직접 접근(ADR-004 FastAPI는 AI 도입까지 보류).",
       "completed_at": "2026-06-11T09:12:00+0900"
+    },
+    {
+      "step": 2,
+      "name": "ios-supabase-sdk",
+      "status": "completed",
+      "record": "step2-ios-sdk.md",
+      "summary": "supabase-swift 2.47.0 SPM 의존성을 pbxproj 수동 편집으로 추가(+Package.resolved 핀). Services/SupabaseService.swift에 SupabaseClient 단일 진입점 + publishable 키 설정. iOS 시뮬레이터 빌드 성공.",
+      "completed_at": "2026-06-11T11:22:00+0900"
     }
   ]
 }
