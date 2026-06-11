@@ -20,16 +20,10 @@ struct ReviewGalleryView: View {
             List {
                 Section("Home") {
                     GalleryLink(title: "초기 상태") {
-                        HomeView(viewModel: HomeViewModel(
-                            displayName: MockData.populated.displayName,
-                            egg: EggState(targetMinutes: 60, focusedMinutes: 0)
-                        ))
+                        HomeView(session: .preview(progress: 0))
                     }
                     GalleryLink(title: "부화 임박 상태") {
-                        HomeView(viewModel: HomeViewModel(
-                            displayName: MockData.populated.displayName,
-                            egg: EggState(targetMinutes: 60, focusedMinutes: 58)
-                        ))
+                        HomeView(session: .preview(progress: 0.95))
                     }
                 }
 

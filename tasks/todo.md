@@ -1,50 +1,29 @@
-# 컬렉션 도감 + 확률 부화 + 진화
+# Phase 2-1 — 집중 세션 코어
 
 ## 목표
-- images/charactor 동물들로 컬렉션 채우기
-- 미발견 종은 검은 실루엣 + 가운데 "?" (픽셀 톤)
-- 확률표대로 가중 랜덤 부화 (합 100%)
-- 빨간 토종닭은 여러 표정 중 랜덤
-- 백호·피닉스는 20분 뒤 진화
-
-## 확률표
-| 등급 | 생명체 | 확률 |
-|---|---|---|
-| Common | 빨간 토종닭 | 55% |
-| Common | 슬라임 | 25% |
-| Uncommon | 아기 공룡 | 10% |
-| Rare | 검은 고양이 | 5% |
-| Rare | 황금 병아리 | 3% |
-| Legendary | 백호 | 1% |
-| Legendary | 피닉스 | 1% |
+홈 화면이 실제로 동작: 실제 카운트다운 → 시간 기반 알 성장 → 목표 도달 시 확률 부화 → 컬렉션 반영. + 화면 꺼짐 방지.
 
 ## 작업
-- [x] 배경 제거 스크립트(scripts/make_creature_assets.py) — 14개 PNG → 투명 trim 에셋
-- [x] Rarity: epic→uncommon 재정의(Common/Uncommon/Rare/Legendary), 색/점/정렬
-- [x] CreatureSpecies(신규): 7종 카탈로그 + 가중 랜덤 roll() + 변형 풀 + 진화 이미지
-- [x] Creature: species 기반 + 진화(20분) + hatch 팩토리
-- [x] CreatureImage: 실제 픽셀 에셋 렌더 + 실루엣 모드(검은 윤곽 + "?")
-- [x] CollectionView: 전체 7종 나열, 발견/미발견(실루엣) n/7
-- [x] CollectionStore(신규): 탭 공유 도감, hatch() 추가
-- [x] HomeView: 알 탭 → 부화 → HatchResultSheet, 스토어 연결
-- [x] RootView: 공유 스토어 주입(홈 부화 → 컬렉션 반영)
-- [x] 테스트: 가중치 합/분포/진화/변형 (CreatureSpeciesTests)
+- [x] `FocusSessionState.swift` — SessionPhase + ActiveSession(타임스탬프 계산, 캡)
+- [x] `ScreenAwake.swift` — 세션 중 idleTimer off, @AppStorage 설정 연동
+- [x] `SessionManager.swift` — 상태머신/틱/재계산/경량 복구(UserDefaults)
+- [x] `HomeView` — 집중시간 메뉴 + 단계별 컨트롤 + 완료 시 자동 부화 + scenePhase 연동
+- [x] `HomeViewModel` 제거, RootView/ReviewGallery/프리뷰 갱신
+- [x] MyPage — "화면 꺼짐 방지" 토글(@AppStorage)
 - [x] 빌드 성공
-- [x] 테스트 통과 (8/8, 분포 20만 회 검증 포함)
-- [x] 시뮬레이터 검수: 컬렉션 5/7 + 실루엣 + 백호 진화 / 홈 알 렌더
+- [x] `SessionManagerTests` — 주입 시계로 시작/일시정지/재개/완료/복구/단계 검증
+- [x] 테스트 통과 (16/16) — `plannedSeconds` didSet 무한재귀(SIGSEGV) 버그 수정 후
+- [ ] 시뮬레이터 육안 검증(idle/start/완료 부화)
+- [ ] 커밋
 
-## 에셋 매핑
-- 닭(Common, 랜덤 6종): Chicken1, ChickenAngry, ChickenAnnoyed, ChickenBro, ChickenSleepy, ChickenSmart
-- Slime / Dino / BlackCat / GoldChick
-- WhiteTiger → WhiteTigerEvolved (진화)
-- Phoenix → PhoenixEvolved (진화)
+## 디버깅 기록
+- 증상: 시뮬레이터가 "Eggtimer 종료됨" 반복 + 테스트가 0.000초 동반 실패.
+- 원인: `var plannedSeconds { didSet { ... plannedSeconds = oldValue } }` 자기대입 → 무한재귀 → 스택오버플로 SIGSEGV. 호스트 앱(테스트 러너) 크래시가 병렬 테스트까지 전부 죽임.
+- 해결: 백킹 스토어(`_plannedSeconds`) + computed 세터(idle일 때만 반영).
 
-## 리뷰
-- 시뮬레이터 컬렉션 탭: "발견한 친구들 5/7", 발견 5종 픽셀 카드, 미발견 2종(황금 병아리·피닉스)은 검은 실루엣 + 가운데 "?". 백호는 골드 테두리 + 진화 이미지로 표시됨.
-- 확률 로직은 CreatureSpecies.roll()에 집약(단일 진실 소스). 가중치 합 100 검증, 20만 회 분포 테스트 통과.
-- 빨간 토종닭은 6종 표정 풀에서 랜덤(부화 시점 고정). 백호·피닉스만 20분 뒤 진화.
-- 부화 트리거는 Phase 0 더미라 "알 탭"으로 시험(주석에 Phase 2 자동 호출 명시). 부화 → CollectionStore에 추가 → 컬렉션 반영.
+## 스코핑
+- 영속화는 활성 세션 1건만 UserDefaults 경량 복구. 전체 SwiftData 이력은 2-2.
+- 검수용 DEBUG 10초 세션 옵션 제공.
 
-## 후속(미포함)
-- 실제 타이머 완료 시 자동 부화(Phase 2) 연결
-- 영속화(SwiftData) — 현재는 앱 재시작 시 컬렉션 초기화
+## 메모
+- 테스트 러너가 EggtimerUITests의 swiftStdLibTool(CopySwiftLibs) 단계에서 간헐적 행 → 시뮬레이터 재부팅 후 재시도.

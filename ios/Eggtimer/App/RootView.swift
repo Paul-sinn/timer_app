@@ -13,6 +13,8 @@ struct RootView: View {
     @State private var selection: RootTab
     /// 탭 간 공유되는 도감 스토어(홈에서 부화 → 컬렉션에 반영).
     @State private var store = CollectionStore()
+    /// 집중 세션 단일 소스(타이머·성장·부화 트리거).
+    @State private var session = SessionManager()
 
     init() {
         Self.configureTabBarAppearance()
@@ -22,7 +24,7 @@ struct RootView: View {
 
     var body: some View {
         TabView(selection: $selection) {
-            HomeView(store: store)
+            HomeView(session: session, store: store)
                 .tabItem { Label(RootTab.home.title, systemImage: RootTab.home.systemImage) }
                 .tag(RootTab.home)
             CollectionView(creatures: store.creatures)

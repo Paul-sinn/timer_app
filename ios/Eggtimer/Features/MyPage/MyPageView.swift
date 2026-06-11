@@ -18,6 +18,8 @@ struct MyPageView: View {
     // 설정 토글은 로컬 상태만(영속/시스템 연동 없음).
     @State private var notificationsOn = true
     @State private var soundOn = true
+    /// 화면 꺼짐 방지(Feature 7). 세션 중 ScreenAwake가 이 값을 참조한다.
+    @AppStorage(ScreenAwake.settingKey) private var keepScreenAwake = true
 
     #if DEBUG
     /// 화면 검수 갤러리(개발 전용) 표시 여부.
@@ -111,6 +113,8 @@ struct MyPageView: View {
                     SettingToggleRow(title: "알림", systemImage: "bell", isOn: $notificationsOn)
                     SettingDivider()
                     SettingToggleRow(title: "사운드", systemImage: "speaker.wave.2", isOn: $soundOn)
+                    SettingDivider()
+                    SettingToggleRow(title: "화면 꺼짐 방지", systemImage: "sun.max", isOn: $keepScreenAwake)
                     SettingDivider()
                     SettingInfoRow(title: "다크모드", systemImage: "moon", value: "고정")
                     SettingDivider()
