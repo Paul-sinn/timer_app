@@ -2,15 +2,19 @@
 
 내(Claude) 권한 밖이라 코드 스캐폴딩만 해둔 항목들. 아래를 마치면 로그인·동기화가 실제로 동작한다.
 
-## 1. Supabase 대시보드 — Auth 공급자 설정
-프로젝트: `qvaqiuabsplcwfedoklu`
-- **Apple**: Authentication → Providers → Apple 활성화. Services ID / Team ID / Key ID / Private Key(.p8) 입력.
-- **Google**: Authentication → Providers → Google 활성화. Google Cloud OAuth Client ID/Secret 입력.
-- (선택) Redirect URL / Authorized Client IDs에 iOS 번들 `com.paulsin.Eggtimer` 관련 값 등록.
+번들 ID: `com.paulsin.studymon` / Supabase 프로젝트: `qvaqiuabsplcwfedoklu`
+콜백 URL: `https://qvaqiuabsplcwfedoklu.supabase.co/auth/v1/callback`
 
-## 2. Apple Developer — Sign in with Apple
-- App ID(`com.paulsin.Eggtimer`)에 **Sign in with Apple** capability 추가.
-- Xcode 타겟 Signing & Capabilities에 **Sign in with Apple** 추가(엔타이틀먼트 생성).
+## 1. Google 로그인  ✅ (완료)
+- Google Cloud에 **iOS 클라이언트**(secret 없음 — 정상) + **웹 애플리케이션 클라이언트**(ID+secret) 생성.
+- Supabase Google provider: Client ID/Secret = 웹 값, **Authorized Client IDs = 웹 ID + iOS ID**(쉼표), iOS는 **Skip nonce check 켜기**.
+- 웹 클라이언트 승인 리디렉션 URI에 위 콜백 URL 등록.
+
+## 2. Apple 로그인 (네이티브 전용 — OAuth 설정 불필요!)
+> Supabase 문서: "네이티브 앱만 만들면 OAuth 설정(Services ID/Team ID/.p8 등)은 필요 없다."
+- **Apple Developer**: App ID `com.paulsin.studymon`에 **Sign in with Apple** capability 체크(S2S notification endpoint는 비움).
+- **Supabase Apple provider**: 활성화 → **Client IDs 칸에 `com.paulsin.studymon`만** 입력. Secret Key/Services ID/Team ID 칸은 **비워둠**.
+- **Xcode**: 타겟 Signing & Capabilities에 **Sign in with Apple** 추가(엔타이틀먼트) — 로그인 UI 붙일 때 내가 처리.
 
 ## 3. (macOS 빌드 시) 네트워크 엔타이틀먼트
 - macOS/Catalyst 빌드에서 `com.apple.security.network.client` 필요(iOS는 기본 허용). 지금은 iOS 우선이라 보류.
