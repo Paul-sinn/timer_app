@@ -2,7 +2,7 @@
 
 내(Claude) 권한 밖이라 코드 스캐폴딩만 해둔 항목들. 아래를 마치면 로그인·동기화가 실제로 동작한다.
 
-번들 ID: `com.paulsin.studymon` / Supabase 프로젝트: `qvaqiuabsplcwfedoklu`
+번들 ID: `com.paulsin.hatchly` / Supabase 프로젝트: `qvaqiuabsplcwfedoklu`
 콜백 URL: `https://qvaqiuabsplcwfedoklu.supabase.co/auth/v1/callback`
 
 ## 1. Google 로그인  ✅ (완료)
@@ -12,8 +12,8 @@
 
 ## 2. Apple 로그인 (네이티브 전용 — OAuth 설정 불필요!)
 > Supabase 문서: "네이티브 앱만 만들면 OAuth 설정(Services ID/Team ID/.p8 등)은 필요 없다."
-- **Apple Developer**: App ID `com.paulsin.studymon`에 **Sign in with Apple** capability 체크(S2S notification endpoint는 비움).
-- **Supabase Apple provider**: 활성화 → **Client IDs 칸에 `com.paulsin.studymon`만** 입력. Secret Key/Services ID/Team ID 칸은 **비워둠**.
+- **Apple Developer**: App ID `com.paulsin.hatchly`에 **Sign in with Apple** capability 체크(S2S notification endpoint는 비움).
+- **Supabase Apple provider**: 활성화 → **Client IDs 칸에 `com.paulsin.hatchly`만** 입력. Secret Key/Services ID/Team ID 칸은 **비워둠**.
 - **Xcode**: 타겟 Signing & Capabilities에 **Sign in with Apple** 추가(엔타이틀먼트) — 로그인 UI 붙일 때 내가 처리.
 
 ## 3. (macOS 빌드 시) 네트워크 엔타이틀먼트
