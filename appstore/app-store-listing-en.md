@@ -1,21 +1,17 @@
-# Hatchly — App Store Listing (English)
+# Hatcho — App Store Listing (English)
 
 > Copy-paste each block into App Store Connect. Character limits noted per field.
 
 ---
 
-## App Name (max 30 chars)
-
-> ⚠️ Apple blocks special characters in App Name: @ & * " — use plain words only.
+## App Name (max 30 chars) — REGISTERED
 
 ```
-Hatchly: Focus and Collect
+Hatcho
 ```
 
-> 27 chars. Alt options if taken:
-> - `Hatchly - Focus Timer` (22)
-> - `Hatchly: Study Timer` (21)
-> - `Hatchly Focus Timer` (20)
+> Clean one-word brand name. The tagline lives in the Subtitle below.
+> Bundle ID stays `com.paulsin.hatchly` (internal, never shown to users).
 
 ---
 
@@ -42,11 +38,11 @@ The more you focus, the more monsters you collect. Run a study or work timer, an
 ## Description (max 4000 chars — requires app review to change)
 
 ```
-🥚 The focus timer that rewards you — Hatchly
+🥚 The focus timer that rewards you — Hatcho
 
 Struggling to stay focused? Tired of plain timers that feel like a chore?
 
-Hatchly turns your focus into a reward. Set a timer, dive into your study or work session, and every time you make it to the end, you hatch and collect an adorable monster. Focus becomes something you actually look forward to.
+Hatcho turns your focus into a reward. Set a timer, dive into your study or work session, and every time you make it to the end, you hatch and collect an adorable monster. Focus becomes something you actually look forward to.
 
 Focus → Reward → Focus again.
 Every minute you concentrate becomes part of your own growing collection.
@@ -88,7 +84,7 @@ focus,study,timer,pomodoro,monster,collect,habit,productivity,deep work,concentr
 ## What's New (for v1.0 launch)
 
 ```
-Welcome to Hatchly! Start a focus session, finish it, and collect your first monster. Build a focus habit that actually feels rewarding.
+Welcome to Hatcho! Start a focus session, finish it, and collect your first monster. Build a focus habit that actually feels rewarding.
 ```
 
 ---
