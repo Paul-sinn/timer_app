@@ -51,3 +51,13 @@ npm run test     # 테스트
   - 증상: AuthService(`@Observable @MainActor`)에서 `deinit { observationTask?.cancel() }`가 "main actor-isolated property can not be referenced from a nonisolated context"로 빌드 실패.
   - 원인: 프로젝트가 `SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor`라 타입이 기본 MainActor 격리되는데, deinit은 nonisolated → 격리 저장 프로퍼티 접근 불가.
   - 교훈: 격리 클래스 deinit에서 격리 상태 만지지 말 것. 무한 AsyncStream 구독은 **루프 안에서 self를 약참조**(`guard let self else { break }`)해 self 해제 시 자연 종료시키면 task 저장·deinit 취소가 불필요. 네트워크/데이터 레이어 타입은 `nonisolated`로 선언해 MainActor 격리 전파를 끊는다(기본격리 경고도 해소).
+
+- **2026-06-12 · 명시적 `@MainActor` 클래스를 init 기본인자로 생성 → 컴파일 에러**
+  - 증상: `init(auth: AuthService = AuthService())`가 "call to main actor-isolated initializer in a synchronous nonisolated context"로 실패. 단, `EggtimerApp.init`(MainActor) 안에서 직접 `AuthService()` 생성은 정상.
+  - 원인: 기본인자 식은 호출부의 nonisolated 맥락에서 평가됨. 명시적 `@MainActor` 타입의 init은 MainActor 격리라 기본인자 위치에서 호출 불가. (추론 MainActor인 `CollectionStore()`는 통과 — 비대칭)
+  - 교훈: 명시적 `@MainActor` 의존성은 init 기본인자로 두지 말 것. 필수 파라미터로 받고, 프리뷰/검수 호출부(SwiftUI `#Preview`·View body = MainActor)에서 명시적으로 주입.
+
+- **2026-06-12 · UITest "Simulator device failed to launch" → 코드 크래시로 오인 금지**
+  - 증상: `xcodebuild test`가 앱 런치 실패를 반복 재시도하며 묶임. 동시에 `MobileCal`/`WidgetRenderer` .ips 크래시 리포트 발생.
+  - 원인: 시뮬레이터 launchd 불안정(테스트 호스트 런치). MobileCal/WidgetRenderer는 **시스템 앱**이라 우리 앱과 무관. 우리 앱(Eggtimer/hatchly) .ips는 없음 = 코드 크래시 아님.
+  - 교훈: 런치 실패 시 우리 번들 .ips 유무로 코드 크래시/환경 문제 구분. 검증은 `simctl install + launch`로 직접 런치(살아있으면 정상) + `-only-testing:EggtimerTests`로 UITest 제외하고 순수 로직만 확인.
