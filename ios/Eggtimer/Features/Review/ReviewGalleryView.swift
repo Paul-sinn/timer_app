@@ -47,7 +47,7 @@ struct ReviewGalleryView: View {
 
                 Section("MyPage") {
                     GalleryLink(title: "로그인 전(더미 유저)") {
-                        MyPageView(user: MockData.populated)
+                        MyPageView(user: MockData.populated, auth: AuthService())
                     }
                 }
             }

@@ -15,6 +15,8 @@ struct HomeView: View {
     @State private var session: SessionManager
     private let store: CollectionStore
     private let history: FocusHistoryStore
+    /// 로그인 시 부화·세션종료를 원격에 동기화(비로그인 시 무시).
+    private let sync: SyncCoordinator?
     /// 부화 결과 시트로 띄울 새 생명체.
     @State private var hatchedCreature: Creature?
     /// 부화 후 알 자리를 대체해 표시 중인 생명체(idle 상태에서만 노출).
@@ -33,10 +35,12 @@ struct HomeView: View {
 
     init(session: SessionManager,
          store: CollectionStore = CollectionStore(),
-         history: FocusHistoryStore = FocusHistoryStore()) {
+         history: FocusHistoryStore = FocusHistoryStore(),
+         sync: SyncCoordinator? = nil) {
         _session = State(initialValue: session)
         self.store = store
         self.history = history
+        self.sync = sync
     }
 
     /// 집중 시간 선택지(초). DEBUG에서는 빠른 검수용 10초 포함.
@@ -79,6 +83,7 @@ struct HomeView: View {
         .onChange(of: session.isCompleted) { _, completed in
             if completed && hatchedCreature == nil {
                 let born = store.hatch()          // 목표 도달 → 확률 부화 + 컬렉션 반영
+                sync?.pushNewCreature(born)       // 로그인 시 원격 동기화
                 hatchedCreature = born            // 결과 시트
                 hatchling = born                  // 알 자리를 태어난 캐릭터로 대체
                 // 태어난 생명체가 자기 성격대로 인사한다.
@@ -119,8 +124,11 @@ struct HomeView: View {
             }
         }
         .onAppear {
-            // 세션 종료(완료/중단) 시 이력에 기록(영속 + 통계).
-            session.onSessionEnd = { history.record($0) }
+            // 세션 종료(완료/중단) 시 이력에 기록(영속 + 통계) + 로그인 시 원격 동기화.
+            session.onSessionEnd = { result in
+                history.record(result)
+                sync?.pushNewSession(result)
+            }
             if session.isIdle { dialogue.fire(.idle) }
         }
     }
@@ -253,7 +261,11 @@ struct HomeView: View {
                 DangerButton("중단") { session.stop() }
             case .completed:
                 PrimaryButton("부화 확인") {
-                    if hatchedCreature == nil { hatchedCreature = store.hatch() }
+                    if hatchedCreature == nil {
+                        let born = store.hatch()
+                        sync?.pushNewCreature(born)   // 로그인 시 원격 동기화
+                        hatchedCreature = born
+                    }
                 }
             }
         }

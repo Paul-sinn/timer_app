@@ -1,34 +1,42 @@
 # Phase 3 — 사용자(폴)가 직접 해야 하는 작업
 
-내(Claude) 권한 밖이라 코드 스캐폴딩만 해둔 항목들. 아래를 마치면 로그인·동기화가 실제로 동작한다.
-
-번들 ID: `com.paulsin.hatchly` / Supabase 프로젝트: `qvaqiuabsplcwfedoklu`
+번들 ID: `com.paulsin.hatchly` / 앱 표시명: **Hatcho** / Supabase 프로젝트: `qvaqiuabsplcwfedoklu`
 콜백 URL: `https://qvaqiuabsplcwfedoklu.supabase.co/auth/v1/callback`
 
-## 1. Google 로그인  ✅ (완료)
-- Google Cloud에 **iOS 클라이언트**(secret 없음 — 정상) + **웹 애플리케이션 클라이언트**(ID+secret) 생성.
-- Supabase Google provider: Client ID/Secret = 웹 값, **Authorized Client IDs = 웹 ID + iOS ID**(쉼표), iOS는 **Skip nonce check 켜기**.
-- 웹 클라이언트 승인 리디렉션 URI에 위 콜백 URL 등록.
-
-## 2. Apple 로그인 (네이티브 전용 — OAuth 설정 불필요!)
-> Supabase 문서: "네이티브 앱만 만들면 OAuth 설정(Services ID/Team ID/.p8 등)은 필요 없다."
-- **Apple Developer**: App ID `com.paulsin.hatchly`에 **Sign in with Apple** capability 체크(S2S notification endpoint는 비움).
-- **Supabase Apple provider**: 활성화 → **Client IDs 칸에 `com.paulsin.hatchly`만** 입력. Secret Key/Services ID/Team ID 칸은 **비워둠**.
-- **Xcode**: 타겟 Signing & Capabilities에 **Sign in with Apple** 추가(엔타이틀먼트) — 로그인 UI 붙일 때 내가 처리.
-
-## 3. (macOS 빌드 시) 네트워크 엔타이틀먼트
-- macOS/Catalyst 빌드에서 `com.apple.security.network.client` 필요(iOS는 기본 허용). 지금은 iOS 우선이라 보류.
+로그인 UI·자동 동기화·계정삭제는 **코드 구현 완료**. 아래 사용자 직접 항목만 마치면 실제 동작 + 심사 제출 가능.
 
 ---
 
-## 위가 끝나면 내가 이어서 할 일 (말해주면 진행)
-- 로그인 UI: `SignInWithAppleButton`(+nonce) / Google 버튼 → `AuthService.signIn(provider:idToken:nonce:)` 연결.
-- RootView 로그인 게이트(비로그인 시 로그인 화면) — 현재는 앱 사용성 위해 미적용.
-- 자동 동기화 연결: 부화/세션 종료 시 `SyncService.push*`, 로그인 시 `fetch*`→로컬 머지(`currentUserID != nil`일 때만).
-- 라이브 push/pull을 실기기/시뮬레이터에서 RLS와 함께 검증.
+## 🔴 남은 사용자 직접 작업 (심사 전 필수)
 
-## 이미 완료(내가 한 것)
-- ✅ 원격 스키마 + RLS + 트리거 (마이그레이션 2건, `supabase/migrations/`)
-- ✅ supabase-swift SDK 연동 + `SupabaseService`(URL/publishable 키)
-- ✅ `AuthService`(세션 상태) + `SyncService`/DTO(매핑 테스트 6/6)
-- ✅ 빌드/테스트 통과, 커밋·푸시 완료
+### 1. Google 로그인 활성화 (선택 — Apple만으로도 출시 가능)
+Google 버튼은 SDK가 추가될 때만 자동으로 나타난다(`#if canImport(GoogleSignIn)`). 켜려면:
+- **Xcode에 SDK 추가**: File ▸ Add Package Dependencies ▸ `https://github.com/google/GoogleSignIn-iOS` → `GoogleSignIn` + `GoogleSignInSwift` 추가.
+- **iOS 클라이언트 ID 입력**: `ios/Eggtimer/Services/GoogleAuth.swift`의 `iosClientID` 상수를 Google Cloud의 **iOS** 클라이언트 ID로 교체.
+- **URL scheme 등록**: 타겟 Info ▸ URL Types에 iOS 클라이언트 ID의 **reversed** 형태 추가
+  (예: `com.googleusercontent.apps.1234-abcd`). 이게 있어야 로그인 콜백이 앱으로 복귀.
+- (Supabase Google provider 백엔드 설정은 이미 ✅ 완료.)
+> Google을 첫 출시에서 빼려면: SDK를 추가하지 않으면 됨(Apple만 노출, 빌드 정상).
+
+### 2. Apple 로그인 (네이티브 — OAuth 설정 불필요)
+- **Apple Developer**: App ID `com.paulsin.hatchly`에 **Sign in with Apple** capability 체크. ✅(완료했으면 OK)
+- **Supabase Apple provider**: 활성화 + Client IDs = `com.paulsin.hatchly`. ✅
+- **Xcode**: 타겟 Signing & Capabilities에 **Sign in with Apple** 추가(엔타이틀먼트). ← 아직이면 추가.
+
+### 3. App Store Connect 메타데이터 (제출 필수)
+- **Privacy Policy URL**, **Support URL** (필수 입력 — 없으면 제출 불가).
+- 스크린샷(타이머 + 컬렉션 화면), 앱 아이콘(1024², 알파 없음).
+- 카테고리: Productivity(주) / Education(부). 설명문구는 `appstore/app-store-listing-en.md`.
+
+---
+
+## ✅ 코드 구현 완료 (Claude)
+- 원격 스키마 + RLS + 트리거, supabase-swift SDK, `SupabaseService`/`AuthService`/`SyncService`/`SyncMerge`.
+- **로그인 UI**: Apple(`SignInWithAppleButton`+nonce) / Google(canImport 게이트) → `AuthService`. (MyPageView)
+- **선택형 로그인**(게이트 없음) — 비로그인도 전 기능 사용, 로그인 시 동기화 ON.
+- **자동 동기화**: 부화·세션종료 시 push, 로그인 시 양방향 합집합 머지(`SyncCoordinator`).
+- **계정 삭제**: Supabase Edge Function `delete-account`(service_role, cascade) 배포 완료 + 앱 내 삭제 버튼.
+- 앱 표시명 Hatcho, 버전 1.0, 빌드 성공.
+
+## (참고) macOS/Catalyst 빌드 시
+- `com.apple.security.network.client` 엔타이틀먼트 필요(iOS는 기본 허용). iOS 우선이라 보류.

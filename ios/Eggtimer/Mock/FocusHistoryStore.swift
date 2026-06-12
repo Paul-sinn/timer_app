@@ -38,4 +38,17 @@ final class FocusHistoryStore {
             try? context.save()
         }
     }
+
+    /// 원격(Supabase)에서 풀한 세션 이력을 로컬에 병합한다(동기화). 이미 가진 id는 건너뛴다(idempotent).
+    func insertFromRemote(_ incoming: [FocusSessionResult]) {
+        let existing = Set(sessions.map(\.id))
+        let fresh = incoming.filter { !existing.contains($0.id) }
+        guard !fresh.isEmpty else { return }
+        for result in fresh {
+            sessions.append(result)
+            context?.insert(FocusSessionRecord(from: result))
+        }
+        sessions.sort { $0.startedAt > $1.startedAt }
+        try? context?.save()
+    }
 }

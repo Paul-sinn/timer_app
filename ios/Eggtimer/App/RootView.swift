@@ -17,10 +17,19 @@ struct RootView: View {
     @State private var session = SessionManager()
     /// 끝난 세션 이력 스토어(통계 원자료). App에서 영속 주입.
     @State private var history: FocusHistoryStore
+    /// 로그인 세션 상태(마이페이지 로그인 UI).
+    @State private var auth: AuthService
+    /// 로그인↔로컬 동기화(부화·세션종료 push, 로그인 머지).
+    @State private var sync: SyncCoordinator
 
-    init(store: CollectionStore = CollectionStore(), history: FocusHistoryStore = FocusHistoryStore()) {
+    init(store: CollectionStore = CollectionStore(),
+         history: FocusHistoryStore = FocusHistoryStore(),
+         auth: AuthService,
+         sync: SyncCoordinator? = nil) {
         _store = State(initialValue: store)
         _history = State(initialValue: history)
+        _auth = State(initialValue: auth)
+        _sync = State(initialValue: sync ?? SyncCoordinator(auth: auth, store: store, history: history))
         Self.configureTabBarAppearance()
         let env = ProcessInfo.processInfo.environment["START_TAB"]
         _selection = State(initialValue: RootTab(envKey: env) ?? .home)
@@ -28,7 +37,7 @@ struct RootView: View {
 
     var body: some View {
         TabView(selection: $selection) {
-            HomeView(session: session, store: store, history: history)
+            HomeView(session: session, store: store, history: history, sync: sync)
                 .tabItem { Label(RootTab.home.title, systemImage: RootTab.home.systemImage) }
                 .tag(RootTab.home)
             CollectionView(creatures: store.creatures)
@@ -37,7 +46,7 @@ struct RootView: View {
             ProgressScreen(sessions: history.sessions)
                 .tabItem { Label(RootTab.progress.title, systemImage: RootTab.progress.systemImage) }
                 .tag(RootTab.progress)
-            MyPageView(hatchedCount: store.creatures.count)
+            MyPageView(hatchedCount: store.creatures.count, auth: auth, sync: sync)
                 .tabItem { Label(RootTab.myPage.title, systemImage: RootTab.myPage.systemImage) }
                 .tag(RootTab.myPage)
         }
@@ -55,6 +64,6 @@ struct RootView: View {
 }
 
 #Preview {
-    RootView()
+    RootView(auth: AuthService())
         .preferredColorScheme(.dark)
 }

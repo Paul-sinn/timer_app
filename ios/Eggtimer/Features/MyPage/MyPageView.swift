@@ -10,16 +10,31 @@
 //
 
 import SwiftUI
+import AuthenticationServices
 
 struct MyPageView: View {
     /// 프로필/통계에 쓰는 더미 유저 상태. 외부 주입(기본값 = populated)으로 검수 가능.
     private let user: AppSnapshot
+
+    /// 로그인 세션 상태(@Observable — body에서 접근 시 변화 추적).
+    private let auth: AuthService
+    /// 로그인↔로컬 동기화. nil이면 프리뷰(동기화 없음).
+    private let sync: SyncCoordinator?
 
     // 설정 토글은 로컬 상태만(영속/시스템 연동 없음).
     @State private var notificationsOn = true
     @State private var soundOn = true
     /// 화면 꺼짐 방지(Feature 7). 세션 중 ScreenAwake가 이 값을 참조한다.
     @AppStorage(ScreenAwake.settingKey) private var keepScreenAwake = true
+
+    /// Sign in with Apple 요청에 실은 원본 nonce(콜백에서 Supabase 검증에 재사용).
+    @State private var appleNonce: String?
+    /// 로그인/삭제 진행 중 표시.
+    @State private var isWorking = false
+    /// 에러 알림 문구(nil = 미표시).
+    @State private var errorMessage: String?
+    /// 계정 삭제 확인 알림 표시.
+    @State private var showDeleteConfirm = false
 
     #if DEBUG
     /// 화면 검수 갤러리(개발 전용) 표시 여부.
@@ -29,9 +44,14 @@ struct MyPageView: View {
     /// 실제 누적 부화 수(주입). nil이면 더미(user.creatures.count) 사용.
     private let hatchedCount: Int?
 
-    init(user: AppSnapshot = MockData.populated, hatchedCount: Int? = nil) {
+    init(user: AppSnapshot = MockData.populated,
+         hatchedCount: Int? = nil,
+         auth: AuthService,
+         sync: SyncCoordinator? = nil) {
         self.user = user
         self.hatchedCount = hatchedCount
+        self.auth = auth
+        self.sync = sync
     }
 
     var body: some View {
@@ -54,6 +74,20 @@ struct MyPageView: View {
                 .padding(.horizontal, AppSpacing.section)
                 .padding(.vertical, AppSpacing.section)
             }
+        }
+        .alert("문제가 발생했어요", isPresented: Binding(
+            get: { errorMessage != nil },
+            set: { if !$0 { errorMessage = nil } }
+        )) {
+            Button("확인", role: .cancel) { errorMessage = nil }
+        } message: {
+            Text(errorMessage ?? "")
+        }
+        .alert("계정을 삭제할까요?", isPresented: $showDeleteConfirm) {
+            Button("취소", role: .cancel) {}
+            Button("삭제", role: .destructive) { deleteAccount() }
+        } message: {
+            Text("계정과 클라우드에 저장된 집중 기록·생명체가 영구 삭제됩니다. 이 기기의 로컬 데이터는 남아요.")
         }
     }
 
@@ -84,22 +118,159 @@ struct MyPageView: View {
         }
     }
 
-    // MARK: - 계정 섹션(로그인 전 가정 · UI 껍데기만)
+    // MARK: - 계정 섹션 (로그인 상태에 따라 분기)
 
+    @ViewBuilder
     private var accountSection: some View {
         VStack(alignment: .leading, spacing: AppSpacing.elementTight) {
             Text("계정")
                 .font(AppFont.cardTitle)
                 .foregroundStyle(AppColor.textSecondary)
 
-            // 실제 인증 연동은 Phase 2(ADR-007). 여기서는 액션을 호출하지 않는다.
-            AuthButton(title: "Apple로 계속하기", symbol: "applelogo", style: .light) {
-                // TODO: Phase 2 auth — Sign in with Apple
-                print("Apple 로그인 (Phase 2 예정)")
+            if auth.isAuthenticated {
+                signedInView
+            } else {
+                signedOutView
             }
+        }
+    }
+
+    /// 비로그인: Apple/Google 로그인 버튼. 로그인하면 기기 간 동기화가 켜진다는 안내.
+    @ViewBuilder
+    private var signedOutView: some View {
+        Text("로그인하면 집중 기록과 생명체가 클라우드에 백업되어 다른 기기에서도 이어집니다.")
+            .font(AppFont.cardTitle)
+            .foregroundStyle(AppColor.textSecondary)
+            .fixedSize(horizontal: false, vertical: true)
+
+        SignInWithAppleButton(.continue) { request in
+            let nonce = AppleSignInNonce.random()
+            appleNonce = nonce
+            request.requestedScopes = [.fullName, .email]
+            request.nonce = AppleSignInNonce.sha256(nonce)
+        } onCompletion: { result in
+            handleApple(result)
+        }
+        .signInWithAppleButtonStyle(.white)
+        .frame(height: 48)
+        .clipShape(RoundedRectangle(cornerRadius: AppSpacing.buttonCornerRadius))
+        .disabled(isWorking)
+
+        #if canImport(GoogleSignIn)
+        if GoogleAuth.isConfigured {
             AuthButton(title: "Google로 계속하기", symbol: "g.circle", style: .outline) {
-                // TODO: Phase 2 auth — Sign in with Google
-                print("Google 로그인 (Phase 2 예정)")
+                signInWithGoogle()
+            }
+            .disabled(isWorking)
+        }
+        #endif
+
+        if isWorking {
+            ProgressView().frame(maxWidth: .infinity).padding(.top, 4)
+        }
+    }
+
+    /// 로그인됨: 동기화 상태 + 로그아웃 + 계정 삭제(심사 요건).
+    @ViewBuilder
+    private var signedInView: some View {
+        AppCard {
+            VStack(alignment: .leading, spacing: AppSpacing.element) {
+                Label {
+                    Text(sync?.isSyncing == true ? "동기화 중…" : "기기 간 동기화 켜짐")
+                        .font(AppFont.body)
+                        .foregroundStyle(AppColor.textPrimary)
+                } icon: {
+                    Image(systemName: "checkmark.icloud")
+                        .foregroundStyle(AppColor.eggAccent)
+                }
+
+                SettingDivider()
+
+                Button { signOut() } label: {
+                    Text("로그아웃")
+                        .font(AppFont.body)
+                        .foregroundStyle(AppColor.textPrimary)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
+                .buttonStyle(.plain)
+                .disabled(isWorking)
+
+                SettingDivider()
+
+                Button { showDeleteConfirm = true } label: {
+                    Text("계정 삭제")
+                        .font(AppFont.body)
+                        .foregroundStyle(AppColor.danger)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
+                .buttonStyle(.plain)
+                .disabled(isWorking)
+            }
+        }
+    }
+
+    // MARK: - 인증 액션
+
+    private func handleApple(_ result: Result<ASAuthorization, Error>) {
+        switch result {
+        case .success(let authorization):
+            guard
+                let credential = authorization.credential as? ASAuthorizationAppleIDCredential,
+                let tokenData = credential.identityToken,
+                let idToken = String(data: tokenData, encoding: .utf8),
+                let nonce = appleNonce
+            else {
+                errorMessage = "Apple 로그인 정보를 읽지 못했어요. 다시 시도해 주세요."
+                return
+            }
+            performSignIn { try await auth.signInWithApple(idToken: idToken, nonce: nonce) }
+        case .failure(let error):
+            // 사용자가 취소(ASAuthorizationError.canceled)한 경우는 조용히 무시.
+            if (error as? ASAuthorizationError)?.code != .canceled {
+                errorMessage = "Apple 로그인에 실패했어요: \(error.localizedDescription)"
+            }
+        }
+    }
+
+    #if canImport(GoogleSignIn)
+    private func signInWithGoogle() {
+        performSignIn {
+            let idToken = try await GoogleAuth.signIn()
+            try await auth.signInWithGoogle(idToken: idToken)
+        }
+    }
+    #endif
+
+    /// 로그인 작업 공통 래퍼: 진행표시 → 성공 시 로그인 머지 동기화.
+    private func performSignIn(_ work: @escaping () async throws -> Void) {
+        isWorking = true
+        Task {
+            defer { isWorking = false }
+            do {
+                try await work()
+                await sync?.syncOnLogin()
+            } catch {
+                errorMessage = "로그인에 실패했어요: \(error.localizedDescription)"
+            }
+        }
+    }
+
+    private func signOut() {
+        isWorking = true
+        Task {
+            defer { isWorking = false }
+            await sync?.signOut()
+        }
+    }
+
+    private func deleteAccount() {
+        isWorking = true
+        Task {
+            defer { isWorking = false }
+            do {
+                try await sync?.deleteAccount()
+            } catch {
+                errorMessage = "계정 삭제에 실패했어요: \(error.localizedDescription)"
             }
         }
     }
@@ -122,7 +293,7 @@ struct MyPageView: View {
                     SettingDivider()
                     SettingInfoRow(title: "다크모드", systemImage: "moon", value: "고정")
                     SettingDivider()
-                    SettingInfoRow(title: "버전", systemImage: "info.circle", value: "0.1.0")
+                    SettingInfoRow(title: "버전", systemImage: "info.circle", value: "1.0")
                     #if DEBUG
                     SettingDivider()
                     Button {
@@ -238,11 +409,11 @@ private struct SettingDivider: View {
 }
 
 #Preview("로그인 전") {
-    MyPageView(user: MockData.populated)
+    MyPageView(user: MockData.populated, auth: AuthService())
         .preferredColorScheme(.dark)
 }
 
 #Preview("새 사용자") {
-    MyPageView(user: MockData.empty)
+    MyPageView(user: MockData.empty, auth: AuthService())
         .preferredColorScheme(.dark)
 }

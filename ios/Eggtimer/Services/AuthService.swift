@@ -48,8 +48,26 @@ final class AuthService {
         return session.user.id
     }
 
+    /// Sign in with Apple — UI가 Supabase 프로바이더 타입을 몰라도 되도록 감싼다(아키텍처: View는 Supabase 비노출).
+    func signInWithApple(idToken: String, nonce: String) async throws {
+        try await signIn(provider: .apple, idToken: idToken, nonce: nonce)
+    }
+
+    /// Google 로그인(네이티브). Supabase iOS는 Skip nonce check라 nonce 불필요.
+    func signInWithGoogle(idToken: String) async throws {
+        try await signIn(provider: .google, idToken: idToken)
+    }
+
     func signOut() async {
         try? await client.auth.signOut()
         currentUserID = nil
+    }
+
+    /// 계정 영구 삭제(App Store 심사 요건 5.1.1(v)). 서버 Edge Function이 service_role로
+    /// auth 유저를 지우면 FK on-delete-cascade로 프로필·세션·생명체 행이 함께 삭제된다.
+    /// 성공 시 세션도 종료해 로컬을 비로그인 상태로 되돌린다.
+    func deleteAccount() async throws {
+        try await client.functions.invoke("delete-account")
+        await signOut()
     }
 }

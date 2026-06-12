@@ -45,6 +45,20 @@ final class CollectionStore {
         return creature
     }
 
+    /// 원격(Supabase)에서 풀한 생명체를 로컬에 병합한다(동기화). 이미 가진 id는 건너뛴다(idempotent).
+    /// 부화 시점 순서 유지를 위해 병합 후 최신순 정렬.
+    func insertFromRemote(_ incoming: [Creature]) {
+        let existing = Set(creatures.map(\.id))
+        let fresh = incoming.filter { !existing.contains($0.id) }
+        guard !fresh.isEmpty else { return }
+        for creature in fresh {
+            creatures.append(creature)
+            context?.insert(HatchedCreatureRecord(from: creature))
+        }
+        creatures.sort { $0.hatchedAt > $1.hatchedAt }
+        try? context?.save()
+    }
+
     /// 이미 발견한 종 집합(컬렉션의 발견/미발견 판정용).
     var discoveredSpecies: Set<CreatureSpecies> {
         Set(creatures.map(\.species))
