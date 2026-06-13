@@ -87,21 +87,26 @@ struct HomeView: View {
                     .padding(.top, AppSpacing.elementTight)
                 centerStage
                     .padding(.vertical, AppSpacing.elementTight)
-                if showingHatchling, let hatchling {
+                if justHatched, let hatchling {
                     HatchRevealCard(creature: hatchling)
                         .padding(.top, AppSpacing.elementTight)
                         .transition(.opacity.combined(with: .move(edge: .bottom)))
                 }
                 Spacer(minLength: 0)
-                if !showingHatchling && !session.isOnBreak { progressSection }
+                if !hasCompanion && !session.isOnBreak { progressSection }
                 controlButtons
                     .padding(.top, AppSpacing.element)
             }
             .padding(.horizontal, AppSpacing.section)
-            .animation(.easeInOut(duration: 0.3), value: showingHatchling)
+            .animation(.easeInOut(duration: 0.3), value: hasCompanion)
         }
         .onChange(of: session.isCompleted) { _, completed in
-            if completed { triggerHatch() }   // 목표 도달 → 즉시 부화(자동 경로)
+            guard completed else { return }
+            if hatchling == nil {
+                triggerHatch()                    // 첫 부화: 알 → 캐릭터
+            } else {
+                session.acknowledgeCompletion()   // 동료와 함께한 세션 종료 → 캐릭터 유지(진화는 시간 경과로)
+            }
         }
         .onChange(of: session.isOnBreak) { _, onBreak in
             if onBreak { dialogue.fire(.breakStart) }   // 휴식 진입 시 알 한마디
@@ -227,19 +232,23 @@ struct HomeView: View {
 
     // MARK: - 중앙 무대 (알 ↔ 부화한 캐릭터)
 
-    /// idle 상태에서 부화한 캐릭터를 알 자리에 표시 중인지.
-    private var showingHatchling: Bool { session.isIdle && hatchling != nil }
+    /// 부화한 동료가 화면에 있는지(부화 후 알 자리를 영구히 차지하고 집중 세션 내내 유지·진화).
+    private var hasCompanion: Bool { hatchling != nil }
+    /// 방금 부화해 쉬는 중(축하 카드·탄생 문구 노출 — 집중 중에는 숨김).
+    private var justHatched: Bool { hatchling != nil && session.isIdle }
 
     @ViewBuilder
     private var centerStage: some View {
         if session.isOnBreak {
             BreakView()
                 .transition(.scale.combined(with: .opacity))
-        } else if showingHatchling, let hatchling {
+        } else if let hatchling {
+            // 부화 후엔 idle/집중 무관하게 캐릭터가 알 자리를 유지(집중 중 시간 경과 시 진화).
             HatchedCenter(creature: hatchling)
+                .id(hatchling.id)   // 새 캐릭터마다 등장 연출 재생
                 .transition(.scale(scale: 0.6).combined(with: .opacity))
         } else {
-            EggView(stageIndex: session.stageIndex)
+            EggView(stageIndex: session.stageIndex)   // 알은 첫 부화 전까지만
                 .transition(.opacity)
         }
     }
@@ -275,10 +284,10 @@ struct HomeView: View {
                 .font(AppFont.timer)
                 .foregroundStyle(AppColor.textPrimary)
                 .monospacedDigit()
-                .opacity(showingHatchling ? 0.3 : 1)
-            Text(showingHatchling ? "\(hatchling?.name ?? "")이(가) 태어났어요! 🎉" : session.statusText)
+                .opacity(justHatched ? 0.3 : 1)
+            Text(justHatched ? "\(hatchling?.name ?? "")이(가) 태어났어요! 🎉" : session.statusText)
                 .font(AppFont.body)
-                .foregroundStyle(showingHatchling ? AppColor.eggAccent : AppColor.textSecondary)
+                .foregroundStyle(justHatched ? AppColor.eggAccent : AppColor.textSecondary)
         }
     }
 
@@ -311,9 +320,9 @@ struct HomeView: View {
                 switch session.phase {
                 case nil:
                     if hatchling != nil {
-                        // 부화 후: 바로 다음 집중을 이어가거나, 알만 새로 받기.
-                        PrimaryButton("이어서 집중") { hatchling = nil; session.start() }
-                        SecondaryButton("새 알 받기") { hatchling = nil }
+                        // 부화 후: 동료를 유지한 채 집중을 이어가거나(진화), 새 알을 받아 다른 종 수집.
+                        PrimaryButton("이어서 집중") { session.start() }       // 캐릭터 유지(알 X)
+                        SecondaryButton("새 알 받기") { hatchling = nil }      // 알만 리셋(컬렉션은 유지)
                     } else {
                         PrimaryButton("시작") { session.start() }
                     }
