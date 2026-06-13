@@ -112,4 +112,61 @@ struct SessionManagerTests {
         m.plannedSeconds = 999                // 진행 중엔 무시
         #expect(m.plannedSeconds == 200)
     }
+
+    // MARK: - 포모도로
+
+    private func makePomodoro(_ clock: ClockBox) -> SessionManager {
+        let m = SessionManager(plannedSeconds: 100, clock: { clock.now }, persists: false)
+        m.mode = .pomodoro
+        return m
+    }
+
+    @Test func pomodoroEntersBreakAfterFocusBlock() {
+        let clock = ClockBox()
+        let m = makePomodoro(clock)
+        m.start()
+        #expect(m.isRunning)
+        clock.advance(PomodoroConfig.focusBlock); m.recompute()
+        #expect(m.isOnBreak)
+        #expect(!m.isRunning)                 // 휴식 중엔 집중 아님
+    }
+
+    @Test func pomodoroSkipBreakResumesFocus() {
+        let clock = ClockBox()
+        let m = makePomodoro(clock)
+        m.start()
+        clock.advance(PomodoroConfig.focusBlock); m.recompute()
+        #expect(m.isOnBreak)
+        m.skipBreak()
+        #expect(!m.isOnBreak)
+        #expect(m.isRunning)
+    }
+
+    @Test func pomodoroBreakAutoEndsAndAccumulationFreezesDuringBreak() {
+        let clock = ClockBox()
+        let m = makePomodoro(clock)
+        m.start()
+        clock.advance(PomodoroConfig.focusBlock); m.recompute()   // → 휴식
+        #expect(m.isOnBreak)
+        clock.advance(PomodoroConfig.breakLength + 1); m.recompute()  // 휴식 자동 종료
+        #expect(!m.isOnBreak)
+        #expect(m.isRunning)
+        #expect(m.activeSecondsLive == PomodoroConfig.focusBlock)  // 휴식 동안 누적 동결
+        clock.advance(3); m.recompute()
+        #expect(m.activeSecondsLive == PomodoroConfig.focusBlock + 3)  // 재개 후 다시 누적
+    }
+
+    @Test func pomodoroHatchesAtCumulativeThreshold() {
+        let clock = ClockBox()
+        let m = makePomodoro(clock)
+        m.start()
+        var steps = 0
+        while !m.isCompleted && steps < PomodoroConfig.hatchThreshold * 4 {
+            if m.isOnBreak { m.skipBreak() }   // 휴식은 건너뛰며 집중만 누적
+            clock.advance(1); m.recompute()
+            steps += 1
+        }
+        #expect(m.isCompleted)
+        #expect(m.activeSecondsLive == PomodoroConfig.hatchThreshold)  // 누적 1시간(컨셉)에 부화
+    }
 }

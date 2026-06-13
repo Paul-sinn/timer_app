@@ -12,6 +12,19 @@
 
 import SwiftUI
 
+/// 포모도로 사이클 상수. DEBUG는 검수를 위해 대폭 단축한다.
+enum PomodoroConfig {
+    #if DEBUG
+    static let focusBlock = 10      // 집중 블록(초) — 검수용
+    static let breakLength = 5       // 휴식(초) — 검수용
+    static let hatchThreshold = 30   // 누적 집중 부화 임계(초) — 검수용
+    #else
+    static let focusBlock = 25 * 60      // 25분 집중
+    static let breakLength = 5 * 60      // 5분 휴식
+    static let hatchThreshold = 60 * 60  // 누적 1시간이면 부화
+    #endif
+}
+
 @Observable
 @MainActor
 final class SessionManager {
@@ -32,10 +45,17 @@ final class SessionManager {
         set { if session == nil { _plannedSeconds = newValue } }
     }
 
+    private var _mode: TimerMode = .free
+    /// 타이머 모드(idle일 때만 변경 가능). pomodoro면 25/5 사이클 + 누적 1시간 부화.
+    var mode: TimerMode {
+        get { _mode }
+        set { if session == nil { _mode = newValue } }
+    }
+
     private var ticker: Timer?
     private let clock: () -> Date
     private let persists: Bool
-    private static let persistKey = "active_session_v1"
+    private static let persistKey = "active_session_v2"
 
     /// 세션이 끝날 때(완료/중단) 결과를 전달(영속/통계 기록용). HomeView가 주입.
     var onSessionEnd: ((FocusSessionResult) -> Void)?
@@ -62,15 +82,47 @@ final class SessionManager {
 
     var phase: SessionPhase? { session?.phase }
     var isIdle: Bool { session == nil }
-    var isRunning: Bool { session?.phase == .running }
+    /// 활성 집중 중(휴식은 제외).
+    var isRunning: Bool { session?.phase == .running && !isOnBreak }
     var isPaused: Bool { session?.phase == .paused }
     var isCompleted: Bool { session?.phase == .completed }
 
-    /// 표시용 목표 시간(idle이면 선택값, 진행 중이면 세션값).
-    private var targetSeconds: Int { session?.plannedSeconds ?? plannedSeconds }
+    /// 포모도로 휴식 중인지.
+    var isOnBreak: Bool { session?.isOnBreak ?? false }
+    /// 현재 모드(진행 중이면 세션 모드, idle이면 선택 모드).
+    var activeMode: TimerMode { session?.mode ?? mode }
+
+    /// 표시용 목표 시간(idle이면 모드별 기본, 진행 중이면 세션값).
+    private var targetSeconds: Int {
+        session?.plannedSeconds ?? (mode == .pomodoro ? PomodoroConfig.hatchThreshold : plannedSeconds)
+    }
 
     /// 남은 시간(초). idle이면 목표 전체.
     var remainingSeconds: Int { max(targetSeconds - activeSecondsLive, 0) }
+
+    /// 타이머에 표시할 카운트다운(초). 휴식 중=휴식 남은시간, 포모도로 집중=다음 휴식/부화까지, free=목표까지.
+    var countdownSeconds: Int {
+        if isOnBreak { return breakRemainingSeconds }
+        guard let s = session else {
+            return mode == .pomodoro ? PomodoroConfig.focusBlock : plannedSeconds
+        }
+        if s.mode == .pomodoro {
+            return max(min(s.nextBreakAt, s.plannedSeconds) - activeSecondsLive, 0)
+        }
+        return max(s.plannedSeconds - activeSecondsLive, 0)
+    }
+
+    /// 휴식 남은 시간(초).
+    var breakRemainingSeconds: Int {
+        guard let end = session?.breakEndsAt else { return 0 }
+        return max(0, Int(end.timeIntervalSince(clock())))
+    }
+
+    /// 현재(진행/완료한) 집중 블록 번호(1부터). 포모도로 캡션용.
+    var pomodoroBlock: Int {
+        let total = PomodoroConfig.hatchThreshold / PomodoroConfig.focusBlock
+        return min(activeSecondsLive / PomodoroConfig.focusBlock + 1, max(total, 1))
+    }
 
     /// 진행도 0...1.
     var progress: Double {
@@ -83,9 +135,9 @@ final class SessionManager {
         min(max(Int(progress * Double(EggState.visualStages)), 0), EggState.visualStages - 1)
     }
 
-    /// "MM:SS" 타이머 표시(남은 시간).
+    /// "MM:SS" 타이머 표시(맥락별 카운트다운).
     var timerDisplay: String {
-        let s = remainingSeconds
+        let s = countdownSeconds
         return String(format: "%02d:%02d", s / 60, s % 60)
     }
 
@@ -94,8 +146,9 @@ final class SessionManager {
 
     /// 상태 문구.
     var statusText: String {
+        if isOnBreak { return "잠깐 쉬어가요 ☕" }
         switch phase {
-        case .running:   return "집중하는 중이에요"
+        case .running:   return activeMode == .pomodoro ? "집중 블록 \(pomodoroBlock) 진행 중" : "집중하는 중이에요"
         case .paused:    return "잠시 멈췄어요"
         case .completed: return "부화 준비 완료!"
         case nil:        return "집중할 준비가 되었나요?"
@@ -106,7 +159,9 @@ final class SessionManager {
 
     func start() {
         guard session == nil else { return }
-        var s = ActiveSession(plannedSeconds: plannedSeconds, startedAt: clock())
+        let planned = mode == .pomodoro ? PomodoroConfig.hatchThreshold : plannedSeconds
+        let nextBreak = mode == .pomodoro ? PomodoroConfig.focusBlock : Int.max
+        var s = ActiveSession(plannedSeconds: planned, startedAt: clock(), mode: mode, nextBreakAt: nextBreak)
         s.phase = .running
         session = s
         activeSecondsLive = 0
@@ -119,7 +174,7 @@ final class SessionManager {
     }
 
     func pause() {
-        guard var s = session, s.phase == .running else { return }
+        guard var s = session, s.phase == .running, !s.isOnBreak else { return }
         s.accumulatedActiveSeconds = s.activeSeconds(now: clock())
         s.lastResumedAt = nil
         s.phase = .paused
@@ -157,25 +212,72 @@ final class SessionManager {
 
     // MARK: - 틱 / 재계산
 
-    /// scenePhase 복귀·틱에서 호출. running 중 목표 도달 시 완료 전이.
+    /// scenePhase 복귀·틱에서 호출. 휴식 종료/휴식 진입/목표 도달을 처리한다.
     func recompute() {
         guard let s = session else { return }
-        activeSecondsLive = s.activeSeconds(now: clock())
-        if s.phase == .running, s.isComplete(now: clock()) {
+        let now = clock()
+
+        // 휴식 중: 카운트다운만, 종료 시 집중 재개.
+        if s.isOnBreak {
+            if let end = s.breakEndsAt, now >= end { endBreak(at: now) }
+            return
+        }
+
+        activeSecondsLive = s.activeSeconds(now: now)
+
+        // 포모도로: 다음 휴식 도달 & 아직 부화 전 → 휴식 진입.
+        if s.mode == .pomodoro, s.phase == .running,
+           activeSecondsLive >= s.nextBreakAt, activeSecondsLive < s.plannedSeconds {
+            enterBreak(at: now)
+            return
+        }
+
+        if s.phase == .running, s.isComplete(now: now) {
             complete()
         }
+    }
+
+    /// 포모도로 휴식 진입: 집중 누적 고정 + 5분 휴식 시작 + 다음 휴식 지점 전진.
+    private func enterBreak(at now: Date) {
+        guard var s = session else { return }
+        s.accumulatedActiveSeconds = s.activeSeconds(now: now)
+        s.lastResumedAt = nil
+        s.breakEndsAt = now.addingTimeInterval(Double(PomodoroConfig.breakLength))
+        s.nextBreakAt += PomodoroConfig.focusBlock
+        session = s
+        activeSecondsLive = s.accumulatedActiveSeconds
+        ScreenAwake.set(false)
+        persist()
+    }
+
+    /// 휴식 종료(자동/건너뛰기) → 집중 재개.
+    private func endBreak(at now: Date) {
+        guard var s = session, s.isOnBreak else { return }
+        s.breakEndsAt = nil
+        s.lastResumedAt = now
+        s.phase = .running
+        session = s
+        ScreenAwake.set(true)
+        recompute()
+        persist()
+    }
+
+    /// 휴식 건너뛰고 바로 다음 집중 블록 시작.
+    func skipBreak() {
+        guard isOnBreak else { return }
+        endBreak(at: clock())
     }
 
     /// 백그라운드 진입 시(화면 유지 해제). 진행은 타임스탬프로 보존되므로 멈추지 않는다.
     /// running 중 이탈이면 이탈 시작 시각을 기록(복귀 시 분류).
     func handleBackground() {
-        if session?.phase == .running { leftAt = clock() }
+        if isRunning { leftAt = clock() }   // 휴식 중 이탈은 집중 이탈로 치지 않음
         ScreenAwake.set(false)
     }
 
     /// 포그라운드 복귀 시: 이탈 시간 분류 → 재계산 → 화면 유지 재적용.
     func handleForeground() {
-        if let left = leftAt, session?.phase == .running {
+        if let left = leftAt, isRunning {
             let away = max(0, Int(clock().timeIntervalSince(left)))
             lastAwaySeconds = away
             let severity = Interruption.severity(awaySeconds: away)
@@ -186,7 +288,7 @@ final class SessionManager {
         }
         leftAt = nil
         recompute()
-        if session?.phase == .running { ScreenAwake.set(true) }
+        if isRunning { ScreenAwake.set(true) }
     }
 
     private func complete() {
@@ -255,8 +357,8 @@ final class SessionManager {
         activeSecondsLive = s.activeSeconds(now: clock())
         switch s.phase {
         case .running:
-            if s.isComplete(now: clock()) { complete() }   // 백그라운드 동안 완료된 경우
-            else { startTicker() }
+            startTicker()
+            recompute()   // 백그라운드 동안의 휴식 종료/목표 도달을 즉시 반영
         case .paused, .completed:
             break
         }

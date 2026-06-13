@@ -55,6 +55,7 @@ enum DialogueTrigger: Equatable, Hashable, Sendable {
     case appReturn(ReturnBucket)       // 복귀(이탈 시간 버킷)
     case streak(days: Int)             // 연속일 도달(3·7·30·100)
     case greeting                      // 생명체 등장 인사(부화/컬렉션)
+    case breakStart                    // 포모도로 휴식 진입
 }
 
 struct DialogueLine: Identifiable, Equatable, Sendable {

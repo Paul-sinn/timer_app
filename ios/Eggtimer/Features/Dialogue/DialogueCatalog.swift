@@ -125,6 +125,14 @@ enum DialogueCatalog {
             "That was a long side quest.",
             "Welcome back, traveler.",
         ], cooldown: 20)
+        // 포모도로 휴식 진입(알 톤 유지)
+        + pool("egg_break", .egg, .breakStart, [
+            "Fine. Take five. Don't get comfortable.",
+            "A break already? Bold.",
+            "Rest. You earned a sliver of it.",
+            "Five minutes. I'm counting.",
+            "Stretch. Breathe. Then back to it.",
+        ], cooldown: 30)
         // Streaks
         + pool("egg_streak3", .egg, .streak(days: 3), [
             "Three days? Lucky streak.",

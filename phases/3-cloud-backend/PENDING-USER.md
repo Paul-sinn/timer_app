@@ -21,7 +21,7 @@ Google 버튼은 SDK가 추가될 때만 자동으로 나타난다(`#if canImpor
 ### 2. Apple 로그인 (네이티브 — OAuth 설정 불필요)
 - **Apple Developer**: App ID `com.paulsin.hatchly`에 **Sign in with Apple** capability 체크. ✅(완료했으면 OK)
 - **Supabase Apple provider**: 활성화 + Client IDs = `com.paulsin.hatchly`. ✅
-- **Xcode**: 타겟 Signing & Capabilities에 **Sign in with Apple** 추가(엔타이틀먼트). ← 아직이면 추가.
+- **Xcode**: 타겟 Signing & Capabilities에 **Sign in with Apple** 추가(엔타이틀먼트). ← 아직이면 추가. 완료했어
 
 ### 3. App Store Connect 메타데이터 (제출 필수)
 - **Privacy Policy URL**, **Support URL** (필수 입력 — 없으면 제출 불가).

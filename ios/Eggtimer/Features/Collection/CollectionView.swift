@@ -15,6 +15,8 @@ struct CollectionView: View {
     /// 발견한 생명체 목록. 외부 주입(기본값 = populated)으로 검수 가능.
     private let creatures: [Creature]
     @State private var selected: Creature?
+    /// 그리드 등장 애니메이션 토글.
+    @State private var appeared = false
 
     /// 도감 전체 종(등급 오름차순으로 표시).
     private let allSpecies = CreatureSpecies.allCases.sorted {
@@ -51,18 +53,26 @@ struct CollectionView: View {
             }
         }
         .sheet(item: $selected) { CreatureDetailSheet(creature: $0) }
+        .onAppear { withAnimation(.easeOut(duration: 0.4)) { appeared = true } }
     }
 
-    // MARK: - 헤더
+    // MARK: - 헤더 (제목 + 발견 진행 바)
 
     private var header: some View {
-        VStack(alignment: .leading, spacing: 4) {
+        VStack(alignment: .leading, spacing: AppSpacing.elementTight) {
             Text("Collection")
                 .font(.title.weight(.bold))
                 .foregroundStyle(AppColor.textPrimary)
-            Text("발견한 친구들 \(discovered.count)/\(allSpecies.count)")
-                .font(AppFont.cardTitle)
-                .foregroundStyle(AppColor.textSecondary)
+            HStack {
+                Text("발견한 친구들")
+                    .font(AppFont.cardTitle)
+                    .foregroundStyle(AppColor.textSecondary)
+                Spacer()
+                Text("\(discovered.count)/\(allSpecies.count)")
+                    .font(AppFont.cardTitle.weight(.bold))
+                    .foregroundStyle(AppColor.eggAccent)
+            }
+            DiscoveryBar(fraction: allSpecies.isEmpty ? 0 : Double(discovered.count) / Double(allSpecies.count))
         }
     }
 
@@ -70,44 +80,70 @@ struct CollectionView: View {
 
     private var grid: some View {
         LazyVGrid(columns: columns, spacing: 12) {
-            ForEach(allSpecies) { species in
-                if let creature = discovered[species] {
-                    Button { selected = creature } label: {
-                        CreatureSlot(creature: creature)
+            ForEach(Array(allSpecies.enumerated()), id: \.element.id) { index, species in
+                Group {
+                    if let creature = discovered[species] {
+                        Button { selected = creature } label: {
+                            CreatureSlot(creature: creature)
+                        }
+                        .buttonStyle(.plain)
+                    } else {
+                        LockedSlot(species: species)
                     }
-                    .buttonStyle(.plain)
-                } else {
-                    LockedSlot(species: species)
                 }
+                .opacity(appeared ? 1 : 0)
+                .scaleEffect(appeared ? 1 : 0.85)
+                .animation(.spring(response: 0.45, dampingFraction: 0.8).delay(Double(index) * 0.04), value: appeared)
             }
         }
     }
 }
 
-/// 발견한 생명체 슬롯. 전설은 골드 테두리로 강조.
+/// 발견 진행 바. 채워진 비율만큼 골드 그라데이션.
+private struct DiscoveryBar: View {
+    let fraction: Double
+
+    var body: some View {
+        GeometryReader { geo in
+            ZStack(alignment: .leading) {
+                Capsule().fill(AppColor.border)
+                Capsule()
+                    .fill(LinearGradient(colors: [AppColor.eggAccent.opacity(0.7), AppColor.eggAccent],
+                                         startPoint: .leading, endPoint: .trailing))
+                    .frame(width: max(0, min(1, fraction)) * geo.size.width)
+            }
+        }
+        .frame(height: 6)
+    }
+}
+
+/// 발견한 생명체 슬롯. 등급색 글로우 + 레어 이상 테두리 강조.
 private struct CreatureSlot: View {
     let creature: Creature
 
-    private var highlighted: Bool { creature.rarity == .legendary }
+    private var rarity: Rarity { creature.rarity }
+    /// 레어 이상이면 등급색으로 테두리·글로우 강조.
+    private var emphasized: Bool { rarity >= .rare }
 
     var body: some View {
         VStack(spacing: 8) {
-            CreatureImage(imageName: creature.displayImageName, rarity: creature.rarity, size: 64)
+            CreatureImage(imageName: creature.displayImageName, rarity: rarity, size: 64)
             Text(creature.name)
                 .font(.caption2)
                 .foregroundStyle(AppColor.textBody)
                 .lineLimit(1)
-            RarityDots(rarity: creature.rarity)
+            RarityDots(rarity: rarity)
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, AppSpacing.elementTight)
         .background(AppColor.cardBackground)
         .overlay(
             RoundedRectangle(cornerRadius: AppSpacing.cardCornerRadius)
-                .stroke(highlighted ? AppColor.eggAccent : AppColor.border,
-                        lineWidth: highlighted ? 1.5 : AppSpacing.borderWidth)
+                .stroke(emphasized ? rarity.color : AppColor.border,
+                        lineWidth: emphasized ? 1.5 : AppSpacing.borderWidth)
         )
         .clipShape(RoundedRectangle(cornerRadius: AppSpacing.cardCornerRadius))
+        .shadow(color: emphasized ? rarity.color.opacity(0.35) : .clear, radius: 8)
     }
 }
 
