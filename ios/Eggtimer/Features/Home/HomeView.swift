@@ -311,7 +311,9 @@ struct HomeView: View {
                 switch session.phase {
                 case nil:
                     if hatchling != nil {
-                        PrimaryButton("새 알 받기") { hatchling = nil }
+                        // 부화 후: 바로 다음 집중을 이어가거나, 알만 새로 받기.
+                        PrimaryButton("이어서 집중") { hatchling = nil; session.start() }
+                        SecondaryButton("새 알 받기") { hatchling = nil }
                     } else {
                         PrimaryButton("시작") { session.start() }
                     }
