@@ -14,6 +14,8 @@ import SwiftUI
 struct CollectionView: View {
     /// 발견한 생명체 목록. 외부 주입(기본값 = populated)으로 검수 가능.
     private let creatures: [Creature]
+    /// 개체별 부화 후 완료한 집중 세션 수(진화 단계 파생). 기본은 0(갓 부화).
+    private let completedSessionsSinceHatch: (Creature) -> Int
     @State private var selected: Creature?
     /// 그리드 등장 애니메이션 토글.
     @State private var appeared = false
@@ -23,8 +25,10 @@ struct CollectionView: View {
         $0.rarity != $1.rarity ? $0.rarity < $1.rarity : $0.weight > $1.weight
     }
 
-    init(creatures: [Creature] = MockData.populated.creatures) {
+    init(creatures: [Creature] = MockData.populated.creatures,
+         completedSessionsSinceHatch: @escaping (Creature) -> Int = { _ in 0 }) {
         self.creatures = creatures
+        self.completedSessionsSinceHatch = completedSessionsSinceHatch
     }
 
     /// 종 → 가장 최근 발견 개체.
@@ -52,7 +56,10 @@ struct CollectionView: View {
                 .padding(.bottom, AppSpacing.section)
             }
         }
-        .sheet(item: $selected) { CreatureDetailSheet(creature: $0) }
+        .sheet(item: $selected) { c in
+            CreatureDetailSheet(creature: c,
+                                stage: c.evolutionStage(completedSessionsSinceHatch: completedSessionsSinceHatch(c)))
+        }
         .onAppear { withAnimation(.easeOut(duration: 0.4)) { appeared = true } }
     }
 
@@ -84,7 +91,8 @@ struct CollectionView: View {
                 Group {
                     if let creature = discovered[species] {
                         Button { selected = creature } label: {
-                            CreatureSlot(creature: creature)
+                            CreatureSlot(creature: creature,
+                                         stage: creature.evolutionStage(completedSessionsSinceHatch: completedSessionsSinceHatch(creature)))
                         }
                         .buttonStyle(.plain)
                     } else {
@@ -120,6 +128,8 @@ private struct DiscoveryBar: View {
 /// 발견한 생명체 슬롯. 등급색 글로우 + 레어 이상 테두리 강조.
 private struct CreatureSlot: View {
     let creature: Creature
+    /// 진화 단계(0…max).
+    var stage: Int = 0
 
     private var rarity: Rarity { creature.rarity }
     /// 레어 이상이면 등급색으로 테두리·글로우 강조.
@@ -127,12 +137,16 @@ private struct CreatureSlot: View {
 
     var body: some View {
         VStack(spacing: 8) {
-            CreatureImage(imageName: creature.displayImageName, rarity: rarity, size: 64)
+            CreatureImage(imageName: creature.displayImageName(stage: stage), rarity: rarity, size: 64)
             Text(creature.name)
                 .font(.caption2)
                 .foregroundStyle(AppColor.textBody)
                 .lineLimit(1)
-            RarityDots(rarity: rarity)
+            if stage > 0 {
+                EvolutionBadge(stage: stage, compact: true)
+            } else {
+                RarityDots(rarity: rarity)
+            }
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, AppSpacing.elementTight)
@@ -191,6 +205,8 @@ private struct RarityDots: View {
 /// 셀 탭 시 표시되는 상세 시트(이미지 · 이름 · 레어도 · 부화일 · 진화 여부).
 private struct CreatureDetailSheet: View {
     let creature: Creature
+    /// 진화 단계(0…max).
+    var stage: Int = 0
     /// 이 개체의 성격 대사 한 줄(시트 표시 동안 고정).
     @State private var quote: String?
 
@@ -202,7 +218,7 @@ private struct CreatureDetailSheet: View {
         ZStack {
             AppColor.pageBackground.ignoresSafeArea()
             VStack(spacing: AppSpacing.section) {
-                CreatureImage(imageName: creature.displayImageName, rarity: creature.rarity, size: 160)
+                CreatureImage(imageName: creature.displayImageName(stage: stage), rarity: creature.rarity, size: 160)
                 if let quote {
                     Text("“\(quote)”")
                         .font(AppFont.cardTitle)
@@ -222,13 +238,10 @@ private struct CreatureDetailSheet: View {
                     Text(creature.rarity.label)
                         .font(AppFont.cardTitle)
                         .foregroundStyle(creature.rarity.color)
-                    if creature.isEvolved {
-                        Text("진화 완료 ✨")
-                            .font(AppFont.cardTitle)
-                            .foregroundStyle(AppColor.eggAccent)
-                    } else if creature.canEvolve {
-                        Text("20분 집중하면 진화해요")
-                            .font(AppFont.cardTitle)
+                    EvolutionBadge(stage: stage)
+                    if !creature.isFinalEvolved(stage: stage) {
+                        Text("이어서 집중하면 진화해요")
+                            .font(AppFont.body)
                             .foregroundStyle(AppColor.textSecondary)
                     }
                     Text("부화일 · \(hatchedText)")

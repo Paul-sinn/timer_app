@@ -4,6 +4,12 @@
       "dir": "0-ui-dummy-screens",
       "status": "completed",
       "completed_at": "2026-06-10T10:51:18+0900"
+    },
+    {
+      "dir": "4-polish",
+      "status": "completed",
+      "summary": "로컬 알림 + 진화(누적 집중시간 기반) + 사운드/햅틱 + 온보딩",
+      "completed_at": "2026-06-30T12:46:00+0900"
     }
   ]
 }

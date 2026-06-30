@@ -30,7 +30,7 @@ struct HatchResultSheet: View {
                             )
                         )
                         .frame(width: 280, height: 280)
-                    CreatureImage(imageName: creature.displayImageName, rarity: creature.rarity, size: 180)
+                    CreatureImage(imageName: creature.displayImageName(stage: 0), rarity: creature.rarity, size: 180)
                         .scaleEffect(appeared ? 1 : 0.6)
                         .animation(.spring(response: 0.5, dampingFraction: 0.55), value: appeared)
                 }
@@ -42,8 +42,8 @@ struct HatchResultSheet: View {
                     Text(creature.rarity.label)
                         .font(AppFont.cardTitle)
                         .foregroundStyle(creature.rarity.color)
-                    if creature.canEvolve {
-                        Text("20분 더 집중하면 진화해요 ✨")
+                    if creature.hasFinalArt {
+                        Text("이어서 집중하면 진화해요 ✨")
                             .font(AppFont.body)
                             .foregroundStyle(AppColor.textSecondary)
                     }

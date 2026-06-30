@@ -21,6 +21,8 @@ struct RootView: View {
     @State private var auth: AuthService
     /// 로그인↔로컬 동기화(부화·세션종료 push, 로그인 머지).
     @State private var sync: SyncCoordinator
+    /// 첫 실행 온보딩 노출 여부(완료 시 영구 저장).
+    @AppStorage("hasSeenOnboarding") private var hasSeenOnboarding = false
 
     init(store: CollectionStore = CollectionStore(),
          history: FocusHistoryStore = FocusHistoryStore(),
@@ -40,7 +42,8 @@ struct RootView: View {
             HomeView(session: session, store: store, history: history, sync: sync)
                 .tabItem { Label(RootTab.home.title, systemImage: RootTab.home.systemImage) }
                 .tag(RootTab.home)
-            CollectionView(creatures: store.creatures)
+            CollectionView(creatures: store.creatures,
+                           completedSessionsSinceHatch: { history.completedSessions(since: $0.hatchedAt) })
                 .tabItem { Label(RootTab.collection.title, systemImage: RootTab.collection.systemImage) }
                 .tag(RootTab.collection)
             ProgressScreen(sessions: history.sessions)
@@ -51,6 +54,9 @@ struct RootView: View {
                 .tag(RootTab.myPage)
         }
         .tint(AppColor.eggAccent)
+        .fullScreenCover(isPresented: .constant(!hasSeenOnboarding)) {
+            OnboardingView { hasSeenOnboarding = true }
+        }
     }
 
     /// 탭바를 다크 톤(AppColor.tabBarBackground)으로 고정한다.

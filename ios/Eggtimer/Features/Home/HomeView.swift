@@ -9,6 +9,7 @@
 //
 
 import SwiftUI
+import AudioToolbox
 
 struct HomeView: View {
     @Environment(\.scenePhase) private var scenePhase
@@ -23,6 +24,8 @@ struct HomeView: View {
     @State private var dialogue = DialogueManager()
     /// 이번 세션에서 마지막으로 발화한 집중 마일스톤(분). 중복 발화 방지.
     @State private var lastMilestone = 0
+    /// 방금 진화한 단계(연출/문구 노출용, 잠시 후 nil). nil = 진화 연출 없음.
+    @State private var justEvolvedStage: Int?
 
     /// 집중 경과 대사 마일스톤(분). 알의 톤이 의심→존중→자부심으로 진화하는 지점.
     private static let focusMilestones = [5, 10, 15, 30, 45, 60]
@@ -67,8 +70,36 @@ struct HomeView: View {
         let born = store.hatch()                      // 확률 부화 + 컬렉션 반영(영속)
         sync?.pushNewCreature(born)                   // 로그인 시 원격 동기화
         hatchling = born                              // 알 자리를 태어난 캐릭터로 대체(유지)
+        AudioServicesPlaySystemSound(1025)            // 부화 효과음(시스템 사운드)
         dialogue.fire(.greeting, speaker: .creature(born.personality))  // 성격 대사
         session.acknowledgeCompletion()               // 완료 소비 → idle, 인라인 리빌 노출
+    }
+
+    /// 집중 시작(시작/이어서 집중) — 알림 권한을 1회 요청하고 세션을 시작한다.
+    private func beginFocus() {
+        justEvolvedStage = nil
+        Task { await FocusNotifier.requestAuthorization() }
+        session.start()
+    }
+
+    /// 백그라운드 진입 시 다음 전환(부화/휴식 종료)까지 남은 실시간에 1회 알림 예약.
+    private func scheduleFocusNotification() {
+        if session.isOnBreak {
+            FocusNotifier.schedule(title: "휴식 끝! ☕️",
+                                   body: "다시 집중할 시간이에요.",
+                                   after: session.breakRemainingSeconds)
+        } else if session.isRunning {
+            let secs = session.countdownSeconds
+            if secs >= session.remainingSeconds {   // 다음 전환이 목표 도달(부화)
+                FocusNotifier.schedule(title: "부화 준비 완료! 🥚",
+                                       body: "집중이 끝났어요. 앱을 열어 부화를 확인하세요.",
+                                       after: secs)
+            } else {                                 // 다음 전환이 포모도로 휴식
+                FocusNotifier.schedule(title: "휴식 시간이에요 ☕️",
+                                       body: "잠깐 쉬어가요.",
+                                       after: secs)
+            }
+        }
     }
 
     var body: some View {
@@ -87,6 +118,10 @@ struct HomeView: View {
                     .padding(.top, AppSpacing.elementTight)
                 centerStage
                     .padding(.vertical, AppSpacing.elementTight)
+                if hasCompanion && !session.isOnBreak {
+                    EvolutionBadge(stage: companionStage)
+                        .animation(.easeInOut(duration: 0.3), value: companionStage)
+                }
                 if justHatched, let hatchling {
                     HatchRevealCard(creature: hatchling)
                         .padding(.top, AppSpacing.elementTight)
@@ -106,6 +141,16 @@ struct HomeView: View {
                 triggerHatch()                    // 첫 부화: 알 → 캐릭터
             } else {
                 session.acknowledgeCompletion()   // 동료와 함께한 세션 종료 → 캐릭터 유지(진화는 시간 경과로)
+            }
+        }
+        .onChange(of: companionStage) { old, new in
+            // 동료가 한 단계 진화(이어서 집중 1세션 완료). 등장 연출은 centerStage의 .id 변화가 재생.
+            guard new > old, hatchling != nil else { return }
+            justEvolvedStage = new
+            AudioServicesPlaySystemSound(1025)          // 진화 효과음
+            Task { @MainActor in
+                try? await Task.sleep(for: .seconds(3))
+                if justEvolvedStage == new { justEvolvedStage = nil }   // 연출 문구 자동 해제
             }
         }
         .onChange(of: session.isOnBreak) { _, onBreak in
@@ -134,16 +179,21 @@ struct HomeView: View {
         .onChange(of: scenePhase) { _, phase in
             switch phase {
             case .active:
+                FocusNotifier.cancel()             // 복귀 시 예약 알림 취소(화면에서 직접 보임)
                 session.handleForeground()
                 if session.lastAwaySeconds > 0 {   // 집중 중 이탈했다가 복귀
                     dialogue.fire(.appReturn(ReturnBucket.from(awaySeconds: session.lastAwaySeconds)))
                 }
             case .background:
                 session.handleBackground()
+                scheduleFocusNotification()        // 백그라운드에서 다음 전환(부화/휴식 종료) 알림 예약
             default:
                 break
             }
         }
+        .sensoryFeedback(.success, trigger: hatchling?.id)        // 부화 순간 햅틱
+        .sensoryFeedback(.success, trigger: companionStage)       // 진화 순간 햅틱
+        .sensoryFeedback(.impact(weight: .medium), trigger: session.isOnBreak)  // 휴식 진입 햅틱
         .onAppear {
             // 세션 종료(완료/중단) 시 이력에 기록(영속 + 통계) + 로그인 시 원격 동기화.
             session.onSessionEnd = { result in
@@ -237,15 +287,33 @@ struct HomeView: View {
     /// 방금 부화해 쉬는 중(축하 카드·탄생 문구 노출 — 집중 중에는 숨김).
     private var justHatched: Bool { hatchling != nil && session.isIdle }
 
+    /// 현재 동료의 진화 단계(부화 후 완료한 집중 세션 수로 파생, 0…max).
+    private var companionStage: Int {
+        guard let h = hatchling else { return 0 }
+        return h.evolutionStage(completedSessionsSinceHatch: history.completedSessions(since: h.hatchedAt))
+    }
+
+    /// 타이머 아래 부제(진화/부화 연출 우선, 그 외 상태 문구). 두 번째 값은 골드 강조 여부.
+    private var headerSubtitle: (text: String, highlight: Bool) {
+        let name = hatchling?.name ?? ""
+        if let s = justEvolvedStage {
+            return s >= Creature.maxEvolutionStage
+                ? ("\(name)이(가) 최종 진화했어요! ✨", true)
+                : ("\(name)이(가) 진화했어요! (\(s)/\(Creature.maxEvolutionStage))", true)
+        }
+        if justHatched { return ("\(name)이(가) 태어났어요! 🎉", true) }
+        return (session.statusText, false)
+    }
+
     @ViewBuilder
     private var centerStage: some View {
         if session.isOnBreak {
             BreakView()
                 .transition(.scale.combined(with: .opacity))
         } else if let hatchling {
-            // 부화 후엔 idle/집중 무관하게 캐릭터가 알 자리를 유지(집중 중 시간 경과 시 진화).
-            HatchedCenter(creature: hatchling)
-                .id(hatchling.id)   // 새 캐릭터마다 등장 연출 재생
+            // 부화 후엔 idle/집중 무관하게 캐릭터가 알 자리를 유지(집중 세션 완료마다 단계 진화).
+            HatchedCenter(creature: hatchling, stage: companionStage)
+                .id("\(hatchling.id.uuidString)-\(companionStage)")   // 캐릭터·단계 바뀔 때마다 등장(진화) 연출 재생
                 .transition(.scale(scale: 0.6).combined(with: .opacity))
         } else {
             EggView(stageIndex: session.stageIndex)   // 알은 첫 부화 전까지만
@@ -284,10 +352,11 @@ struct HomeView: View {
                 .font(AppFont.timer)
                 .foregroundStyle(AppColor.textPrimary)
                 .monospacedDigit()
-                .opacity(justHatched ? 0.3 : 1)
-            Text(justHatched ? "\(hatchling?.name ?? "")이(가) 태어났어요! 🎉" : session.statusText)
+                .opacity(justHatched || justEvolvedStage != nil ? 0.3 : 1)
+            Text(headerSubtitle.text)
                 .font(AppFont.body)
-                .foregroundStyle(justHatched ? AppColor.eggAccent : AppColor.textSecondary)
+                .foregroundStyle(headerSubtitle.highlight ? AppColor.eggAccent : AppColor.textSecondary)
+                .multilineTextAlignment(.center)
         }
     }
 
@@ -321,10 +390,10 @@ struct HomeView: View {
                 case nil:
                     if hatchling != nil {
                         // 부화 후: 동료를 유지한 채 집중을 이어가거나(진화), 새 알을 받아 다른 종 수집.
-                        PrimaryButton("이어서 집중") { session.start() }       // 캐릭터 유지(알 X)
-                        SecondaryButton("새 알 받기") { hatchling = nil }      // 알만 리셋(컬렉션은 유지)
+                        PrimaryButton("이어서 집중") { beginFocus() }       // 캐릭터 유지(알 X)
+                        SecondaryButton("새 알 받기") { hatchling = nil; justEvolvedStage = nil }  // 알만 리셋(컬렉션은 유지)
                     } else {
-                        PrimaryButton("시작") { session.start() }
+                        PrimaryButton("시작") { beginFocus() }
                     }
                 case .running:
                     PrimaryButton("일시정지") { session.pause() }
@@ -344,6 +413,8 @@ struct HomeView: View {
 /// 부화 직후 알 자리를 대체해 표시되는 생명체. 등장 시 글로우 버스트 + 스파클로 "부화 순간"을 연출한다.
 private struct HatchedCenter: View {
     let creature: Creature
+    /// 진화 단계(0…max). 단계가 높을수록 글로우가 강해져 "성장한 느낌"을 준다.
+    var stage: Int = 0
     var height: CGFloat = 240
     @State private var appeared = false
     @State private var burst = false
@@ -351,13 +422,16 @@ private struct HatchedCenter: View {
     /// 스파클이 퍼지는 방향(8방향).
     private let sparkAngles: [Double] = stride(from: 0, to: 360, by: 45).map { $0 }
 
+    /// 단계에 따른 글로우 가중(0단계 1.0 → 최종 단계로 갈수록 진해짐).
+    private var stageGlow: Double { 1.0 + Double(stage) * 0.25 }
+
     var body: some View {
         ZStack {
-            // 등급색 글로우(등장 시 한 번 확 퍼짐).
+            // 등급색 글로우(등장 시 한 번 확 퍼짐, 진화 단계가 높을수록 강해짐).
             Circle()
                 .fill(
                     RadialGradient(
-                        colors: [creature.rarity.color.opacity(burst ? 0.45 : 0.28), .clear],
+                        colors: [creature.rarity.color.opacity(min((burst ? 0.45 : 0.28) * stageGlow, 0.7)), .clear],
                         center: .center, startRadius: 4, endRadius: height * (burst ? 0.7 : 0.55)
                     )
                 )
@@ -376,7 +450,7 @@ private struct HatchedCenter: View {
                     .animation(.easeOut(duration: 0.7), value: burst)
             }
 
-            Image(creature.displayImageName)
+            Image(creature.displayImageName(stage: stage))
                 .interpolation(.none)            // 픽셀아트 선명하게
                 .resizable()
                 .scaledToFit()
@@ -406,11 +480,9 @@ private struct HatchRevealCard: View {
             Text(creature.rarity.label)
                 .font(AppFont.cardTitle)
                 .foregroundStyle(creature.rarity.color)
-            if creature.canEvolve {
-                Text("20분 더 집중하면 진화해요 ✨")
-                    .font(AppFont.body)
-                    .foregroundStyle(AppColor.textSecondary)
-            }
+            Text("이어서 집중하면 진화해요 ✨")
+                .font(AppFont.body)
+                .foregroundStyle(AppColor.textSecondary)
             Text("컬렉션에 추가됐어요")
                 .font(AppFont.body)
                 .foregroundStyle(AppColor.textSecondary)
