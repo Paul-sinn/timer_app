@@ -26,6 +26,9 @@ struct HomeView: View {
     @State private var lastMilestone = 0
     /// 방금 진화한 단계(연출/문구 노출용, 잠시 후 nil). nil = 진화 연출 없음.
     @State private var justEvolvedStage: Int?
+    /// 현재 동료의 id(영속). 콜드런치(앱 재시작) 후 컬렉션에서 같은 개체를 복원해 홈에 다시 표시.
+    /// 빈 문자열 = 동료 없음(첫 부화 전 또는 '새 알 받기' 직후).
+    @AppStorage("companionCreatureID") private var companionID = ""
 
     /// 집중 경과 대사 마일스톤(분). 알의 톤이 의심→존중→자부심으로 진화하는 지점.
     private static let focusMilestones = [5, 10, 15, 30, 45, 60]
@@ -70,6 +73,7 @@ struct HomeView: View {
         let born = store.hatch()                      // 확률 부화 + 컬렉션 반영(영속)
         sync?.pushNewCreature(born)                   // 로그인 시 원격 동기화
         hatchling = born                              // 알 자리를 태어난 캐릭터로 대체(유지)
+        companionID = born.id.uuidString              // 콜드런치 복원용 영속
         AudioServicesPlaySystemSound(1025)            // 부화 효과음(시스템 사운드)
         dialogue.fire(.greeting, speaker: .creature(born.personality))  // 성격 대사
         session.acknowledgeCompletion()               // 완료 소비 → idle, 인라인 리빌 노출
@@ -87,6 +91,17 @@ struct HomeView: View {
         session.stop()
         hatchling = nil
         justEvolvedStage = nil
+        companionID = ""                              // 의도적으로 동료 비움 → 복원 안 함
+    }
+
+    /// 콜드런치 후 저장된 동료를 컬렉션에서 복원(개체가 남아있을 때만).
+    private func restoreCompanionIfNeeded() {
+        guard hatchling == nil, !companionID.isEmpty else { return }
+        if let saved = store.creatures.first(where: { $0.id.uuidString == companionID }) {
+            hatchling = saved
+        } else {
+            companionID = ""                          // 개체가 사라졌으면(삭제 등) 플래그 정리
+        }
     }
 
     /// 백그라운드 진입 시 다음 전환(부화/휴식 종료)까지 남은 실시간에 1회 알림 예약.
@@ -206,12 +221,13 @@ struct HomeView: View {
         .sensoryFeedback(.success, trigger: companionStage)       // 진화 순간 햅틱
         .sensoryFeedback(.impact(weight: .medium), trigger: session.isOnBreak)  // 휴식 진입 햅틱
         .onAppear {
+            restoreCompanionIfNeeded()   // 콜드런치 후 동료 복원(알이 아니라 키우던 캐릭터로)
             // 세션 종료(완료/중단) 시 이력에 기록(영속 + 통계) + 로그인 시 원격 동기화.
             session.onSessionEnd = { result in
                 history.record(result)
                 sync?.pushNewSession(result)
             }
-            if session.isIdle { dialogue.fire(.idle) }
+            if session.isIdle && hatchling == nil { dialogue.fire(.idle) }
         }
     }
 
