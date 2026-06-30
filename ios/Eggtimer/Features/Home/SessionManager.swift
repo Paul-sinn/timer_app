@@ -139,10 +139,10 @@ final class SessionManager {
         min(max(Int(progress * Double(EggState.visualStages)), 0), EggState.visualStages - 1)
     }
 
-    /// 알 이미지 5단계 인덱스(0...4). 진행도 5분할 = 목표 60분 기준 12.5분마다 한 칸 crack.
-    /// 2egg → secondcrack → thirdcrack → 3egg → 4egg. 목표 도달 시 부화(borneffect → 몬스터).
+    /// 알 이미지 6단계 인덱스(0...5). 진행도 6분할 = 목표 60분 기준 10분마다 한 칸 crack.
+    /// Egg0(무결) → 2egg → secondcrack → thirdcrack → 3egg → 4egg. 목표 도달 시 부화(borneffect → 몬스터).
     var eggStageIndex: Int {
-        min(max(Int(progress * 5), 0), 4)
+        min(max(Int(progress * 6), 0), 5)
     }
 
     /// "MM:SS" 타이머 표시(맥락별 카운트다운).

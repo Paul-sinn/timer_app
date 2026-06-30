@@ -21,9 +21,9 @@ struct EggView: View {
     /// crack 순간 "팍" 튀는 pop.
     @State private var crackPop = false
 
-    /// 단계별 알 에셋(crack이 점점 진행). 새 에셋이 없으면 기존 Egg 에셋으로 폴백.
-    private static let primaryNames = ["2egg", "secondcrack_egg", "thirdcrack_egg", "3egg", "4egg"]
-    private static let fallbackNames = ["Egg1", "Egg2", "Egg3", "Egg4", "Egg5"]
+    /// 단계별 알 에셋(무결 → crack 점점 진행). 새 에셋이 없으면 기존 Egg 에셋으로 폴백.
+    private static let primaryNames = ["Egg0", "2egg", "secondcrack_egg", "thirdcrack_egg", "3egg", "4egg"]
+    private static let fallbackNames = ["Egg0", "Egg1", "Egg2", "Egg3", "Egg4", "Egg5"]
 
     private static var stageCount: Int { primaryNames.count }
 
@@ -35,9 +35,9 @@ struct EggView: View {
         return Self.fallbackNames[clampedStage]
     }
 
-    /// 후반 단계일수록 더 크게 흔들린다(부화 임박감).
-    private var wobbleAmplitude: Double { 1.5 + Double(clampedStage) * 0.9 }
-    private var wobblePeriod: Double { max(2.8 - Double(clampedStage) * 0.45, 1.3) }
+    /// 후반 단계일수록 더 크게/빠르게 흔들린다(부화 임박감).
+    private var wobbleAmplitude: Double { 1.3 + Double(clampedStage) * 0.55 }
+    private var wobblePeriod: Double { max(2.8 - Double(clampedStage) * 0.28, 1.3) }
 
     var body: some View {
         ZStack {
