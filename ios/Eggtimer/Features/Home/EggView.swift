@@ -11,7 +11,7 @@
 import SwiftUI
 
 struct EggView: View {
-    /// 알 이미지 단계 0(첫 알) ~ 3(부화 직전).
+    /// 알 이미지 단계 0 ~ 4(부화 직전). 12.5분마다 한 칸씩 crack(목표 60분 기준 5단계).
     let stageIndex: Int
     /// 알 높이 기준 크기(pt).
     var height: CGFloat = 240
@@ -21,11 +21,13 @@ struct EggView: View {
     /// crack 순간 "팍" 튀는 pop.
     @State private var crackPop = false
 
-    /// 단계별 알 에셋. 새 에셋이 없으면 기존 Egg 에셋으로 폴백.
-    private static let primaryNames = ["Egg0", "2egg", "3egg", "4egg"]
-    private static let fallbackNames = ["Egg0", "Egg2", "Egg3", "Egg5"]
+    /// 단계별 알 에셋(crack이 점점 진행). 새 에셋이 없으면 기존 Egg 에셋으로 폴백.
+    private static let primaryNames = ["2egg", "secondcrack_egg", "thirdcrack_egg", "3egg", "4egg"]
+    private static let fallbackNames = ["Egg1", "Egg2", "Egg3", "Egg4", "Egg5"]
 
-    private var clampedStage: Int { min(max(stageIndex, 0), 3) }
+    private static var stageCount: Int { primaryNames.count }
+
+    private var clampedStage: Int { min(max(stageIndex, 0), Self.stageCount - 1) }
 
     private var assetName: String {
         let primary = Self.primaryNames[clampedStage]
