@@ -19,9 +19,14 @@ struct FocusSessionResult: Identifiable, Equatable {
     let distracted: Bool
     /// 목표 도달로 끝났는지(부화), 중단(abandon)인지.
     let completed: Bool
+    /// 이 세션을 함께한 동료 캐릭터 id(알 단계 세션은 nil). 진화 단계 귀속용.
+    let companionID: UUID?
+    /// 타이머 모드(free/pomodoro). 모드별 통계용.
+    let mode: TimerMode?
 
     init(id: UUID = UUID(), startedAt: Date, plannedSeconds: Int, activeSeconds: Int,
-         interruptionCount: Int, distracted: Bool, completed: Bool) {
+         interruptionCount: Int, distracted: Bool, completed: Bool,
+         companionID: UUID? = nil, mode: TimerMode? = nil) {
         self.id = id
         self.startedAt = startedAt
         self.plannedSeconds = plannedSeconds
@@ -29,6 +34,8 @@ struct FocusSessionResult: Identifiable, Equatable {
         self.interruptionCount = interruptionCount
         self.distracted = distracted
         self.completed = completed
+        self.companionID = companionID
+        self.mode = mode
     }
 
     var activeMinutes: Int { activeSeconds / 60 }

@@ -74,6 +74,7 @@ struct HomeView: View {
         sync?.pushNewCreature(born)                   // 로그인 시 원격 동기화
         hatchling = born                              // 알 자리를 태어난 캐릭터로 대체(유지)
         companionID = born.id.uuidString              // 콜드런치 복원용 영속
+        session.companionID = born.id                 // 이후 세션을 이 캐릭터에 귀속(진화 단계)
         AudioServicesPlaySystemSound(1025)            // 부화 효과음(시스템 사운드)
         dialogue.fire(.greeting, speaker: .creature(born.personality))  // 성격 대사
         session.acknowledgeCompletion()               // 완료 소비 → idle, 인라인 리빌 노출
@@ -92,6 +93,7 @@ struct HomeView: View {
         hatchling = nil
         justEvolvedStage = nil
         companionID = ""                              // 의도적으로 동료 비움 → 복원 안 함
+        session.companionID = nil                     // 알 단계 세션은 귀속 없음
     }
 
     /// 콜드런치 후 저장된 동료를 컬렉션에서 복원(개체가 남아있을 때만).
@@ -99,6 +101,7 @@ struct HomeView: View {
         guard hatchling == nil, !companionID.isEmpty else { return }
         if let saved = store.creatures.first(where: { $0.id.uuidString == companionID }) {
             hatchling = saved
+            session.companionID = saved.id            // 복원된 동료에 이후 세션 귀속
         } else {
             companionID = ""                          // 개체가 사라졌으면(삭제 등) 플래그 정리
         }
@@ -342,7 +345,7 @@ struct HomeView: View {
     /// 현재 동료의 진화 단계(부화 후 완료한 집중 세션 수로 파생, 0…max).
     private var companionStage: Int {
         guard let h = hatchling else { return 0 }
-        return h.evolutionStage(completedSessionsSinceHatch: history.completedSessions(since: h.hatchedAt))
+        return h.evolutionStage(completedSessionsSinceHatch: history.completedSessions(forCompanion: h.id))
     }
 
     /// 타이머 아래 부제(진화/부화 연출 우선, 그 외 상태 문구). 두 번째 값은 골드 강조 여부.

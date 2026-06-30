@@ -60,6 +60,10 @@ final class SessionManager {
     /// 세션이 끝날 때(완료/중단) 결과를 전달(영속/통계 기록용). HomeView가 주입.
     var onSessionEnd: ((FocusSessionResult) -> Void)?
 
+    /// 현재 동료 캐릭터 id(HomeView가 동료 변화 시 주입). 세션 결과에 귀속 → 진화 단계 정확화.
+    /// 알 단계(동료 없음)에선 nil.
+    var companionID: UUID?
+
     // 이탈 추적(Feature 6) — 현재 세션 누적.
     private var interruptionCount = 0
     private var distracted = false
@@ -312,7 +316,9 @@ final class SessionManager {
             activeSeconds: activeSecondsLive,
             interruptionCount: interruptionCount,
             distracted: distracted,
-            completed: completed
+            completed: completed,
+            companionID: companionID,
+            mode: s.mode
         )
     }
 

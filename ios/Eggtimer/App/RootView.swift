@@ -43,7 +43,7 @@ struct RootView: View {
                 .tabItem { Label(RootTab.home.title, systemImage: RootTab.home.systemImage) }
                 .tag(RootTab.home)
             CollectionView(creatures: store.creatures,
-                           completedSessionsSinceHatch: { history.completedSessions(since: $0.hatchedAt) })
+                           completedSessionsSinceHatch: { history.completedSessions(forCompanion: $0.id) })
                 .tabItem { Label(RootTab.collection.title, systemImage: RootTab.collection.systemImage) }
                 .tag(RootTab.collection)
             ProgressScreen(sessions: history.sessions)

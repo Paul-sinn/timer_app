@@ -30,10 +30,11 @@ final class FocusHistoryStore {
         self.sessions = sessions.sorted { $0.startedAt > $1.startedAt }
     }
 
-    /// 특정 시점 이후 완료한(목표 도달) 집중 세션 수. 생명체 진화 단계 파생용
-    /// — 부화 시각 이후 "이어서 집중" 1세션 완료마다 한 단계씩 진화한다.
-    func completedSessions(since date: Date) -> Int {
-        sessions.reduce(0) { $0 + (($1.startedAt >= date && $1.completed) ? 1 : 0) }
+    /// 특정 동료와 함께 완료한(목표 도달) 집중 세션 수. 생명체 진화 단계 파생용
+    /// — 그 캐릭터와 "이어서 집중" 1세션 완료마다 한 단계씩 진화한다.
+    /// companion_id로 귀속하므로 다른 동료와 한 집중은 세지 않는다(누수 없음).
+    func completedSessions(forCompanion id: UUID) -> Int {
+        sessions.reduce(0) { $0 + (($1.companionID == id && $1.completed) ? 1 : 0) }
     }
 
     /// 끝난 세션을 기록(영속 저장).
