@@ -29,6 +29,8 @@ struct HomeView: View {
     /// 현재 동료의 id(영속). 콜드런치(앱 재시작) 후 컬렉션에서 같은 개체를 복원해 홈에 다시 표시.
     /// 빈 문자열 = 동료 없음(첫 부화 전 또는 '새 알 받기' 직후).
     @AppStorage("companionCreatureID") private var companionID = ""
+    /// 부화 순간 borneffect.png 버스트 연출 활성(잠시 후 false).
+    @State private var bornEffect = false
 
     /// 집중 경과 대사 마일스톤(분). 알의 톤이 의심→존중→자부심으로 진화하는 지점.
     private static let focusMilestones = [5, 10, 15, 30, 45, 60]
@@ -75,6 +77,11 @@ struct HomeView: View {
         hatchling = born                              // 알 자리를 태어난 캐릭터로 대체(유지)
         companionID = born.id.uuidString              // 콜드런치 복원용 영속
         session.companionID = born.id                 // 이후 세션을 이 캐릭터에 귀속(진화 단계)
+        bornEffect = true                             // borneffect "팍" 버스트
+        Task { @MainActor in
+            try? await Task.sleep(for: .milliseconds(550))
+            bornEffect = false
+        }
         AudioServicesPlaySystemSound(1025)            // 부화 효과음(시스템 사운드)
         dialogue.fire(.greeting, speaker: .creature(born.personality))  // 성격 대사
         session.acknowledgeCompletion()               // 완료 소비 → idle, 인라인 리빌 노출
@@ -159,6 +166,11 @@ struct HomeView: View {
             }
             .padding(.horizontal, AppSpacing.section)
             .animation(.easeInOut(duration: 0.3), value: hasCompanion)
+
+            if bornEffect {
+                BornEffectView()        // 알이 "팍" 터지는 순간 연출(몬스터 등장 직전)
+                    .allowsHitTesting(false)
+            }
         }
         .onChange(of: session.isCompleted) { _, completed in
             guard completed else { return }
@@ -371,7 +383,7 @@ struct HomeView: View {
                 .id("\(hatchling.id.uuidString)-\(companionStage)")   // 캐릭터·단계 바뀔 때마다 등장(진화) 연출 재생
                 .transition(.scale(scale: 0.6).combined(with: .opacity))
         } else {
-            EggView(stageIndex: session.stageIndex)   // 알은 첫 부화 전까지만
+            EggView(stageIndex: session.eggStageIndex)   // 알은 첫 부화 전까지만(15분마다 crack)
                 .transition(.opacity)
         }
     }
@@ -601,6 +613,31 @@ private struct StageStepper: View {
                 }
             }
         }
+    }
+}
+
+/// 부화 순간 알 자리에서 "팍" 터지는 연출. borneffect.png가 있으면 그걸, 없으면 밝은 골드 플래시로 폴백.
+private struct BornEffectView: View {
+    @State private var pop = false
+
+    var body: some View {
+        Group {
+            if UIImage(named: "borneffect") != nil {
+                Image("borneffect")
+                    .interpolation(.none)
+                    .resizable()
+                    .scaledToFit()
+                    .frame(height: 280)
+            } else {
+                Circle()
+                    .fill(RadialGradient(colors: [AppColor.eggAccent.opacity(0.9), .clear],
+                                         center: .center, startRadius: 4, endRadius: 160))
+                    .frame(width: 320, height: 320)
+            }
+        }
+        .scaleEffect(pop ? 1.2 : 0.35)
+        .opacity(pop ? 0 : 1)
+        .onAppear { withAnimation(.easeOut(duration: 0.5)) { pop = true } }
     }
 }
 

@@ -2,27 +2,44 @@
 //  EggView.swift
 //  Eggtimer
 //
-//  홈 화면의 주인공 알. 픽셀아트 알 에셋(Egg0~Egg5)을 단계에 맞춰 보여주고,
-//  뒤에 따뜻한 골드 글로우를 깐다. 픽셀 선명도를 위해 보간을 끈다(.none).
-//  UI_GUIDE 허용 모션인 idle 미세 흔들림(루프)만 둔다.
+//  홈 화면의 주인공 알. 15분마다 crack하는 4단계 픽셀아트(첫 알 → 2egg → 3egg → 4egg)를
+//  진행도에 맞춰 보여주고, 뒤에 따뜻한 골드 글로우를 깐다. 픽셀 선명도를 위해 보간을 끈다(.none).
+//  살아있는 느낌의 미세 흔들림(루프) + crack(단계 변화) 시 "팍" 튀는 pop 연출.
+//  새 에셋(2egg/3egg/4egg)이 아직 없으면 기존 Egg 단계로 폴백한다(개발 중에도 안 깨지게).
 //
 
 import SwiftUI
 
 struct EggView: View {
-    /// 0(온전) ~ 5(부화 직전) 알 이미지 단계.
+    /// 알 이미지 단계 0(첫 알) ~ 3(부화 직전).
     let stageIndex: Int
     /// 알 높이 기준 크기(pt).
     var height: CGFloat = 240
 
-    /// idle 흔들림 토글.
+    /// 흔들림 루프 토글.
     @State private var wobbling = false
+    /// crack 순간 "팍" 튀는 pop.
+    @State private var crackPop = false
 
-    private var assetName: String { "Egg\(min(max(stageIndex, 0), EggState.visualStages - 1))" }
+    /// 단계별 알 에셋. 새 에셋이 없으면 기존 Egg 에셋으로 폴백.
+    private static let primaryNames = ["Egg0", "2egg", "3egg", "4egg"]
+    private static let fallbackNames = ["Egg0", "Egg2", "Egg3", "Egg5"]
+
+    private var clampedStage: Int { min(max(stageIndex, 0), 3) }
+
+    private var assetName: String {
+        let primary = Self.primaryNames[clampedStage]
+        if UIImage(named: primary) != nil { return primary }
+        return Self.fallbackNames[clampedStage]
+    }
+
+    /// 후반 단계일수록 더 크게 흔들린다(부화 임박감).
+    private var wobbleAmplitude: Double { 1.5 + Double(clampedStage) * 0.9 }
+    private var wobblePeriod: Double { max(2.8 - Double(clampedStage) * 0.45, 1.3) }
 
     var body: some View {
         ZStack {
-            // 골드 글로우(알 뒤 은은한 빛). UI_GUIDE 안티패턴(네온)과 다른, 단일 따뜻한 광원.
+            // 골드 글로우(알 뒤 은은한 빛). 단일 따뜻한 광원.
             Circle()
                 .fill(
                     RadialGradient(
@@ -39,11 +56,21 @@ struct EggView: View {
                 .resizable()
                 .scaledToFit()
                 .frame(height: height)
-                .rotationEffect(.degrees(wobbling ? 1.5 : -1.5), anchor: .bottom)
-                .animation(.easeInOut(duration: 2.8).repeatForever(autoreverses: true), value: wobbling)
+                .scaleEffect(crackPop ? 1.08 : 1.0)
+                .rotationEffect(.degrees(wobbling ? wobbleAmplitude : -wobbleAmplitude), anchor: .bottom)
+                .animation(.easeInOut(duration: wobblePeriod).repeatForever(autoreverses: true), value: wobbling)
+                .animation(.spring(response: 0.25, dampingFraction: 0.4), value: crackPop)
         }
         .onAppear { wobbling = true }
-        .accessibilityLabel(Text("부화 중인 알, \(stageIndex + 1)단계"))
+        .onChange(of: stageIndex) { _, _ in
+            // crack(단계 상승) 시 한 번 "팍" 튀어 변화 강조.
+            crackPop = true
+            Task { @MainActor in
+                try? await Task.sleep(for: .milliseconds(300))
+                crackPop = false
+            }
+        }
+        .accessibilityLabel(Text("부화 중인 알, \(clampedStage + 1)단계"))
     }
 }
 
@@ -52,7 +79,7 @@ struct EggView: View {
         AppColor.pageBackground.ignoresSafeArea()
         HStack(spacing: AppSpacing.section) {
             EggView(stageIndex: 0, height: 150)
-            EggView(stageIndex: 5, height: 150)
+            EggView(stageIndex: 3, height: 150)
         }
     }
     .preferredColorScheme(.dark)

@@ -134,9 +134,15 @@ final class SessionManager {
         return min(Double(activeSecondsLive) / Double(targetSeconds), 1)
     }
 
-    /// 알 이미지 단계(0...5) — EggState와 동일 규칙.
+    /// 알 이미지 단계(0...5) — EggState와 동일 규칙. (부화 진행 스텝퍼용)
     var stageIndex: Int {
         min(max(Int(progress * Double(EggState.visualStages)), 0), EggState.visualStages - 1)
+    }
+
+    /// 알 이미지 4단계 인덱스(0...3). 진행도 4분할 = 목표 60분 기준 15분마다 한 칸 crack.
+    /// 0=첫 알, 1=2egg, 2=3egg, 3=4egg. 목표 도달 시 부화(borneffect → 몬스터).
+    var eggStageIndex: Int {
+        min(max(Int(progress * 4), 0), 3)
     }
 
     /// "MM:SS" 타이머 표시(맥락별 카운트다운).
