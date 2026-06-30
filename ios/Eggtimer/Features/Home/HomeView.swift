@@ -82,6 +82,13 @@ struct HomeView: View {
         session.start()
     }
 
+    /// 현재 동료를 보내고 새 알을 받는다(진행 중이면 세션 중단·기록 후 알로 리셋).
+    private func takeNewEgg() {
+        session.stop()
+        hatchling = nil
+        justEvolvedStage = nil
+    }
+
     /// 백그라운드 진입 시 다음 전환(부화/휴식 종료)까지 남은 실시간에 1회 알림 예약.
     private func scheduleFocusNotification() {
         if session.isOnBreak {
@@ -139,8 +146,12 @@ struct HomeView: View {
             guard completed else { return }
             if hatchling == nil {
                 triggerHatch()                    // 첫 부화: 알 → 캐릭터
+            } else if companionStage >= Creature.maxEvolutionStage {
+                // 최종 진화 상태: 더 진화할 게 없으니 멈춤·연출·선택 없이 다음 집중을 끊김없이 이어감.
+                session.acknowledgeCompletion()
+                session.start()
             } else {
-                session.acknowledgeCompletion()   // 동료와 함께한 세션 종료 → 캐릭터 유지(진화는 시간 경과로)
+                session.acknowledgeCompletion()   // 비최종: idle → 진화 연출 + 이어서/새 알 선택
             }
         }
         .onChange(of: companionStage) { old, new in
@@ -212,11 +223,36 @@ struct HomeView: View {
                 .font(.title.weight(.bold))
                 .foregroundStyle(AppColor.textPrimary)
             Spacer()
-            Image(systemName: "gearshape")
-                .font(.title3)
-                .foregroundStyle(AppColor.textSecondary)
+            // 최종 진화 상태에선 집중이 끊김없이 이어지므로, 새 종을 받고 싶은 유저용
+            // 작은 "새 알" 토글을 우상단에 배치(UI 방해 최소화). 그 외엔 설정 아이콘.
+            if hasCompanion && companionStage >= Creature.maxEvolutionStage {
+                newEggButton
+            } else {
+                Image(systemName: "gearshape")
+                    .font(.title3)
+                    .foregroundStyle(AppColor.textSecondary)
+            }
         }
         .padding(.top, AppSpacing.elementTight)
+    }
+
+    /// 우상단 소형 "새 알 받기" 토글(최종 진화 시 노출).
+    private var newEggButton: some View {
+        Button { takeNewEgg() } label: {
+            HStack(spacing: 4) {
+                Image(systemName: "arrow.triangle.2.circlepath")
+                    .font(.caption2)
+                Text("새 알")
+                    .font(.caption.weight(.semibold))
+            }
+            .foregroundStyle(AppColor.textSecondary)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 6)
+            .background(AppColor.cardBackground)
+            .clipShape(Capsule())
+            .overlay(Capsule().stroke(AppColor.border, lineWidth: AppSpacing.borderWidth))
+        }
+        .buttonStyle(.plain)
     }
 
     // MARK: - 모드 선택 + 집중 시간 칩 (idle일 때만)
@@ -391,7 +427,7 @@ struct HomeView: View {
                     if hatchling != nil {
                         // 부화 후: 동료를 유지한 채 집중을 이어가거나(진화), 새 알을 받아 다른 종 수집.
                         PrimaryButton("이어서 집중") { beginFocus() }       // 캐릭터 유지(알 X)
-                        SecondaryButton("새 알 받기") { hatchling = nil; justEvolvedStage = nil }  // 알만 리셋(컬렉션은 유지)
+                        SecondaryButton("새 알 받기") { takeNewEgg() }  // 알만 리셋(컬렉션은 유지)
                     } else {
                         PrimaryButton("시작") { beginFocus() }
                     }
