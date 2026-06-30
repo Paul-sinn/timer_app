@@ -29,6 +29,17 @@ enum Rarity: String, CaseIterable, Identifiable, Comparable {
 
     static func < (lhs: Rarity, rhs: Rarity) -> Bool { lhs.order < rhs.order }
 
+    /// 등급 출현 확률(%). **전 등급 합 = 100(불변)**. 부화는 먼저 이 표로 등급을 뽑고,
+    /// 그 등급 안에서 종을 뽑는다(2단계). 새 종을 추가해도 이 값은 고정 → 다른 등급 확률이 안 바뀐다.
+    var tierWeight: Int {
+        switch self {
+        case .common:    return 80
+        case .uncommon:  return 10
+        case .rare:      return 8
+        case .legendary: return 2
+        }
+    }
+
     /// 한글 표시 라벨.
     var label: String {
         switch self {

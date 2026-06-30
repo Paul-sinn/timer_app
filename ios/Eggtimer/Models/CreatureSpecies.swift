@@ -3,21 +3,23 @@
 //  Eggtimer
 //
 //  도감에 등장하는 7종 생명체의 단일 진실 소스(Single Source of Truth).
-//  각 종의 등급·출현 확률(가중치)·이미지 에셋·진화 여부를 한곳에 정의한다.
-//  알 부화 시 이 가중치표에 따라 랜덤으로 한 종이 뽑힌다.
+//  각 종의 등급·출현 가중치·이미지 에셋·진화 여부를 한곳에 정의한다.
 //
-//  확률표
-//  ┌───────────┬──────────────┬──────┐
-//  │ 등급      │ 생명체       │ 확률 │
-//  ├───────────┼──────────────┼──────┤
-//  │ Common    │ 빨간 토종닭  │ 55%  │  ← 여러 표정 중 랜덤
-//  │ Common    │ 슬라임       │ 25%  │
-//  │ Uncommon  │ 아기 공룡    │ 10%  │
-//  │ Rare      │ 검은 고양이  │  5%  │
-//  │ Rare      │ 황금 병아리  │  3%  │
-//  │ Legendary │ 백호         │  1%  │  ← 20분 뒤 진화
-//  │ Legendary │ 피닉스       │  1%  │  ← 20분 뒤 진화
-//  └───────────┴──────────────┴──────┘
+//  부화는 2단계 추첨: ① 등급(Rarity.tierWeight, 합 100·불변) → ② 그 등급 안의 종(weight 상대가중).
+//  → 새 종을 추가해도 다른 등급 확률이 안 바뀐다(해당 등급 내부만 재분배). 100% 안에서 자동 정규화.
+//
+//  확률표 (등급% × 등급 내 비중 = 실제 출현%)
+//  ┌───────────┬──────┬──────────────┬──────────┬────────┐
+//  │ 등급      │ 등급%│ 생명체       │ 등급내가중│ 실제%  │
+//  ├───────────┼──────┼──────────────┼──────────┼────────┤
+//  │ Common    │ 80%  │ 빨간 토종닭  │ 55       │ 55%    │  ← 여러 표정 중 랜덤
+//  │           │      │ 슬라임       │ 25       │ 25%    │
+//  │ Uncommon  │ 10%  │ 아기 공룡    │ 10       │ 10%    │
+//  │ Rare      │  8%  │ 검은 고양이  │  5       │  5%    │
+//  │           │      │ 황금 병아리  │  3       │  3%    │
+//  │ Legendary │  2%  │ 백호         │  1       │  1%    │  ← 최종 단계서 진화
+//  │           │      │ 피닉스       │  1       │  1%    │  ← 최종 단계서 진화
+//  └───────────┴──────┴──────────────┴──────────┴────────┘
 //
 
 import Foundation
@@ -55,7 +57,9 @@ enum CreatureSpecies: String, CaseIterable, Identifiable {
         }
     }
 
-    /// 출현 가중치(%) — 전체 합 100.
+    /// 같은 등급 안에서의 상대 출현 가중치. (전역 합 100일 필요 없음 — 등급별 합으로만 정규화)
+    /// 실제 출현 확률 = `rarity.tierWeight%` × (이 weight / 같은 등급 weight 합).
+    /// 예) Common 등급(80%) 안에서 닭55:슬라임25 → 닭 55%, 슬라임 25%.
     var weight: Int {
         switch self {
         case .chicken:    return 55
@@ -117,17 +121,38 @@ enum CreatureSpecies: String, CaseIterable, Identifiable {
         }
     }
 
-    // MARK: - 가중 랜덤 추첨
+    // MARK: - 2단계 가중 추첨 (등급 → 종)
 
-    /// 확률표(weight)에 따라 한 종을 뽑는다. 주입형 RNG로 테스트 가능.
+    /// 한 종을 뽑는다: ① 등급(`Rarity.tierWeight`, 합 100) ② 그 등급 안의 종(`weight` 상대가중).
+    /// 주입형 RNG로 테스트 가능. **새 종을 추가해도 다른 등급의 확률은 불변**(해당 등급 내부만 재분배).
     static func roll<G: RandomNumberGenerator>(using generator: inout G) -> CreatureSpecies {
-        let total = allCases.reduce(0) { $0 + $1.weight }
+        let rarity = rollRarity(using: &generator)
+        let pool = allCases.filter { $0.rarity == rarity }
+        return weightedPick(pool, using: &generator) ?? allCases[0]
+    }
+
+    /// 1단계: 등급 추첨(tierWeight 가중, 전 등급 합 100).
+    private static func rollRarity<G: RandomNumberGenerator>(using generator: inout G) -> Rarity {
+        let total = Rarity.allCases.reduce(0) { $0 + $1.tierWeight }
         var ticket = Int.random(in: 0..<total, using: &generator)
-        for species in allCases {
-            if ticket < species.weight { return species }
-            ticket -= species.weight
+        for r in Rarity.allCases {
+            if ticket < r.tierWeight { return r }
+            ticket -= r.tierWeight
         }
-        return allCases[0] // 도달 불가(가중치 합 보장)
+        return .common // 도달 불가(합 보장)
+    }
+
+    /// 2단계: 같은 등급 종 풀에서 weight 가중으로 하나 선택.
+    private static func weightedPick<G: RandomNumberGenerator>(_ pool: [CreatureSpecies], using generator: inout G) -> CreatureSpecies? {
+        guard !pool.isEmpty else { return nil }
+        let total = pool.reduce(0) { $0 + max(1, $1.weight) }
+        var ticket = Int.random(in: 0..<total, using: &generator)
+        for s in pool {
+            let w = max(1, s.weight)
+            if ticket < w { return s }
+            ticket -= w
+        }
+        return pool.last
     }
 
     /// 시스템 RNG로 한 종을 뽑는 편의 메서드.
