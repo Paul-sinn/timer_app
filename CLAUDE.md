@@ -10,6 +10,13 @@
 - CRITICAL: {절대 지켜야 할 규칙 2 (예: 클라이언트 컴포넌트에서 직접 외부 API를 호출하지 말 것)}
 - {일반 규칙 (예: 컴포넌트는 components/ 폴더에, 타입은 types/ 폴더에 분리)}
 
+## 데이터 영속/마이그레이션 (CRITICAL — 유저 데이터 보호)
+영속 데이터: SwiftData `@Model` `HatchedCreatureRecord`(부화 이력) / `FocusSessionRecord`(집중 이력). 로그인 시 Supabase 미러(추가 백업·기기간 동기화). 비로그인은 로컬만(기기 백업엔 포함).
+- CRITICAL: `@Model` 필드를 **이름변경/삭제/타입변경 금지**. 하면 자동 lightweight 마이그레이션 실패 → 앱 업데이트 시 유저 데이터 소실/크래시.
+- CRITICAL: 필드 추가는 **옵셔널 또는 기본값**으로만(lightweight 호환). 그 외 스키마 변경은 반드시 `VersionedSchema` + `SchemaMigrationPlan`을 작성하고 구버전 데이터로 마이그레이션 테스트 후 릴리스.
+- CRITICAL: 동기화/머지는 **id 기준 idempotent 합집합**만(기존 로직 유지). 원격 데이터로 로컬을 통째 덮어쓰지 말 것.
+- 진화 단계 등 파생값은 저장하지 말고 이력에서 계산(스키마 안정성↑). 새 영속 필드는 신중히.
+
 ## 개발 프로세스
 - CRITICAL: 새 기능 구현 시 반드시 테스트를 먼저 작성하고, 테스트가 통과하는 구현을 작성할 것 (TDD)
 - 커밋 메시지는 conventional commits 형식을 따를 것 (feat:, fix:, docs:, refactor:)
