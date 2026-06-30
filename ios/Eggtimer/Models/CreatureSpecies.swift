@@ -96,6 +96,20 @@ enum CreatureSpecies: String, CaseIterable, Identifiable {
         }
     }
 
+    /// 변형(표정)별 도감 이름. 단일 변형 종은 종 이름 그대로.
+    /// 빨간 토종닭은 표정마다 다른 이름으로 따로 수집된다(질림 방지 + 컬렉션 재미).
+    func variantName(imageName: String) -> String {
+        switch imageName {
+        case "Chicken1":       return "빨간 토종닭"
+        case "ChickenAnnoyed": return "심통난 토종닭"
+        case "ChickenSleepy":  return "잠꾸러기 토종닭"
+        case "ChickenSmart":   return "공부벌레 토종닭"
+        case "ChickenBro":     return "헬스 토종닭"
+        case "ChickenAngry":   return "버럭 토종닭"
+        default:               return name
+        }
+    }
+
     /// 실루엣(미발견 표시)에 사용할 대표 이미지.
     var silhouetteImageName: String { imageVariants.first ?? rawValue }
 
@@ -159,5 +173,25 @@ enum CreatureSpecies: String, CaseIterable, Identifiable {
     static func roll() -> CreatureSpecies {
         var generator = SystemRandomNumberGenerator()
         return roll(using: &generator)
+    }
+}
+
+/// 도감 수집 단위(폼). 같은 종이라도 이미지 변형마다 별도 칸으로 모은다.
+/// 닭은 6표정 → 6폼, 나머지 종은 변형 1개 → 1폼. (총 12폼)
+struct CreatureForm: Identifiable, Hashable {
+    let species: CreatureSpecies
+    /// 변형 이미지명(폼 고유 식별자 역할).
+    let imageName: String
+
+    var id: String { imageName }
+    var name: String { species.variantName(imageName: imageName) }
+    var rarity: Rarity { species.rarity }
+
+    /// 도감에 등장하는 전체 폼. allCases 선언 순서가 이미 등급 오름차순(common→legendary)이라
+    /// 별도 정렬 없이 그대로 등급순 + 변형 선언순이 유지된다.
+    static var all: [CreatureForm] {
+        CreatureSpecies.allCases.flatMap { sp in
+            sp.imageVariants.map { CreatureForm(species: sp, imageName: $0) }
+        }
     }
 }

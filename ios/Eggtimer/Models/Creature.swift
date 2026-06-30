@@ -39,7 +39,7 @@ struct Creature: Identifiable, Hashable {
         self.hatchedAt = hatchedAt
     }
 
-    var name: String { species.name }
+    var name: String { species.variantName(imageName: imageName) }
     var rarity: Rarity { species.rarity }
     /// 대사 성격(종 + 부화 시 확정 이미지 변형에서 파생).
     var personality: CreaturePersonality { species.personality(imageName: imageName) }

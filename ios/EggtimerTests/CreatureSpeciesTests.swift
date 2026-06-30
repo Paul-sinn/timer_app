@@ -52,6 +52,17 @@ struct CreatureSpeciesTests {
         #expect(CreatureSpecies.slime.imageVariants.count == 1)
     }
 
+    @Test func dexEnumeratesEachImageVariantAsForm() {
+        let forms = CreatureForm.all
+        // 닭 6표정 + 나머지 6종 1개씩 = 12폼.
+        #expect(forms.count == 12)
+        // 닭 변형은 서로 다른 이름으로 따로 수집된다.
+        let chickenNames = Set(forms.filter { $0.species == .chicken }.map(\.name))
+        #expect(chickenNames.count == 6)
+        // 폼 id(imageName)는 고유.
+        #expect(Set(forms.map(\.id)).count == forms.count)
+    }
+
     @Test func onlyLegendariesEvolve() {
         for species in CreatureSpecies.allCases {
             let evolves = species.evolvedImageName != nil

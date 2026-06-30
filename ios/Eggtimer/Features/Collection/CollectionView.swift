@@ -20,10 +20,8 @@ struct CollectionView: View {
     /// 그리드 등장 애니메이션 토글.
     @State private var appeared = false
 
-    /// 도감 전체 종(등급 오름차순으로 표시).
-    private let allSpecies = CreatureSpecies.allCases.sorted {
-        $0.rarity != $1.rarity ? $0.rarity < $1.rarity : $0.weight > $1.weight
-    }
+    /// 도감 전체 폼(변형 단위). 닭은 표정마다 별도 칸으로 수집된다.
+    private let allForms = CreatureForm.all
 
     init(creatures: [Creature] = MockData.populated.creatures,
          completedSessionsSinceHatch: @escaping (Creature) -> Int = { _ in 0 }) {
@@ -31,10 +29,10 @@ struct CollectionView: View {
         self.completedSessionsSinceHatch = completedSessionsSinceHatch
     }
 
-    /// 종 → 가장 최근 발견 개체.
-    private var discovered: [CreatureSpecies: Creature] {
-        var map: [CreatureSpecies: Creature] = [:]
-        for c in creatures where map[c.species] == nil { map[c.species] = c }
+    /// 폼(변형 imageName) → 가장 최근 발견 개체.
+    private var discovered: [String: Creature] {
+        var map: [String: Creature] = [:]
+        for c in creatures where map[c.imageName] == nil { map[c.imageName] = c }
         return map
     }
 
@@ -75,11 +73,11 @@ struct CollectionView: View {
                     .font(AppFont.cardTitle)
                     .foregroundStyle(AppColor.textSecondary)
                 Spacer()
-                Text("\(discovered.count)/\(allSpecies.count)")
+                Text("\(discovered.count)/\(allForms.count)")
                     .font(AppFont.cardTitle.weight(.bold))
                     .foregroundStyle(AppColor.eggAccent)
             }
-            DiscoveryBar(fraction: allSpecies.isEmpty ? 0 : Double(discovered.count) / Double(allSpecies.count))
+            DiscoveryBar(fraction: allForms.isEmpty ? 0 : Double(discovered.count) / Double(allForms.count))
         }
     }
 
@@ -87,16 +85,16 @@ struct CollectionView: View {
 
     private var grid: some View {
         LazyVGrid(columns: columns, spacing: 12) {
-            ForEach(Array(allSpecies.enumerated()), id: \.element.id) { index, species in
+            ForEach(Array(allForms.enumerated()), id: \.element.id) { index, form in
                 Group {
-                    if let creature = discovered[species] {
+                    if let creature = discovered[form.imageName] {
                         Button { selected = creature } label: {
                             CreatureSlot(creature: creature,
                                          stage: creature.evolutionStage(completedSessionsSinceHatch: completedSessionsSinceHatch(creature)))
                         }
                         .buttonStyle(.plain)
                     } else {
-                        LockedSlot(species: species)
+                        LockedSlot(form: form)
                     }
                 }
                 .opacity(appeared ? 1 : 0)
@@ -163,12 +161,12 @@ private struct CreatureSlot: View {
 
 /// 미발견 슬롯(검은 실루엣 + "?").
 private struct LockedSlot: View {
-    let species: CreatureSpecies
+    let form: CreatureForm
 
     var body: some View {
         VStack(spacing: 8) {
-            CreatureImage(imageName: species.silhouetteImageName,
-                          rarity: species.rarity, size: 64, silhouette: true)
+            CreatureImage(imageName: form.imageName,
+                          rarity: form.rarity, size: 64, silhouette: true)
             Text("???")
                 .font(.caption2)
                 .foregroundStyle(AppColor.textDisabled)
