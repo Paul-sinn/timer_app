@@ -284,14 +284,22 @@ final class SessionManager {
         endBreak(at: clock())
     }
 
-    /// 백그라운드 진입 시(화면 유지 해제). 진행은 타임스탬프로 보존되므로 멈추지 않는다.
-    /// running 중 이탈이면 이탈 시작 시각을 기록(복귀 시 분류).
+    /// 백그라운드 진입 시: 집중 중이면 **자동 일시정지**(누적 고정, 백그라운드 시간 미포함).
+    /// 세션은 유지되므로 복귀/재실행 시 이어서 진행(초기화 아님). 이탈 시작 시각도 기록(복귀 분류용).
+    /// 휴식 중 이탈은 집중 이탈로 치지 않으며 휴식 카운트다운은 계속 흐른다.
     func handleBackground() {
-        if isRunning { leftAt = clock() }   // 휴식 중 이탈은 집중 이탈로 치지 않음
+        if isRunning, var s = session {
+            leftAt = clock()
+            s.accumulatedActiveSeconds = s.activeSeconds(now: clock())
+            s.lastResumedAt = nil        // 벽시계 카운트 정지(누적만 남김)
+            session = s
+            stopTicker()
+            persist()
+        }
         ScreenAwake.set(false)
     }
 
-    /// 포그라운드 복귀 시: 이탈 시간 분류 → 재계산 → 화면 유지 재적용.
+    /// 포그라운드 복귀 시: 이탈 시간 분류 → 얼려둔 집중 자동 재개 → 재계산 → 화면 유지 재적용.
     func handleForeground() {
         if let left = leftAt, isRunning {
             let away = max(0, Int(clock().timeIntervalSince(left)))
@@ -303,6 +311,12 @@ final class SessionManager {
             lastAwaySeconds = 0
         }
         leftAt = nil
+        // 백그라운드에서 얼려둔 집중 재개(누적 유지, 지금부터 다시 카운트).
+        if var s = session, s.phase == .running, !s.isOnBreak, s.lastResumedAt == nil {
+            s.lastResumedAt = clock()
+            session = s
+            startTicker()
+        }
         recompute()
         if isRunning { ScreenAwake.set(true) }
     }
@@ -381,9 +395,14 @@ final class SessionManager {
     private func restore() {
         guard persists,
               let data = UserDefaults.standard.data(forKey: Self.persistKey),
-              let s = try? JSONDecoder().decode(ActiveSession.self, from: data)
+              var s = try? JSONDecoder().decode(ActiveSession.self, from: data)
         else { return }
 
+        // 콜드런치 = 포그라운드 진입. 백그라운드에서 얼려둔(lastResumedAt=nil) 집중을 재개.
+        // 휴식 중이면 건드리지 않음(휴식 카운트다운은 recompute가 처리).
+        if s.phase == .running, !s.isOnBreak, s.lastResumedAt == nil {
+            s.lastResumedAt = clock()
+        }
         session = s
         activeSecondsLive = s.activeSeconds(now: clock())
         switch s.phase {
