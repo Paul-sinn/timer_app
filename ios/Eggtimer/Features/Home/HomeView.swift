@@ -77,7 +77,7 @@ struct HomeView: View {
         AudioServicesPlaySystemSound(1025)            // 부화 효과음(시스템 사운드)
         bornEffect = true                             // 알 자리에 버스트 재생(몬스터 아직 X)
         Task { @MainActor in
-            try? await Task.sleep(for: .milliseconds(560))   // 버스트 재생(3프레임 × 150ms + 여유)
+            try? await Task.sleep(for: .milliseconds(660))   // 버스트 재생(5프레임 × 120ms + 여유)
             hatchling = born                          // 버스트 끝 → 태어난 캐릭터 노출
             companionID = born.id.uuidString          // 콜드런치 복원용 영속
             session.companionID = born.id             // 이후 세션을 이 캐릭터에 귀속(진화 단계)
@@ -617,10 +617,10 @@ private struct StageStepper: View {
 /// 6프레임 모두 1254² 동일 캔버스 → 정렬 안정. 높이 340pt면 알 코어(캔버스의 ~68%)가 정적 알(240)과 일치.
 /// 프레임 에셋이 없으면 단일 borneffect 플래시로 폴백.
 private struct HatchBurstView: View {
-    // 부화 버스트: 알 stage(4-2egg) 다음 crack-open(4-3→4-4) → 껍질 폭발(borneffect) → 몬스터.
-    // (4-5~4-7은 흰 배경 위 흰 폭발광이라 배경만 분리 불가 → 투명 재export 전까지 borneffect로 마무리.)
-    private let frames = ["4-3egg", "4-4egg", "borneffect"]
-    private let frameDuration: Double = 0.15
+    // 부화 버스트: 4-3egg→4-7egg 순서대로(알 쩍→황금 폭발). 모두 665×864 동일 박스라 정렬 일관.
+    // (4-5~4-7은 흰 배경이라 흰색→투명 키잉 처리 — 흰 플래시 자리는 황금 광선이 채움.)
+    private let frames = ["4-3egg", "4-4egg", "4-5egg", "4-6egg", "4-7egg"]
+    private let frameDuration: Double = 0.12
     /// 알과 동일 크기(4egg와 일치). centerStage 알 높이와 같게.
     var height: CGFloat = 240
     @State private var idx = 0
