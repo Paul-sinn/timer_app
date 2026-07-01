@@ -27,7 +27,11 @@ enum CreaturePersonality: String, CaseIterable, Sendable {
     case angryChicken   // 화난 닭: 츤데레
     case whiteTiger     // 백호: 차분한 멘토
     case phoenix        // 피닉스: 서사적/신화적
-    case generic        // 스펙 미정의 종(슬라임·공룡·검은고양이·황금병아리) 공용
+    case slime          // 슬라임: 느긋·말랑
+    case dino           // 아기 공룡: 힘차고 에너지
+    case blackCat       // 검은 고양이: 신비·쿨·행운
+    case goldChick      // 황금 병아리: 귀하고 조용한 자부심
+    case generic        // 폴백(미매핑 종)
 }
 
 /// 앱 이탈 후 복귀까지의 시간 버킷(Interruption 임계값과 동일: 0–30s / 30s–3m / 3–10m / 10m+).
@@ -51,6 +55,7 @@ enum ReturnBucket: String, CaseIterable, Equatable, Hashable, Sendable {
 enum DialogueTrigger: Equatable, Hashable, Sendable {
     case idle                          // 홈 대기
     case sessionStart                  // 세션 시작
+    case focusTick                     // 집중 중 주기(3분)마다 한마디(화자별 풀)
     case focusMilestone(minutes: Int)  // 집중 경과 분(5·10·15·30·45·60)
     case appReturn(ReturnBucket)       // 복귀(이탈 시간 버킷)
     case streak(days: Int)             // 연속일 도달(3·7·30·100)

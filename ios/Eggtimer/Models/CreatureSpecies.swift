@@ -131,7 +131,10 @@ enum CreatureSpecies: String, CaseIterable, Identifiable {
             }
         case .whiteTiger: return .whiteTiger
         case .phoenix:    return .phoenix
-        case .slime, .dino, .blackCat, .goldChick: return .generic
+        case .slime:      return .slime
+        case .dino:       return .dino
+        case .blackCat:   return .blackCat
+        case .goldChick:  return .goldChick
         }
     }
 

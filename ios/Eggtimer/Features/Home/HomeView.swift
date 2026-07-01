@@ -22,8 +22,8 @@ struct HomeView: View {
     @State private var hatchling: Creature?
     /// 캐릭터 말풍선 대사 선택기(Feature 4).
     @State private var dialogue = DialogueManager()
-    /// 이번 세션에서 마지막으로 발화한 집중 마일스톤(분). 중복 발화 방지.
-    @State private var lastMilestone = 0
+    /// 이번 세션에서 마지막으로 focus tick을 발화한 분. 3분 간격 중복 방지.
+    @State private var lastTickMinute = 0
     /// 방금 진화한 단계(연출/문구 노출용, 잠시 후 nil). nil = 진화 연출 없음.
     @State private var justEvolvedStage: Int?
     /// 현재 동료의 id(영속). 콜드런치(앱 재시작) 후 컬렉션에서 같은 개체를 복원해 홈에 다시 표시.
@@ -38,8 +38,8 @@ struct HomeView: View {
     /// 직전 찌릿으로 받은 보너스 %(표시용, 잠시 후 nil).
     @State private var zapBonusPercent: Int?
 
-    /// 집중 경과 대사 마일스톤(분). 알의 톤이 의심→존중→자부심으로 진화하는 지점.
-    private static let focusMilestones = [5, 10, 15, 30, 45, 60]
+    /// 집중 중 대사 발화 간격(분). 3분마다 현재 화자 풀에서 한마디.
+    private static let tickIntervalMinutes = 3
     /// 연속일에 해당하는 가장 높은 스트릭 임계값(없으면 nil).
     private static func streakThreshold(for streak: Int) -> Int? {
         [100, 30, 7, 3].first { streak >= $0 }
@@ -205,7 +205,7 @@ struct HomeView: View {
         .onChange(of: session.isRunning) { _, running in
             // 새 시작(activeSecondsLive == 0)에만 시작/스트릭 대사. resume에는 발화 안 함.
             guard running, session.activeSecondsLive == 0 else { return }
-            lastMilestone = 0
+            lastTickMinute = 0
             let streak = StatsEngine.currentStreak(history.sessions)
             if let t = Self.streakThreshold(for: streak) {
                 dialogue.fire(.streak(days: t))       // 스트릭 인정(의심→존중→자부심)
@@ -214,12 +214,13 @@ struct HomeView: View {
             }
         }
         .onChange(of: session.activeSecondsLive) { _, secs in
-            // 집중 경과 마일스톤(5·10·15·30·45·60분) 도달 시 1회 발화.
+            // 집중 중 3분마다 현재 화자(알/부화 캐릭터 성격) 풀에서 랜덤 한마디.
             guard session.isRunning else { return }
             let minutes = secs / 60
-            if let m = Self.focusMilestones.last(where: { $0 <= minutes && $0 > lastMilestone }) {
-                lastMilestone = m
-                dialogue.fire(.focusMilestone(minutes: m))
+            if minutes >= lastTickMinute + Self.tickIntervalMinutes {
+                lastTickMinute = minutes
+                let speaker: DialogueSpeaker = hatchling.map { .creature($0.personality) } ?? .egg
+                dialogue.fire(.focusTick, speaker: speaker)
             }
         }
         .onChange(of: scenePhase) { _, phase in
@@ -430,22 +431,26 @@ struct HomeView: View {
 
     @ViewBuilder
     private var dialogueBubble: some View {
-        // 레이아웃 점프 방지를 위해 높이를 확보하고, 대사 유무로 내용만 토글.
+        // 말풍선(아래 꼬리로 알/캐릭터를 가리킴). 집중 방해 없게 은은한 카드톤 + 최대 2줄.
+        // 레이아웃 점프 방지를 위해 최소 높이를 확보하고, 대사 유무로 내용만 토글.
         ZStack {
             if let line = dialogue.currentLine {
                 Text(line.text)
                     .font(AppFont.cardTitle)
                     .foregroundStyle(AppColor.textBody)
-                    .padding(.horizontal, AppSpacing.element)
-                    .padding(.vertical, 8)
-                    .background(AppColor.cardBackground)
-                    .clipShape(Capsule())
-                    .overlay(Capsule().stroke(AppColor.border, lineWidth: AppSpacing.borderWidth))
-                    .transition(.opacity.combined(with: .scale(scale: 0.9)))
+                    .multilineTextAlignment(.center)
+                    .lineLimit(2)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.horizontal, 14)
+                    .padding(.top, 9)
+                    .padding(.bottom, 15)          // 꼬리 공간 확보
+                    .background(BubbleShape().fill(AppColor.cardBackground))
+                    .overlay(BubbleShape().stroke(AppColor.border, lineWidth: AppSpacing.borderWidth))
+                    .transition(.opacity.combined(with: .scale(scale: 0.92)))
                     .id(line.id)
             }
         }
-        .frame(height: 36)
+        .frame(minHeight: 56)
         .animation(.easeInOut(duration: 0.25), value: dialogue.currentLine?.id)
     }
 
@@ -690,6 +695,26 @@ private struct HatchBurstView: View {
                 }
             }
         }
+    }
+}
+
+/// 말풍선 모양 — 둥근 사각형 본체 + 하단 중앙 아래로 향하는 작은 꼬리(아래의 캐릭터를 가리킴).
+private struct BubbleShape: Shape {
+    var radius: CGFloat = 14
+    var tailWidth: CGFloat = 14
+    var tailHeight: CGFloat = 8
+
+    func path(in rect: CGRect) -> Path {
+        var p = Path()
+        let body = CGRect(x: rect.minX, y: rect.minY,
+                          width: rect.width, height: max(0, rect.height - tailHeight))
+        p.addRoundedRect(in: body, cornerSize: CGSize(width: radius, height: radius))
+        let cx = rect.midX
+        p.move(to: CGPoint(x: cx - tailWidth / 2, y: body.maxY - 0.5))
+        p.addLine(to: CGPoint(x: cx, y: rect.maxY))
+        p.addLine(to: CGPoint(x: cx + tailWidth / 2, y: body.maxY - 0.5))
+        p.closeSubpath()
+        return p
     }
 }
 

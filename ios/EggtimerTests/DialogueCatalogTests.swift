@@ -79,12 +79,25 @@ struct DialogueCatalogTests {
         #expect(CreatureSpecies.chicken.personality(imageName: "ChickenAngry") == .angryChicken)
     }
 
-    @Test func legendaryAndGenericMapping() {
+    @Test func speciesPersonalityMapping() {
         #expect(CreatureSpecies.whiteTiger.personality(imageName: "WhiteTiger") == .whiteTiger)
         #expect(CreatureSpecies.phoenix.personality(imageName: "Phoenix") == .phoenix)
-        for s in [CreatureSpecies.slime, .dino, .blackCat, .goldChick] {
-            #expect(s.personality(imageName: s.silhouetteImageName) == .generic)
+        // 슬라임·공룡·검은고양이·황금병아리는 각자 고유 성격(더 이상 generic 공용 아님).
+        let expected: [CreatureSpecies: CreaturePersonality] =
+            [.slime: .slime, .dino: .dino, .blackCat: .blackCat, .goldChick: .goldChick]
+        for (s, p) in expected {
+            #expect(s.personality(imageName: s.silhouetteImageName) == p)
         }
+    }
+
+    @Test func everySpeciesHasFocusTickLines() {
+        // 모든 종의 성격 + 알(egg)이 focus tick 풀을 가져야 3분마다 대사가 빈다 없이 나온다.
+        for p in CreaturePersonality.allCases where p != .generic {
+            let lines = DialogueCatalog.all.filter { $0.speaker == .creature(p) && $0.trigger == .focusTick }
+            #expect(!lines.isEmpty, "\(p.rawValue) focusTick 풀 없음")
+        }
+        let eggTicks = DialogueCatalog.all.filter { $0.speaker == .egg && $0.trigger == .focusTick }
+        #expect(!eggTicks.isEmpty)
     }
 
     @Test func returnBucketBoundaries() {
