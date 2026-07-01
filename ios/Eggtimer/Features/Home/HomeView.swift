@@ -77,9 +77,9 @@ struct HomeView: View {
         hatchling = born                              // 알 자리를 태어난 캐릭터로 대체(유지)
         companionID = born.id.uuidString              // 콜드런치 복원용 영속
         session.companionID = born.id                 // 이후 세션을 이 캐릭터에 귀속(진화 단계)
-        bornEffect = true                             // borneffect "팍" 버스트
+        bornEffect = true                             // 부화 버스트 시퀀스(4-2egg→4-7egg) 재생
         Task { @MainActor in
-            try? await Task.sleep(for: .milliseconds(550))
+            try? await Task.sleep(for: .milliseconds(620))   // 6프레임 × 90ms + 여유
             bornEffect = false
         }
         AudioServicesPlaySystemSound(1025)            // 부화 효과음(시스템 사운드)
@@ -149,6 +149,7 @@ struct HomeView: View {
                 dialogueBubble
                     .padding(.top, AppSpacing.elementTight)
                 centerStage
+                    .overlay { if bornEffect { HatchBurstView().allowsHitTesting(false) } }  // 알 위치에 정렬된 부화 버스트
                     .padding(.vertical, AppSpacing.elementTight)
                 if hasCompanion && !session.isOnBreak {
                     EvolutionBadge(stage: companionStage)
@@ -166,11 +167,6 @@ struct HomeView: View {
             }
             .padding(.horizontal, AppSpacing.section)
             .animation(.easeInOut(duration: 0.3), value: hasCompanion)
-
-            if bornEffect {
-                BornEffectView()        // 알이 "팍" 터지는 순간 연출(몬스터 등장 직전)
-                    .allowsHitTesting(false)
-            }
         }
         .onChange(of: session.isCompleted) { _, completed in
             guard completed else { return }
@@ -616,28 +612,38 @@ private struct StageStepper: View {
     }
 }
 
-/// 부화 순간 알 자리에서 "팍" 터지는 연출. borneffect.png가 있으면 그걸, 없으면 밝은 골드 플래시로 폴백.
-private struct BornEffectView: View {
-    @State private var pop = false
+/// 부화 순간 알이 쩍 갈라져 "빡!" 터지는 프레임 시퀀스(4-2egg → 4-7egg). 한 번 재생 후 몬스터 노출.
+/// 6프레임 모두 1254² 동일 캔버스 → 정렬 안정. 높이 340pt면 알 코어(캔버스의 ~68%)가 정적 알(240)과 일치.
+/// 프레임 에셋이 없으면 단일 borneffect 플래시로 폴백.
+private struct HatchBurstView: View {
+    private let frames = ["4-2egg", "4-3egg", "4-4egg", "4-5egg", "4-6egg", "4-7egg"]
+    private let frameDuration: Double = 0.09
+    @State private var idx = 0
+
+    private var hasFrames: Bool { UIImage(named: frames[0]) != nil }
 
     var body: some View {
         Group {
-            if UIImage(named: "borneffect") != nil {
-                Image("borneffect")
+            if hasFrames {
+                Image(frames[min(idx, frames.count - 1)])
                     .interpolation(.none)
                     .resizable()
                     .scaledToFit()
-                    .frame(height: 280)
-            } else {
-                Circle()
-                    .fill(RadialGradient(colors: [AppColor.eggAccent.opacity(0.9), .clear],
-                                         center: .center, startRadius: 4, endRadius: 160))
-                    .frame(width: 320, height: 320)
+                    .frame(height: 340)
+            } else if UIImage(named: "borneffect") != nil {
+                Image("borneffect")
+                    .interpolation(.none).resizable().scaledToFit().frame(height: 300)
             }
         }
-        .scaleEffect(pop ? 1.2 : 0.35)
-        .opacity(pop ? 0 : 1)
-        .onAppear { withAnimation(.easeOut(duration: 0.5)) { pop = true } }
+        .onAppear {
+            guard hasFrames else { return }
+            Task { @MainActor in
+                for i in frames.indices {
+                    idx = i
+                    try? await Task.sleep(for: .seconds(frameDuration))
+                }
+            }
+        }
     }
 }
 
