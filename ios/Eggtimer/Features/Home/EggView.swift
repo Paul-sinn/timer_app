@@ -20,14 +20,18 @@ struct EggView: View {
     @State private var wobbling = false
     /// crack 순간 "팍" 튀는 pop.
     @State private var crackPop = false
+    /// 마지막 단계 두근두근(심장박동) 펄스.
+    @State private var beat = false
 
-    /// 단계별 알 에셋(무결 → crack 점점 진행). 새 에셋이 없으면 기존 Egg 에셋으로 폴백.
-    private static let primaryNames = ["Egg0", "2egg", "secondcrack_egg", "thirdcrack_egg", "3egg", "4egg"]
-    private static let fallbackNames = ["Egg0", "Egg1", "Egg2", "Egg3", "Egg4", "Egg5"]
+    /// 단계별 알 에셋(무결 → crack 점점 진행 → 부화 직전 황금 균열). 없으면 기존 Egg 에셋으로 폴백.
+    private static let primaryNames = ["Egg0", "2egg", "secondcrack_egg", "thirdcrack_egg", "3egg", "4egg", "4-2egg"]
+    private static let fallbackNames = ["Egg0", "Egg1", "Egg2", "Egg3", "Egg4", "Egg5", "Egg5"]
 
     private static var stageCount: Int { primaryNames.count }
 
     private var clampedStage: Int { min(max(stageIndex, 0), Self.stageCount - 1) }
+    /// 부화 임박(마지막 단계) — 두근두근 강조.
+    private var isFinalStage: Bool { clampedStage >= Self.stageCount - 1 }
 
     private var assetName: String {
         let primary = Self.primaryNames[clampedStage]
@@ -59,11 +63,13 @@ struct EggView: View {
                 .scaledToFit()
                 .frame(height: height)
                 .scaleEffect(crackPop ? 1.08 : 1.0)
+                .scaleEffect(isFinalStage && beat ? 1.05 : 1.0)   // 부화 임박 두근두근
                 .rotationEffect(.degrees(wobbling ? wobbleAmplitude : -wobbleAmplitude), anchor: .bottom)
                 .animation(.easeInOut(duration: wobblePeriod).repeatForever(autoreverses: true), value: wobbling)
                 .animation(.spring(response: 0.25, dampingFraction: 0.4), value: crackPop)
+                .animation(.easeInOut(duration: 0.42).repeatForever(autoreverses: true), value: beat)
         }
-        .onAppear { wobbling = true }
+        .onAppear { wobbling = true; beat = true }
         .onChange(of: stageIndex) { _, _ in
             // crack(단계 상승) 시 한 번 "팍" 튀어 변화 강조.
             crackPop = true

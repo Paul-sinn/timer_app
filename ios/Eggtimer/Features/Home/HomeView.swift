@@ -616,8 +616,11 @@ private struct StageStepper: View {
 /// 6프레임 모두 1254² 동일 캔버스 → 정렬 안정. 높이 340pt면 알 코어(캔버스의 ~68%)가 정적 알(240)과 일치.
 /// 프레임 에셋이 없으면 단일 borneffect 플래시로 폴백.
 private struct HatchBurstView: View {
-    private let frames = ["4-2egg", "4-3egg", "4-4egg", "4-5egg", "4-6egg", "4-7egg"]
-    private let frameDuration: Double = 0.09
+    // 부화 버스트: 4-3egg부터 순서대로 4-7egg. 알 stage(4-2egg) 다음 프레임들이라 자연스럽게 이어짐.
+    private let frames = ["4-3egg", "4-4egg", "4-5egg", "4-6egg", "4-7egg"]
+    private let frameDuration: Double = 0.11
+    /// 알과 동일 크기(4egg와 일치). centerStage 알 높이와 같게.
+    var height: CGFloat = 240
     @State private var idx = 0
 
     private var hasFrames: Bool { UIImage(named: frames[0]) != nil }
@@ -629,10 +632,10 @@ private struct HatchBurstView: View {
                     .interpolation(.none)
                     .resizable()
                     .scaledToFit()
-                    .frame(height: 340)
+                    .frame(height: height)
             } else if UIImage(named: "borneffect") != nil {
                 Image("borneffect")
-                    .interpolation(.none).resizable().scaledToFit().frame(height: 300)
+                    .interpolation(.none).resizable().scaledToFit().frame(height: height)
             }
         }
         .onAppear {
