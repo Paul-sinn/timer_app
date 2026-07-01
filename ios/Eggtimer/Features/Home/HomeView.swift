@@ -71,20 +71,20 @@ struct HomeView: View {
 
     /// 부화 처리(자동·수동 공통 단일 진입점). 캐릭터를 알 자리에 유지하고 성격대로 인사시킨다.
     private func triggerHatch() {
-        guard hatchling == nil else { return }       // 중복 방지
+        guard hatchling == nil, !bornEffect else { return }   // 중복 방지(버스트 중 재진입 차단)
         let born = store.hatch()                      // 확률 부화 + 컬렉션 반영(영속)
         sync?.pushNewCreature(born)                   // 로그인 시 원격 동기화
-        hatchling = born                              // 알 자리를 태어난 캐릭터로 대체(유지)
-        companionID = born.id.uuidString              // 콜드런치 복원용 영속
-        session.companionID = born.id                 // 이후 세션을 이 캐릭터에 귀속(진화 단계)
-        bornEffect = true                             // 부화 버스트 시퀀스(4-2egg→4-7egg) 재생
+        AudioServicesPlaySystemSound(1025)            // 부화 효과음(시스템 사운드)
+        bornEffect = true                             // 알 자리에 버스트 재생(몬스터 아직 X)
         Task { @MainActor in
-            try? await Task.sleep(for: .milliseconds(620))   // 6프레임 × 90ms + 여유
+            try? await Task.sleep(for: .milliseconds(560))   // 버스트 재생(3프레임 × 150ms + 여유)
+            hatchling = born                          // 버스트 끝 → 태어난 캐릭터 노출
+            companionID = born.id.uuidString          // 콜드런치 복원용 영속
+            session.companionID = born.id             // 이후 세션을 이 캐릭터에 귀속(진화 단계)
+            dialogue.fire(.greeting, speaker: .creature(born.personality))  // 성격 대사
+            session.acknowledgeCompletion()           // 완료 소비 → idle, 인라인 리빌 노출
             bornEffect = false
         }
-        AudioServicesPlaySystemSound(1025)            // 부화 효과음(시스템 사운드)
-        dialogue.fire(.greeting, speaker: .creature(born.personality))  // 성격 대사
-        session.acknowledgeCompletion()               // 완료 소비 → idle, 인라인 리빌 노출
     }
 
     /// 집중 시작(시작/이어서 집중) — 알림 권한을 1회 요청하고 세션을 시작한다.
@@ -149,7 +149,6 @@ struct HomeView: View {
                 dialogueBubble
                     .padding(.top, AppSpacing.elementTight)
                 centerStage
-                    .overlay { if bornEffect { HatchBurstView().allowsHitTesting(false) } }  // 알 위치에 정렬된 부화 버스트
                     .padding(.vertical, AppSpacing.elementTight)
                 if hasCompanion && !session.isOnBreak {
                     EvolutionBadge(stage: companionStage)
@@ -370,7 +369,9 @@ struct HomeView: View {
 
     @ViewBuilder
     private var centerStage: some View {
-        if session.isOnBreak {
+        if bornEffect {
+            HatchBurstView()          // 부화 버스트 재생 중(알도 몬스터도 아님) → 끝나면 몬스터 노출
+        } else if session.isOnBreak {
             BreakView()
                 .transition(.scale.combined(with: .opacity))
         } else if let hatchling {
@@ -616,9 +617,10 @@ private struct StageStepper: View {
 /// 6프레임 모두 1254² 동일 캔버스 → 정렬 안정. 높이 340pt면 알 코어(캔버스의 ~68%)가 정적 알(240)과 일치.
 /// 프레임 에셋이 없으면 단일 borneffect 플래시로 폴백.
 private struct HatchBurstView: View {
-    // 부화 버스트: 4-3egg부터 순서대로 4-7egg. 알 stage(4-2egg) 다음 프레임들이라 자연스럽게 이어짐.
-    private let frames = ["4-3egg", "4-4egg", "4-5egg", "4-6egg", "4-7egg"]
-    private let frameDuration: Double = 0.11
+    // 부화 버스트: 알 stage(4-2egg) 다음 crack-open(4-3→4-4) → 껍질 폭발(borneffect) → 몬스터.
+    // (4-5~4-7은 흰 배경 위 흰 폭발광이라 배경만 분리 불가 → 투명 재export 전까지 borneffect로 마무리.)
+    private let frames = ["4-3egg", "4-4egg", "borneffect"]
+    private let frameDuration: Double = 0.15
     /// 알과 동일 크기(4egg와 일치). centerStage 알 높이와 같게.
     var height: CGFloat = 240
     @State private var idx = 0
