@@ -24,6 +24,8 @@ struct HomeView: View {
     @State private var dialogue = DialogueManager()
     /// 이번 세션에서 마지막으로 focus tick을 발화한 분. 3분 간격 중복 방지.
     @State private var lastTickMinute = 0
+    /// 이번 세션에서 마지막으로 발화한 알 마일스톤(분). 알의 의심→존중→자부심 서사.
+    @State private var lastMilestone = 0
     /// 방금 진화한 단계(연출/문구 노출용, 잠시 후 nil). nil = 진화 연출 없음.
     @State private var justEvolvedStage: Int?
     /// 현재 동료의 id(영속). 콜드런치(앱 재시작) 후 컬렉션에서 같은 개체를 복원해 홈에 다시 표시.
@@ -40,6 +42,8 @@ struct HomeView: View {
 
     /// 집중 중 대사 발화 간격(분). 3분마다 현재 화자 풀에서 한마디.
     private static let tickIntervalMinutes = 3
+    /// 알(부화 전) 서사 마일스톤(분). 의심→존중→자부심으로 톤이 진화하는 지점.
+    private static let eggMilestones = [5, 10, 15, 30, 45, 60]
     /// 연속일에 해당하는 가장 높은 스트릭 임계값(없으면 nil).
     private static func streakThreshold(for streak: Int) -> Int? {
         [100, 30, 7, 3].first { streak >= $0 }
@@ -206,6 +210,7 @@ struct HomeView: View {
             // 새 시작(activeSecondsLive == 0)에만 시작/스트릭 대사. resume에는 발화 안 함.
             guard running, session.activeSecondsLive == 0 else { return }
             lastTickMinute = 0
+            lastMilestone = 0
             let streak = StatsEngine.currentStreak(history.sessions)
             if let t = Self.streakThreshold(for: streak) {
                 dialogue.fire(.streak(days: t))       // 스트릭 인정(의심→존중→자부심)
@@ -214,9 +219,17 @@ struct HomeView: View {
             }
         }
         .onChange(of: session.activeSecondsLive) { _, secs in
-            // 집중 중 3분마다 현재 화자(알/부화 캐릭터 성격) 풀에서 랜덤 한마디.
             guard session.isRunning else { return }
             let minutes = secs / 60
+            // 알(부화 전): 5·10·15·30·45·60분 서사 마일스톤 우선(의심→존중→자부심).
+            if hatchling == nil,
+               let m = Self.eggMilestones.last(where: { $0 <= minutes && $0 > lastMilestone }) {
+                lastMilestone = m
+                lastTickMinute = minutes                 // 같은 분 tick 중복 방지
+                dialogue.fire(.focusMilestone(minutes: m))
+                return
+            }
+            // 그 외(빈 구간·부화 후): 3분마다 현재 화자 풀에서 랜덤 한마디.
             if minutes >= lastTickMinute + Self.tickIntervalMinutes {
                 lastTickMinute = minutes
                 let speaker: DialogueSpeaker = hatchling.map { .creature($0.personality) } ?? .egg
