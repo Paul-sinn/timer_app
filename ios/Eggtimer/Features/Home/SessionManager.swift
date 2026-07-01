@@ -64,6 +64,9 @@ final class SessionManager {
     /// 알 단계(동료 없음)에선 nil.
     var companionID: UUID?
 
+    /// 충전 중 "찌릿" 보너스로 추가된 부화 진행 초(A+ 기믹). 세션 시작 시 0으로 리셋(비영속).
+    private var bonusSeconds = 0
+
     // 이탈 추적(Feature 6) — 현재 세션 누적.
     private var interruptionCount = 0
     private var distracted = false
@@ -176,6 +179,7 @@ final class SessionManager {
         s.phase = .running
         session = s
         activeSecondsLive = 0
+        bonusSeconds = 0
         interruptionCount = 0
         distracted = false
         leftAt = nil
@@ -234,7 +238,8 @@ final class SessionManager {
             return
         }
 
-        activeSecondsLive = s.activeSeconds(now: now)
+        // 타임스탬프 유효 집중초 + 충전 보너스(목표치로 캡).
+        activeSecondsLive = min(s.activeSeconds(now: now) + bonusSeconds, s.plannedSeconds)
 
         // 포모도로: 다음 휴식 도달 & 아직 부화 전 → 휴식 진입.
         if s.mode == .pomodoro, s.phase == .running,
@@ -243,7 +248,7 @@ final class SessionManager {
             return
         }
 
-        if s.phase == .running, s.isComplete(now: now) {
+        if s.phase == .running, activeSecondsLive >= s.plannedSeconds {
             complete()
         }
     }
@@ -329,9 +334,22 @@ final class SessionManager {
         )
     }
 
+    /// 충전 중 "찌릿" 부화 보너스(A+ 기믹). 집중 중일 때만, 목표의 fraction만큼 진행도 추가.
+    /// 반환: 실제 적용된 보너스 비율(0이면 미적용). 표시용.
+    @discardableResult
+    func applyChargeBonus(fraction: Double) -> Double {
+        guard isRunning, let s = session else { return 0 }
+        let add = max(1, Int(Double(s.plannedSeconds) * fraction))
+        bonusSeconds += add
+        recompute()
+        persist()
+        return Double(add) / Double(max(s.plannedSeconds, 1))
+    }
+
     private func clearSession() {
         session = nil
         activeSecondsLive = 0
+        bonusSeconds = 0
         stopTicker()
         ScreenAwake.set(false)
         UserDefaults.standard.removeObject(forKey: Self.persistKey)

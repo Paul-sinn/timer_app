@@ -31,6 +31,12 @@ struct HomeView: View {
     @AppStorage("companionCreatureID") private var companionID = ""
     /// 부화 순간 borneffect.png 버스트 연출 활성(잠시 후 false).
     @State private var bornEffect = false
+    /// 충전 감지(A+ 기믹). 충전 중 집중하면 알이 찌릿하며 부화 살짝 가속.
+    @State private var battery = BatteryMonitor()
+    /// 찌릿 스파크 연출 순간 토글.
+    @State private var zapFlash = false
+    /// 직전 찌릿으로 받은 보너스 %(표시용, 잠시 후 nil).
+    @State private var zapBonusPercent: Int?
 
     /// 집중 경과 대사 마일스톤(분). 알의 톤이 의심→존중→자부심으로 진화하는 지점.
     private static let focusMilestones = [5, 10, 15, 30, 45, 60]
@@ -149,6 +155,10 @@ struct HomeView: View {
                 dialogueBubble
                     .padding(.top, AppSpacing.elementTight)
                 centerStage
+                    .overlay(alignment: .topTrailing) {
+                        if battery.isCharging && !bornEffect { chargeBadge.padding(6) }   // 알 옆 충전 표시
+                    }
+                    .overlay { if zapFlash { ZapBurstView().allowsHitTesting(false) } }    // 찌릿 스파크
                     .padding(.vertical, AppSpacing.elementTight)
                 if hasCompanion && !session.isOnBreak {
                     EvolutionBadge(stage: companionStage)
@@ -239,6 +249,37 @@ struct HomeView: View {
             }
             if session.isIdle && hatchling == nil { dialogue.fire(.idle) }
         }
+        .task {
+            // 충전 중 집중하면 랜덤 주기로 "찌릿" → 부화 +1~2% 보너스(A+). 실기기에서만 충전 감지됨.
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .seconds(Double.random(in: 8...15)))
+                guard battery.isCharging, session.isRunning else { continue }
+                let applied = session.applyChargeBonus(fraction: Double.random(in: 0.01...0.02))
+                guard applied > 0 else { continue }
+                zapBonusPercent = max(1, Int((applied * 100).rounded()))
+                zapFlash = true
+                Task { @MainActor in
+                    try? await Task.sleep(for: .milliseconds(500)); zapFlash = false
+                    try? await Task.sleep(for: .milliseconds(1300)); zapBonusPercent = nil
+                }
+            }
+        }
+    }
+
+    /// 알 옆 충전 표시. 평소 "충전 중", 찌릿 순간엔 "+N%"로 바뀌며 강조.
+    private var chargeBadge: some View {
+        HStack(spacing: 3) {
+            Image(systemName: "bolt.fill").font(.caption2)
+            Text(zapBonusPercent.map { "+\($0)%" } ?? "충전 중").font(.caption2.weight(.semibold))
+        }
+        .foregroundStyle(AppColor.eggAccent)
+        .padding(.horizontal, 8)
+        .padding(.vertical, 4)
+        .background(AppColor.cardBackground)
+        .clipShape(Capsule())
+        .overlay(Capsule().stroke(AppColor.eggAccent.opacity(0.5), lineWidth: AppSpacing.borderWidth))
+        .scaleEffect(zapBonusPercent != nil ? 1.12 : 1.0)
+        .animation(.spring(response: 0.3, dampingFraction: 0.5), value: zapBonusPercent)
     }
 
     // MARK: - 상단 헤더
@@ -649,6 +690,31 @@ private struct HatchBurstView: View {
                 }
             }
         }
+    }
+}
+
+/// 충전 "찌릿" 스파크. 알 주위로 번개 심볼이 확 퍼지며 한 번 재생.
+private struct ZapBurstView: View {
+    @State private var burst = false
+    private let angles = stride(from: 0, to: 360, by: 60).map { Double($0) }
+
+    var body: some View {
+        ZStack {
+            Circle()
+                .fill(RadialGradient(colors: [AppColor.eggAccent.opacity(burst ? 0 : 0.35), .clear],
+                                     center: .center, startRadius: 4, endRadius: 120))
+                .frame(width: 200, height: 200)
+            ForEach(Array(angles.enumerated()), id: \.offset) { _, a in
+                Image(systemName: "bolt.fill")
+                    .font(.system(size: 15))
+                    .foregroundStyle(AppColor.eggAccent)
+                    .offset(x: cos(a * .pi / 180) * (burst ? 105 : 15),
+                            y: sin(a * .pi / 180) * (burst ? 105 : 15))
+                    .opacity(burst ? 0 : 1)
+                    .scaleEffect(burst ? 1.3 : 0.4)
+            }
+        }
+        .onAppear { withAnimation(.easeOut(duration: 0.45)) { burst = true } }
     }
 }
 
