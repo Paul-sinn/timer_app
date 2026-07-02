@@ -21,11 +21,7 @@ struct MyPageView: View {
     /// 로그인↔로컬 동기화. nil이면 프리뷰(동기화 없음).
     private let sync: SyncCoordinator?
 
-    // 설정 토글은 로컬 상태만(영속/시스템 연동 없음).
-    @State private var notificationsOn = true
-    @State private var soundOn = true
-    /// 화면 꺼짐 방지(Feature 7). 세션 중 ScreenAwake가 이 값을 참조한다.
-    @AppStorage(ScreenAwake.settingKey) private var keepScreenAwake = true
+    // 설정 토글은 홈 기어 → SettingsView(설정 시트)로 이관. MyPage는 프로필+계정만.
 
     /// Sign in with Apple 요청에 실은 원본 nonce(콜백에서 Supabase 검증에 재사용).
     @State private var appleNonce: String?
@@ -35,11 +31,6 @@ struct MyPageView: View {
     @State private var errorMessage: String?
     /// 계정 삭제 확인 알림 표시.
     @State private var showDeleteConfirm = false
-
-    #if DEBUG
-    /// 화면 검수 갤러리(개발 전용) 표시 여부.
-    @State private var showReviewGallery = false
-    #endif
 
     /// 실제 누적 부화 수(주입). nil이면 더미(user.creatures.count) 사용.
     private let hatchedCount: Int?
@@ -68,8 +59,6 @@ struct MyPageView: View {
                     profileHeader
 
                     accountSection
-
-                    settingsSection
                 }
                 .padding(.horizontal, AppSpacing.section)
                 .padding(.vertical, AppSpacing.section)
@@ -275,43 +264,6 @@ struct MyPageView: View {
         }
     }
 
-    // MARK: - 설정 섹션(로컬 @State 토글 + 고정 안내 + 정보)
-
-    private var settingsSection: some View {
-        VStack(alignment: .leading, spacing: AppSpacing.elementTight) {
-            Text("설정")
-                .font(AppFont.cardTitle)
-                .foregroundStyle(AppColor.textSecondary)
-
-            AppCard {
-                VStack(spacing: AppSpacing.element) {
-                    SettingToggleRow(title: "알림", systemImage: "bell", isOn: $notificationsOn)
-                    SettingDivider()
-                    SettingToggleRow(title: "사운드", systemImage: "speaker.wave.2", isOn: $soundOn)
-                    SettingDivider()
-                    SettingToggleRow(title: "화면 꺼짐 방지", systemImage: "sun.max", isOn: $keepScreenAwake)
-                    SettingDivider()
-                    SettingInfoRow(title: "다크모드", systemImage: "moon", value: "고정")
-                    SettingDivider()
-                    SettingInfoRow(title: "버전", systemImage: "info.circle", value: "1.0")
-                    #if DEBUG
-                    SettingDivider()
-                    Button {
-                        showReviewGallery = true
-                    } label: {
-                        SettingInfoRow(title: "🛠 화면 검수 갤러리(DEBUG)", systemImage: "wrench.and.screwdriver", value: "")
-                    }
-                    .buttonStyle(.plain)
-                    #endif
-                }
-            }
-        }
-        #if DEBUG
-        .fullScreenCover(isPresented: $showReviewGallery) {
-            ReviewGalleryView()
-        }
-        #endif
-    }
 }
 
 /// 소셜 로그인 버튼(UI 껍데기). light=흰 채움/검정, outline=보더만.
@@ -351,60 +303,6 @@ private struct AuthButton: View {
     }
     private var borderColor: Color {
         style == .light ? .clear : AppColor.border
-    }
-}
-
-/// 설정 토글 행. isOn은 화면 로컬 @State에 바인딩(영속/시스템 연동 없음).
-private struct SettingToggleRow: View {
-    let title: String
-    let systemImage: String
-    @Binding var isOn: Bool
-
-    var body: some View {
-        Toggle(isOn: $isOn) {
-            Label {
-                Text(title)
-                    .font(AppFont.body)
-                    .foregroundStyle(AppColor.textPrimary)
-            } icon: {
-                Image(systemName: systemImage)
-                    .foregroundStyle(AppColor.textSecondary)
-            }
-        }
-        .tint(AppColor.eggAccent)
-    }
-}
-
-/// 토글이 아닌 정보/고정 안내 행(우측에 값만 표시).
-private struct SettingInfoRow: View {
-    let title: String
-    let systemImage: String
-    let value: String
-
-    var body: some View {
-        HStack {
-            Label {
-                Text(title)
-                    .font(AppFont.body)
-                    .foregroundStyle(AppColor.textPrimary)
-            } icon: {
-                Image(systemName: systemImage)
-                    .foregroundStyle(AppColor.textSecondary)
-            }
-            Spacer(minLength: 0)
-            Text(value)
-                .font(AppFont.body)
-                .foregroundStyle(AppColor.textSecondary)
-        }
-    }
-}
-
-/// 설정 행 사이 구분선.
-private struct SettingDivider: View {
-    var body: some View {
-        Rectangle()
-            .fill(AppColor.border)
-            .frame(height: AppSpacing.borderWidth)
     }
 }
 

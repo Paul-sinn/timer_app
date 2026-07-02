@@ -39,6 +39,14 @@ struct HomeView: View {
     @State private var zapFlash = false
     /// 직전 찌릿으로 받은 보너스 %(표시용, 잠시 후 nil).
     @State private var zapBonusPercent: Int?
+    /// 설정 시트 표시(우상단 기어).
+    @State private var showSettings = false
+    /// 효과음(부화·진화 시스템 사운드) 사용 여부. 설정 시트와 같은 키를 공유.
+    @AppStorage(AppSettings.soundKey) private var soundEnabled = AppSettings.defaultOn
+    /// 진동(부화·진화·휴식 진입 햅틱) 사용 여부.
+    @AppStorage(AppSettings.hapticsKey) private var hapticsEnabled = AppSettings.defaultOn
+    /// 로컬 알림 사용 여부. 백그라운드 알림 예약·권한 요청을 게이트.
+    @AppStorage(AppSettings.notificationsKey) private var notificationsEnabled = AppSettings.defaultOn
 
     /// 집중 중 대사 발화 간격(분). 3분마다 현재 화자 풀에서 한마디.
     private static let tickIntervalMinutes = 3
@@ -84,7 +92,7 @@ struct HomeView: View {
         guard hatchling == nil, !bornEffect else { return }   // 중복 방지(버스트 중 재진입 차단)
         let born = store.hatch()                      // 확률 부화 + 컬렉션 반영(영속)
         sync?.pushNewCreature(born)                   // 로그인 시 원격 동기화
-        AudioServicesPlaySystemSound(1025)            // 부화 효과음(시스템 사운드)
+        if soundEnabled { AudioServicesPlaySystemSound(1025) }   // 부화 효과음(설정 게이트)
         bornEffect = true                             // 알 자리에 버스트 재생(몬스터 아직 X)
         Task { @MainActor in
             try? await Task.sleep(for: .milliseconds(660))   // 버스트 재생(5프레임 × 120ms + 여유)
@@ -100,7 +108,7 @@ struct HomeView: View {
     /// 집중 시작(시작/이어서 집중) — 알림 권한을 1회 요청하고 세션을 시작한다.
     private func beginFocus() {
         justEvolvedStage = nil
-        Task { await FocusNotifier.requestAuthorization() }
+        if notificationsEnabled { Task { await FocusNotifier.requestAuthorization() } }
         session.start()
     }
 
@@ -126,6 +134,7 @@ struct HomeView: View {
 
     /// 백그라운드 진입 시 다음 전환(부화/휴식 종료)까지 남은 실시간에 1회 알림 예약.
     private func scheduleFocusNotification() {
+        guard notificationsEnabled else { return }   // 알림 끄면 예약 안 함
         if session.isOnBreak {
             FocusNotifier.schedule(title: "휴식 끝! ☕️",
                                    body: "다시 집중할 시간이에요.",
@@ -197,7 +206,7 @@ struct HomeView: View {
             // 동료가 한 단계 진화(이어서 집중 1세션 완료). 등장 연출은 centerStage의 .id 변화가 재생.
             guard new > old, hatchling != nil else { return }
             justEvolvedStage = new
-            AudioServicesPlaySystemSound(1025)          // 진화 효과음
+            if soundEnabled { AudioServicesPlaySystemSound(1025) }   // 진화 효과음(설정 게이트)
             Task { @MainActor in
                 try? await Task.sleep(for: .seconds(3))
                 if justEvolvedStage == new { justEvolvedStage = nil }   // 연출 문구 자동 해제
@@ -251,9 +260,10 @@ struct HomeView: View {
                 break
             }
         }
-        .sensoryFeedback(.success, trigger: hatchling?.id)        // 부화 순간 햅틱
-        .sensoryFeedback(.success, trigger: companionStage)       // 진화 순간 햅틱
-        .sensoryFeedback(.impact(weight: .medium), trigger: session.isOnBreak)  // 휴식 진입 햅틱
+        .sensoryFeedback(trigger: hatchling?.id) { _, _ in hapticsEnabled ? .success : nil }        // 부화 순간 햅틱
+        .sensoryFeedback(trigger: companionStage) { _, _ in hapticsEnabled ? .success : nil }       // 진화 순간 햅틱
+        .sensoryFeedback(trigger: session.isOnBreak) { _, _ in hapticsEnabled ? .impact(weight: .medium) : nil }  // 휴식 진입 햅틱
+        .sheet(isPresented: $showSettings) { SettingsView() }
         .onAppear {
             restoreCompanionIfNeeded()   // 콜드런치 후 동료 복원(알이 아니라 키우던 캐릭터로)
             // 세션 종료(완료/중단) 시 이력에 기록(영속 + 통계) + 로그인 시 원격 동기화.
@@ -309,9 +319,12 @@ struct HomeView: View {
             if hasCompanion && companionStage >= Creature.maxEvolutionStage {
                 newEggButton
             } else {
-                Image(systemName: "gearshape")
-                    .font(.title3)
-                    .foregroundStyle(AppColor.textSecondary)
+                Button { showSettings = true } label: {
+                    Image(systemName: "gearshape")
+                        .font(.title3)
+                        .foregroundStyle(AppColor.textSecondary)
+                }
+                .buttonStyle(.plain)
             }
         }
         .padding(.top, AppSpacing.elementTight)
