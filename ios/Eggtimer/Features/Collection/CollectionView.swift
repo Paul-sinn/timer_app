@@ -47,6 +47,7 @@ struct CollectionView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: AppSpacing.section) {
                     header
+                    if discovered.isEmpty { emptyHint }
                     grid
                 }
                 .padding(.horizontal, AppSpacing.section)
@@ -78,6 +79,26 @@ struct CollectionView: View {
                     .foregroundStyle(AppColor.eggAccent)
             }
             DiscoveryBar(fraction: allForms.isEmpty ? 0 : Double(discovered.count) / Double(allForms.count))
+        }
+    }
+
+    // MARK: - 빈 상태 안내 (부화 0마리)
+
+    /// 발견 0일 때 헤더와 실루엣 도감 사이에 표시하는 온보딩 배너.
+    private var emptyHint: some View {
+        AppCard {
+            VStack(spacing: AppSpacing.elementTight) {
+                Text("🥚")
+                    .font(.system(size: 40))
+                Text("아직 부화한 친구가 없어요")
+                    .font(AppFont.cardTitle.weight(.bold))
+                    .foregroundStyle(AppColor.textPrimary)
+                Text("집중하면 알이 부화해요")
+                    .font(AppFont.body)
+                    .foregroundStyle(AppColor.textSecondary)
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, AppSpacing.elementTight)
         }
     }
 
