@@ -132,7 +132,10 @@ struct HomeView: View {
         }
     }
 
-    /// 백그라운드 진입 시 다음 전환(부화/휴식 종료)까지 남은 실시간에 1회 알림 예약.
+    /// 백그라운드 진입 시 알림 예약.
+    /// - 휴식 중: 벽시계로 계속 흐르므로 "휴식 끝" 단건 예약(유효).
+    /// - 집중 중: 이탈=자동 일시정지라 백그라운드에서 진행 안 됨 → 진행 알림 대신
+    ///   "돌아와" 이탈 넛지를 드물게(2·15·40분) 예약. 복귀 시 cancel()로 전부 취소.
     private func scheduleFocusNotification() {
         guard notificationsEnabled else { return }   // 알림 끄면 예약 안 함
         if session.isOnBreak {
@@ -140,16 +143,11 @@ struct HomeView: View {
                                    body: "다시 집중할 시간이에요.",
                                    after: session.breakRemainingSeconds)
         } else if session.isRunning {
-            let secs = session.countdownSeconds
-            if secs >= session.remainingSeconds {   // 다음 전환이 목표 도달(부화)
-                FocusNotifier.schedule(title: "부화 준비 완료! 🥚",
-                                       body: "집중이 끝났어요. 앱을 열어 부화를 확인하세요.",
-                                       after: secs)
-            } else {                                 // 다음 전환이 포모도로 휴식
-                FocusNotifier.schedule(title: "휴식 시간이에요 ☕️",
-                                       body: "잠깐 쉬어가요.",
-                                       after: secs)
-            }
+            FocusNotifier.scheduleDistractionNudges([
+                ("hatchly", "🐣 집중이 멈췄어요. 돌아와서 이어가요", 120),
+                ("hatchly", "⏰ 아직 딴 데 있어요? 잠깐 돌아올까요?", 900),
+                ("hatchly", "😴 기다리다 지쳐요… 잠깐이라도 돌아와요", 2400),
+            ])
         }
     }
 

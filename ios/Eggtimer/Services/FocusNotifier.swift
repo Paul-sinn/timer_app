@@ -13,8 +13,10 @@ import UserNotifications
 
 /// 집중 세션 로컬 알림(부화/휴식 종료). 상태 없는 정적 유틸.
 enum FocusNotifier {
-    /// 예약 식별자(단일 — 항상 1건만 유지).
+    /// 휴식-종료 등 단건 전환 알림 식별자(항상 1건만 유지).
     private static let identifier = "focus_next_event"
+    /// 집중 이탈 넛지 식별자(이탈 후 2·15·40분, 최대 3건).
+    private static let nudgeIdentifiers = ["focus_nudge_0", "focus_nudge_1", "focus_nudge_2"]
 
     /// 현재 알림 권한 상태(설정 토글의 거부 안내 분기용).
     static func authorizationStatus() async -> UNAuthorizationStatus {
@@ -45,9 +47,23 @@ enum FocusNotifier {
         center.add(request)
     }
 
-    /// 예약된 집중 알림 취소(포그라운드 복귀·일시정지·중단·완료 시).
+    /// 집중 이탈 넛지 예약(백그라운드 진입 시). 각 item을 대응 넛지 id로 예약하고
+    /// `after > 0`인 것만 등록한다. 복귀 시 `cancel()`이 전부 제거한다.
+    static func scheduleDistractionNudges(_ items: [(title: String, body: String, after: Int)]) {
+        let center = UNUserNotificationCenter.current()
+        for (i, item) in items.enumerated() where i < nudgeIdentifiers.count && item.after > 0 {
+            let content = UNMutableNotificationContent()
+            content.title = item.title
+            content.body = item.body
+            content.sound = .default
+            let trigger = UNTimeIntervalNotificationTrigger(timeInterval: Double(item.after), repeats: false)
+            center.add(UNNotificationRequest(identifier: nudgeIdentifiers[i], content: content, trigger: trigger))
+        }
+    }
+
+    /// 예약된 모든 집중 알림 취소(단건 + 이탈 넛지). 포그라운드 복귀·일시정지·중단·완료 시.
     static func cancel() {
         let center = UNUserNotificationCenter.current()
-        center.removePendingNotificationRequests(withIdentifiers: [identifier])
+        center.removePendingNotificationRequests(withIdentifiers: [identifier] + nudgeIdentifiers)
     }
 }
