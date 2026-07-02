@@ -8,6 +8,7 @@
 //
 
 import SwiftUI
+import UserNotifications
 
 struct SettingsView: View {
     @Environment(\.dismiss) private var dismiss
@@ -17,6 +18,9 @@ struct SettingsView: View {
     @AppStorage(AppSettings.hapticsKey) private var hapticsOn = AppSettings.defaultOn
     /// 화면 꺼짐 방지(Feature 7). 세션 중 ScreenAwake가 참조.
     @AppStorage(ScreenAwake.settingKey) private var keepScreenAwake = true
+
+    /// 알림이 시스템에서 거부돼 켤 수 없을 때 안내 알럿.
+    @State private var showDeniedAlert = false
 
     #if DEBUG
     @State private var showReviewGallery = false
@@ -63,12 +67,25 @@ struct SettingsView: View {
                 }
             }
             .onChange(of: notificationsOn) { _, on in
-                // 켜면 권한 요청(미결정 시), 끄면 예약된 알림 취소.
-                if on {
-                    Task { await FocusNotifier.requestAuthorization() }
-                } else {
-                    FocusNotifier.cancel()
+                guard on else { FocusNotifier.cancel(); return }   // 끄면 예약 취소
+                // 켤 때: 미결정→시스템 프롬프트, 이미 거부됨→설정 앱 안내(재프롬프트 불가).
+                Task {
+                    switch await FocusNotifier.authorizationStatus() {
+                    case .notDetermined: await FocusNotifier.requestAuthorization()
+                    case .denied:        showDeniedAlert = true
+                    default:             break
+                    }
                 }
+            }
+            .alert("알림이 꺼져 있어요", isPresented: $showDeniedAlert) {
+                Button("설정 열기") {
+                    if let url = URL(string: UIApplication.openSettingsURLString) {
+                        UIApplication.shared.open(url)
+                    }
+                }
+                Button("취소", role: .cancel) {}
+            } message: {
+                Text("iOS 설정 > 알림에서 hatchly 알림을 허용해주세요.")
             }
             #if DEBUG
             .fullScreenCover(isPresented: $showReviewGallery) {

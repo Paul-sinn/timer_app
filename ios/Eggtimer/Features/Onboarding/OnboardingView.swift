@@ -32,6 +32,9 @@ struct OnboardingView: View {
         Page(image: "WhiteTigerEvolved", systemFallback: "wand.and.stars",
              title: "이어서 집중하면 진화해요",
              body: "전설 친구는 부화 후에도 함께\n집중을 이어가면 더 멋지게 진화해요."),
+        Page(image: "", systemFallback: "bell.badge.fill",
+             title: "집중 끝나면 알려드릴게요",
+             body: "앱을 잠깐 나가 있어도\n부화·휴식 시점을 놓치지 않게 알림을 보내드려요."),
     ]
 
     var body: some View {
@@ -101,22 +104,36 @@ struct OnboardingView: View {
     private var isLast: Bool { page == pages.count - 1 }
 
     private var button: some View {
-        Button {
-            if isLast {
-                onFinish()
-            } else {
-                withAnimation { page += 1 }
+        VStack(spacing: AppSpacing.elementTight) {
+            Button {
+                if isLast {
+                    // 알림 페이지: 소프트 애스크 → 시스템 권한 프롬프트(미결정 시) 후 온보딩 종료.
+                    Task {
+                        await FocusNotifier.requestAuthorization()
+                        onFinish()
+                    }
+                } else {
+                    withAnimation { page += 1 }
+                }
+            } label: {
+                Text(isLast ? "알림 켜고 시작하기" : "다음")
+                    .font(AppFont.cardTitle.weight(.bold))
+                    .foregroundStyle(AppColor.pageBackground)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 14)
+                    .background(AppColor.eggAccent)
+                    .clipShape(Capsule())
             }
-        } label: {
-            Text(isLast ? "시작하기" : "다음")
-                .font(AppFont.cardTitle.weight(.bold))
-                .foregroundStyle(AppColor.pageBackground)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 14)
-                .background(AppColor.eggAccent)
-                .clipShape(Capsule())
+            .buttonStyle(.plain)
+
+            // 마지막 페이지에서만 건너뛰기(알림 없이 시작). 설정에서 나중에 켤 수 있음.
+            if isLast {
+                Button("나중에 할게요") { onFinish() }
+                    .font(AppFont.body)
+                    .foregroundStyle(AppColor.textSecondary)
+                    .buttonStyle(.plain)
+            }
         }
-        .buttonStyle(.plain)
     }
 }
 

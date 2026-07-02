@@ -16,6 +16,11 @@ enum FocusNotifier {
     /// 예약 식별자(단일 — 항상 1건만 유지).
     private static let identifier = "focus_next_event"
 
+    /// 현재 알림 권한 상태(설정 토글의 거부 안내 분기용).
+    static func authorizationStatus() async -> UNAuthorizationStatus {
+        await UNUserNotificationCenter.current().notificationSettings().authorizationStatus
+    }
+
     /// 알림 권한 요청(미결정일 때만 시스템 프롬프트). 첫 집중 시작 시 호출.
     static func requestAuthorization() async {
         let center = UNUserNotificationCenter.current()
