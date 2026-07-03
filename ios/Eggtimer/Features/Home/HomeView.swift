@@ -41,6 +41,8 @@ struct HomeView: View {
     @State private var zapBonusPercent: Int?
     /// 설정 시트 표시(우상단 기어).
     @State private var showSettings = false
+    /// "새 알" 확인 다이얼로그 표시(실수 탭 방지).
+    @State private var showNewEggConfirm = false
     /// 효과음(부화·진화 시스템 사운드) 사용 여부. 설정 시트와 같은 키를 공유.
     @AppStorage(AppSettings.soundKey) private var soundEnabled = AppSettings.defaultOn
     /// 진동(부화·진화·휴식 진입 햅틱) 사용 여부.
@@ -262,6 +264,12 @@ struct HomeView: View {
         .sensoryFeedback(trigger: companionStage) { _, _ in hapticsEnabled ? .success : nil }       // 진화 순간 햅틱
         .sensoryFeedback(trigger: session.isOnBreak) { _, _ in hapticsEnabled ? .impact(weight: .medium) : nil }  // 휴식 진입 햅틱
         .sheet(isPresented: $showSettings) { SettingsView() }
+        .alert("새 알을 받을까요?", isPresented: $showNewEggConfirm) {
+            Button("새 알 받기", role: .destructive) { takeNewEgg() }
+            Button("취소", role: .cancel) {}
+        } message: {
+            Text("지금 친구는 컬렉션에 남지만, 홈에서는 새 알부터 다시 시작해요.")
+        }
         .onAppear {
             restoreCompanionIfNeeded()   // 콜드런치 후 동료 복원(알이 아니라 키우던 캐릭터로)
             // 세션 종료(완료/중단) 시 이력에 기록(영속 + 통계) + 로그인 시 원격 동기화.
@@ -330,7 +338,7 @@ struct HomeView: View {
 
     /// 우상단 소형 "새 알 받기" 토글(최종 진화 시 노출).
     private var newEggButton: some View {
-        Button { takeNewEgg() } label: {
+        Button { showNewEggConfirm = true } label: {
             HStack(spacing: 4) {
                 Image(systemName: "arrow.triangle.2.circlepath")
                     .font(.caption2)
@@ -710,6 +718,18 @@ private struct HatchBurstView: View {
                     .interpolation(.none).resizable().scaledToFit().frame(height: height)
             }
         }
+        // 방사형 비네트로 사각 경계를 페이드 → 폭발 프레임의 하드컷 아웃라인을 글로우처럼 녹인다.
+        // 중앙 66% 반경은 완전 불투명(알·광선 선명 유지), 바깥 rim만 부드럽게 사라짐.
+        .mask(
+            RadialGradient(
+                gradient: Gradient(stops: [
+                    .init(color: .white, location: 0.0),
+                    .init(color: .white, location: 0.66),
+                    .init(color: .white.opacity(0), location: 1.0),
+                ]),
+                center: .center, startRadius: 0, endRadius: height * 0.72
+            )
+        )
         .onAppear {
             guard hasFrames else { return }
             Task { @MainActor in
