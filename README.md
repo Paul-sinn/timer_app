@@ -3,7 +3,11 @@
 > An iOS focus timer where finishing a study/work session hatches a pixel creature to collect.
 > Solo project — planning, design, and engineering all done by one person.
 
-![app screenshot](images/app_ui.png)
+<p align="center">
+  <img src="images/inapp/IMG_9414.PNG" width="32%" alt="Home — focus timer" />
+  <img src="images/inapp/IMG_9415.PNG" width="32%" alt="Home — hatch result" />
+  <img src="images/inapp/IMG_9416.PNG" width="32%" alt="Collection" />
+</p>
 
 ---
 
