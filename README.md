@@ -16,6 +16,39 @@
 - **1인 개발**: 기획(PRD) → UI/UX 설계 → SwiftUI 구현 → 백엔드(Supabase) 연동 → 테스트 → App Store 제출까지 전 과정을 직접 진행
 - **개발 기간**: 2026-06 ~ (지속 개발 중, 커밋 75+)
 - **플랫폼**: iOS (SwiftUI, iOS 26+)
+- **개발 방식**: 기능 구현 대부분을 아래 **자체 설계한 AI 에이전트 오케스트레이션 하네스**로 자율 진행 — 앱 개발과 별도로 "AI를 어떻게 안전하게 무인 운전시킬지"를 직접 설계·구현한 것이 이 프로젝트의 또 다른 산출물
+
+---
+
+## 🤖 AI 개발 하네스 (직접 설계·구현)
+
+Claude Code를 단순히 "채팅으로 코드 짜는 도구"로 쓰지 않고, **명세 기반으로 여러 step을 무인 실행·자가 교정하는 파이프라인**을 Python으로 직접 만들어 이 프로젝트 대부분의 기능을 여기에 태워 개발했습니다. (`scripts/execute.py`, `.claude/commands/harness.md`)
+
+**왜 만들었나** — 기능 하나를 통으로 AI에 맡기면 스코프가 무한정 커지고, 실패해도 원인 추적이 안 되고, 이전 결정이 다음 세션에 전달이 안 됩니다. 이를 프로그램적으로 강제하기 위한 실행기를 설계했습니다.
+
+**설계 구조**
+
+| 구성요소 | 역할 |
+|---|---|
+| `phases/{phase}/index.json` | phase의 step 목록과 상태(`pending/completed/error/blocked`) 관리 |
+| `phases/{phase}/step{N}.md` | step별 **자기완결적 명세**(읽어야 할 파일, 작업 지시, 실행 가능한 AC, 금지사항) |
+| `scripts/execute.py` | 명세를 읽어 Claude Code(`claude -p`)를 헤드리스로 순차 호출하는 실행기 |
+| `.claude/commands/harness.md` | 명세 작성 규칙(스코프 최소화, 시그니처 수준 지시 등)을 정의한 슬래시커맨드 |
+
+**`execute.py`가 자동으로 처리하는 것**
+1. **가드레일 자동 주입** — 매 step 프롬프트에 `CLAUDE.md` + `docs/*.md` 전체를 첨부해, 에이전트가 매번 아키텍처·CRITICAL 규칙을 다시 읽고 시작하도록 강제
+2. **컨텍스트 누적 전달** — 완료된 step들의 `summary`를 다음 step 프롬프트에 이어붙여, 세션이 끊겨도 "이전에 뭘 했는지" 복원
+3. **자가 교정(self-correction)** — AC(Acceptance Criteria) 검증 실패 시 에러 메시지를 다음 시도 프롬프트에 피드백하며 **최대 3회 자동 재시도**, 그래도 실패하면 `error` 상태로 멈추고 사람에게 알림
+4. **차단 처리** — API 키·수동 인증 등 AI가 해결 불가한 경우 즉시 `blocked` 상태로 멈추고 사유 기록 (무한 루프 방지)
+5. **브랜치·커밋 자동화** — `feat-{phase}` 브랜치 자동 생성, step마다 코드(`feat`)/메타데이터(`chore`) 2단계 분리 커밋, `--push` 옵션으로 완료 후 자동 push
+6. **상태·타임스탬프 추적** — `started_at/completed_at/failed_at/blocked_at`을 실행기가 직접 기록해 진행 이력이 파일 자체에 남음
+
+```bash
+python3 scripts/execute.py 4-polish        # phase 내 step 순차 자율 실행
+python3 scripts/execute.py 4-polish --push # 완료 후 원격 브랜치로 push까지
+```
+
+`phases/` 디렉토리(`0-ui-dummy-screens`, `3-cloud-backend`, `4-polish` 등)가 이 하네스로 실제 실행된 기록입니다.
 
 ---
 
@@ -49,19 +82,24 @@
 | 알림 | UserNotifications (로컬 알림) |
 | 테스트 | Swift Testing (`@Test`) |
 | 디자인 | Figma → SwiftUI 코드 반영 |
+| AI 개발 파이프라인 | Claude Code CLI를 헤드리스로 구동하는 자체 제작 오케스트레이션 하네스 (Python) |
 
 ---
 
 ## 아키텍처
 
 ```
-Eggtimer/
+ios/Eggtimer/
 ├── App/            # 앱 진입점, 전역 환경 설정
 ├── Features/       # 화면 단위 모듈 (Home, Collection, Progress, MyPage, Settings, Onboarding, Dialogue, Review)
 ├── Components/      # 공용 UI 컴포넌트
 ├── Models/          # SwiftData @Model + 도메인 타입 (Creature, Rarity, FocusSession…)
 ├── Services/        # Supabase 연동, 동기화, 알림, 배터리/화면 상태 등 외부 연동 레이어
 └── Resources/       # 에셋, 상수
+
+phases/               # AI 하네스 실행 명세·이력 (phase/step 단위)
+scripts/execute.py     # 하네스 실행기 (아래 참고)
+.claude/commands/harness.md  # 명세 작성 워크플로우 정의
 ```
 
 - **MVVM 기반**: View ↔ ViewModel(상태/로직) ↔ Model(SwiftData/도메인)로 관심사 분리
