@@ -2,7 +2,7 @@
 //  SettingsView.swift
 //  Eggtimer
 //
-//  홈 우상단 기어에서 여는 앱 설정 시트. 알림·효과음·진동·화면 꺼짐 방지 토글과
+//  홈 우상단 기어에서 여는 앱 Settings 시트. 알림·효과음·진동·화면 꺼짐 방지 토글과
 //  버전 정보를 담는다. 값은 @AppStorage(AppSettings 키)로 영속되며 HomeView가 같은
 //  키를 읽어 실제 동작(알림 예약·시스템 사운드·햅틱)을 게이트한다.
 //
@@ -29,26 +29,38 @@ struct SettingsView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                AppColor.pageBackground.ignoresSafeArea()
+                ThemedBackground()
 
                 ScrollView {
                     AppCard {
                         VStack(spacing: AppSpacing.element) {
-                            SettingToggleRow(title: "알림", systemImage: "bell", isOn: $notificationsOn)
+                            SettingToggleRow(title: "Notifications", systemImage: "bell", isOn: $notificationsOn)
                             SettingDivider()
-                            SettingToggleRow(title: "효과음", systemImage: "speaker.wave.2", isOn: $soundOn)
+                            SettingToggleRow(title: "Sound", systemImage: "speaker.wave.2", isOn: $soundOn)
                             SettingDivider()
-                            SettingToggleRow(title: "진동", systemImage: "iphone.radiowaves.left.and.right", isOn: $hapticsOn)
+                            SettingToggleRow(title: "Haptics", systemImage: "iphone.radiowaves.left.and.right", isOn: $hapticsOn)
                             SettingDivider()
-                            SettingToggleRow(title: "화면 꺼짐 방지", systemImage: "sun.max", isOn: $keepScreenAwake)
+                            SettingToggleRow(title: "Keep screen on", systemImage: "sun.max", isOn: $keepScreenAwake)
                             SettingDivider()
-                            SettingInfoRow(title: "버전", systemImage: "info.circle", value: appVersion)
+                            NavigationLink {
+                                ThemePickerView()
+                            } label: {
+                                HStack {
+                                    SettingInfoRow(title: "Theme", systemImage: "paintbrush.pointed", value: "")
+                                    Image(systemName: "chevron.right")
+                                        .font(.footnote)
+                                        .foregroundStyle(AppColor.textSecondary)
+                                }
+                            }
+                            .buttonStyle(.plain)
+                            SettingDivider()
+                            SettingInfoRow(title: "Version", systemImage: "info.circle", value: appVersion)
                             #if DEBUG
                             SettingDivider()
                             Button {
                                 showReviewGallery = true
                             } label: {
-                                SettingInfoRow(title: "🛠 화면 검수 갤러리(DEBUG)", systemImage: "wrench.and.screwdriver", value: "")
+                                SettingInfoRow(title: "🛠 Screen Review Gallery(DEBUG)", systemImage: "wrench.and.screwdriver", value: "")
                             }
                             .buttonStyle(.plain)
                             #endif
@@ -58,17 +70,17 @@ struct SettingsView: View {
                     .padding(.vertical, AppSpacing.section)
                 }
             }
-            .navigationTitle("설정")
+            .navigationTitle("Settings")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("완료") { dismiss() }
+                    Button("Done") { dismiss() }
                         .foregroundStyle(AppColor.eggAccent)
                 }
             }
             .onChange(of: notificationsOn) { _, on in
-                guard on else { FocusNotifier.cancel(); return }   // 끄면 예약 취소
-                // 켤 때: 미결정→시스템 프롬프트, 이미 거부됨→설정 앱 안내(재프롬프트 불가).
+                guard on else { FocusNotifier.cancel(); return }   // 끄면 예약 Cancel
+                // 켤 때: 미결정→시스템 프롬프트, 이미 거부됨→Settings 앱 안내(재프롬프트 불가).
                 Task {
                     switch await FocusNotifier.authorizationStatus() {
                     case .notDetermined: await FocusNotifier.requestAuthorization()
@@ -77,15 +89,15 @@ struct SettingsView: View {
                     }
                 }
             }
-            .alert("알림이 꺼져 있어요", isPresented: $showDeniedAlert) {
-                Button("설정 열기") {
+            .alert("Notifications are off", isPresented: $showDeniedAlert) {
+                Button("Open Settings") {
                     if let url = URL(string: UIApplication.openSettingsURLString) {
                         UIApplication.shared.open(url)
                     }
                 }
-                Button("취소", role: .cancel) {}
+                Button("Cancel", role: .cancel) {}
             } message: {
-                Text("iOS 설정 > 알림에서 hatchly 알림을 허용해주세요.")
+                Text("Allow notifications in iOS Settings › Notifications.")
             }
             #if DEBUG
             .fullScreenCover(isPresented: $showReviewGallery) {
@@ -103,5 +115,6 @@ struct SettingsView: View {
 
 #Preview {
     SettingsView()
+        .environment(ProAccess())   // ThemePicker(하위) 네비게이션용
         .preferredColorScheme(.dark)
 }
