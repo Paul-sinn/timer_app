@@ -2,7 +2,7 @@
 //  FocusHistoryStore.swift
 //  Eggtimer
 //
-//  끝난 집중 세션 이력의 공유 상태(Feature 5). SwiftData 백킹 — 앱 재시작 후 유지.
+//  끝난 집중 세션 이력의 공유 상태(Feature 5). SwiftData 백킹 — 앱 재Start 후 유지.
 //  ModelContext 없이 생성하면(프리뷰/검수) 메모리 전용.
 //  통계는 StatsEngine으로 파생한다.
 //
@@ -30,8 +30,8 @@ final class FocusHistoryStore {
         self.sessions = sessions.sorted { $0.startedAt > $1.startedAt }
     }
 
-    /// 특정 동료와 함께 완료한(목표 도달) 집중 세션 수. 생명체 진화 단계 파생용
-    /// — 그 캐릭터와 "이어서 집중" 1세션 완료마다 한 단계씩 진화한다.
+    /// 특정 동료와 함께 Done한(목표 도달) 집중 세션 수. 생명체 진화 단계 파생용
+    /// — 그 캐릭터와 "Keep focusing" 1세션 Done마다 한 단계씩 진화한다.
     /// companion_id로 귀속하므로 다른 동료와 한 집중은 세지 않는다(누수 없음).
     func completedSessions(forCompanion id: UUID) -> Int {
         sessions.reduce(0) { $0 + (($1.companionID == id && $1.completed) ? 1 : 0) }
@@ -45,6 +45,18 @@ final class FocusHistoryStore {
             try? context.save()
         }
     }
+
+    #if DEBUG
+    /// 검수/스크린샷용 — 이력을 통째로 교체한다(기존 세션 레코드 전부 삭제 후 주입). 릴리스엔 없음.
+    func debugReplaceAll(_ results: [FocusSessionResult]) {
+        sessions = results.sorted { $0.startedAt > $1.startedAt }
+        if let context {
+            try? context.delete(model: FocusSessionRecord.self)
+            for r in results { context.insert(FocusSessionRecord(from: r)) }
+            try? context.save()
+        }
+    }
+    #endif
 
     /// 원격(Supabase)에서 풀한 세션 이력을 로컬에 병합한다(동기화). 이미 가진 id는 건너뛴다(idempotent).
     func insertFromRemote(_ incoming: [FocusSessionResult]) {

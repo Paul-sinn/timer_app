@@ -11,7 +11,7 @@ import UIKit
 @Observable
 @MainActor
 final class BatteryMonitor {
-    /// 충전 중(케이블 연결)인지. 충전 완료(.full)도 연결 상태로 본다.
+    /// Charging(케이블 연결)인지. 충전 Done(.full)도 연결 상태로 본다.
     private(set) var isCharging: Bool = false
 
     init() {

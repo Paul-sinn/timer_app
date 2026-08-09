@@ -3,8 +3,8 @@
 //  Eggtimer
 //
 //  Supabase Auth 세션 상태(Phase 3-3). 로그인 사용자 ID를 단일 소스로 노출해 동기화의 소유자(user_id) 식별에 쓴다.
-//  실제 Apple/Google 공급자 설정(대시보드 키, Apple Developer capability)은 사용자 권한이라 보류 —
-//  이 서비스는 OIDC id_token만 받으면 동작하도록 스캐폴딩만 둔다(로그인 UI는 공급자 설정 후 연결).
+//  실제 Apple/Google 공급자 Settings(대시보드 키, Apple Developer capability)은 사용자 권한이라 보류 —
+//  이 서비스는 OIDC id_token만 받으면 동작하도록 스캐폴딩만 둔다(로그인 UI는 공급자 Settings 후 연결).
 //
 
 import Foundation
@@ -26,7 +26,7 @@ final class AuthService {
         startObserving()
     }
 
-    /// 세션 변화(로그인/로그아웃/토큰 갱신)를 구독해 currentUserID를 갱신.
+    /// 세션 변화(로그인/Sign out/토큰 갱신)를 구독해 currentUserID를 갱신.
     /// self는 약하게 잡아 무한 스트림이 인스턴스를 붙들지 않게 한다(self 해제 시 루프 종료).
     private func startObserving() {
         Task { [weak self] in
@@ -63,8 +63,8 @@ final class AuthService {
         currentUserID = nil
     }
 
-    /// 계정 영구 삭제(App Store 심사 요건 5.1.1(v)). 서버 Edge Function이 service_role로
-    /// auth 유저를 지우면 FK on-delete-cascade로 프로필·세션·생명체 행이 함께 삭제된다.
+    /// Account 영구 Delete(App Store 심사 요건 5.1.1(v)). 서버 Edge Function이 service_role로
+    /// auth 유저를 지우면 FK on-delete-cascade로 프로필·세션·생명체 행이 함께 Delete된다.
     /// 성공 시 세션도 종료해 로컬을 비로그인 상태로 되돌린다.
     func deleteAccount() async throws {
         try await client.functions.invoke("delete-account")

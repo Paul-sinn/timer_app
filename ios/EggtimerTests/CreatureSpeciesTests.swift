@@ -119,4 +119,42 @@ struct CreatureSpeciesTests {
         let creature = Creature.hatch(using: &gen)
         #expect(creature.species.imageVariants.contains(creature.imageName))
     }
+
+    // MARK: - best-of-N (집중 길이 보상)
+
+    /// draws=1은 기존 단일 추첨과 완전히 동일해야 한다(하위호환 · 등급/종 weight 불변).
+    @Test func singleDrawMatchesLegacyRoll() {
+        var a = SeededGenerator(seed: 7)
+        var b = SeededGenerator(seed: 7)
+        for _ in 0..<2000 {
+            #expect(CreatureSpecies.roll(using: &a) == CreatureSpecies.roll(draws: 1, using: &b))
+        }
+    }
+
+    /// draw가 늘수록 전설 확률이 keep-best 공식(1 - 0.98^N)대로 단조 증가한다.
+    @Test func moreDrawsRaiseLegendaryOdds() {
+        func legendaryRate(draws: Int, seed: UInt64) -> Double {
+            var gen = SeededGenerator(seed: seed)
+            let n = 200_000
+            var legend = 0
+            for _ in 0..<n where CreatureSpecies.roll(draws: draws, using: &gen).rarity == .legendary {
+                legend += 1
+            }
+            return Double(legend) / Double(n) * 100
+        }
+        let r1 = legendaryRate(draws: 1, seed: 0xA1)
+        let r2 = legendaryRate(draws: 2, seed: 0xB2)
+        let r3 = legendaryRate(draws: 3, seed: 0xC3)
+        #expect(abs(r1 - 2.00) <= 0.5)   // 1 - 0.98
+        #expect(abs(r2 - 3.96) <= 0.5)   // 1 - 0.98^2
+        #expect(abs(r3 - 5.88) <= 0.6)   // 1 - 0.98^3
+        #expect(r1 < r2 && r2 < r3)      // 단조 증가
+    }
+
+    /// draws가 0/음수여도 최소 1회는 굴려 유효한 종을 낸다(방어).
+    @Test func drawsClampedToAtLeastOne() {
+        var gen = SeededGenerator(seed: 99)
+        let s = CreatureSpecies.roll(draws: 0, using: &gen)
+        #expect(CreatureSpecies.allCases.contains(s))
+    }
 }

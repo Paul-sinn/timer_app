@@ -20,7 +20,7 @@ struct AppSnapshot {
 enum MockData {
     /// 생명체·세션이 골고루 채워진 상태(다양한 레어도/날짜 포함).
     static let populated = AppSnapshot(
-        displayName: "집중하는 너구리",
+        displayName: String(localized: "Focused Racoon"),
         creatures: sampleCreatures,
         sessions: sampleSessions,
         egg: EggState(targetMinutes: 60, focusedMinutes: 38)
@@ -28,7 +28,7 @@ enum MockData {
 
     /// 데이터가 비어 있는 상태(빈 화면 검수용).
     static let empty = AppSnapshot(
-        displayName: "새로운 사용자",
+        displayName: String(localized: "New user"),
         creatures: [],
         sessions: [],
         egg: EggState(targetMinutes: 60, focusedMinutes: 0)

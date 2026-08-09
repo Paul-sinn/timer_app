@@ -29,7 +29,7 @@ struct EggState: Hashable {
         return min(focusedMinutes / EggState.minutesPerCrack, maxStage)
     }
 
-    /// 부화 진행도 0...1.
+    /// Hatch progress 0...1.
     var progress: Double {
         guard targetMinutes > 0 else { return 0 }
         return min(Double(focusedMinutes) / Double(targetMinutes), 1)

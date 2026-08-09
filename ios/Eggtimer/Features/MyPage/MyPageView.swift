@@ -2,10 +2,10 @@
 //  MyPageView.swift
 //  Eggtimer
 //
-//  마이페이지 탭 화면(프로필/계정/설정). UI_GUIDE: 카드/리스트, 좌측 정렬 기본.
+//  마이페이지 탭 화면(프로필/Account/Settings). UI_GUIDE: 카드/리스트, 좌측 정렬 기본.
 //  Phase 0(UI 더미): 로그인은 UI 껍데기만 만든다(ADR-002/007). 실제 인증
 //  (Sign in with Apple/Google/Supabase)은 Phase 2에서 연동하며 여기서는 호출하지 않는다.
-//  로그인 게이트 없이 이 화면이 바로 보이고, 설정 토글은 로컬 @State로만 동작한다.
+//  로그인 게이트 없이 이 화면이 바로 보이고, Settings 토글은 로컬 @State로만 동작한다.
 //  검수를 위해 더미 유저(AppSnapshot)를 주입 가능하게 한다(기본 = populated).
 //
 
@@ -21,33 +21,38 @@ struct MyPageView: View {
     /// 로그인↔로컬 동기화. nil이면 프리뷰(동기화 없음).
     private let sync: SyncCoordinator?
 
-    // 설정 토글은 홈 기어 → SettingsView(설정 시트)로 이관. MyPage는 프로필+계정만.
+    // Settings 토글은 홈 기어 → SettingsView(Settings 시트)로 이관. MyPage는 프로필+Account만.
 
     /// Sign in with Apple 요청에 실은 원본 nonce(콜백에서 Supabase 검증에 재사용).
     @State private var appleNonce: String?
-    /// 로그인/삭제 진행 중 표시.
+    /// 로그인/Delete 진행 중 표시.
     @State private var isWorking = false
     /// 에러 알림 문구(nil = 미표시).
     @State private var errorMessage: String?
-    /// 계정 삭제 확인 알림 표시.
+    /// Delete account OK 알림 표시.
     @State private var showDeleteConfirm = false
 
     /// 실제 누적 부화 수(주입). nil이면 더미(user.creatures.count) 사용.
     private let hatchedCount: Int?
 
+    /// 집중 이력 스토어(DEBUG 시드 데모용). 릴리스 UI에선 미사용.
+    private let history: FocusHistoryStore?
+
     init(user: AppSnapshot = MockData.populated,
          hatchedCount: Int? = nil,
          auth: AuthService,
-         sync: SyncCoordinator? = nil) {
+         sync: SyncCoordinator? = nil,
+         history: FocusHistoryStore? = nil) {
         self.user = user
         self.hatchedCount = hatchedCount
         self.auth = auth
         self.sync = sync
+        self.history = history
     }
 
     var body: some View {
         ZStack {
-            AppColor.pageBackground.ignoresSafeArea()
+            ThemedBackground()
 
             ScrollView {
                 VStack(alignment: .leading, spacing: AppSpacing.section) {
@@ -59,24 +64,28 @@ struct MyPageView: View {
                     profileHeader
 
                     accountSection
+
+                    #if DEBUG
+                    debugSection
+                    #endif
                 }
                 .padding(.horizontal, AppSpacing.section)
                 .padding(.vertical, AppSpacing.section)
             }
         }
-        .alert("문제가 발생했어요", isPresented: Binding(
+        .alert("Something went wrong", isPresented: Binding(
             get: { errorMessage != nil },
             set: { if !$0 { errorMessage = nil } }
         )) {
-            Button("확인", role: .cancel) { errorMessage = nil }
+            Button("OK", role: .cancel) { errorMessage = nil }
         } message: {
             Text(errorMessage ?? "")
         }
-        .alert("계정을 삭제할까요?", isPresented: $showDeleteConfirm) {
-            Button("취소", role: .cancel) {}
-            Button("삭제", role: .destructive) { deleteAccount() }
+        .alert("Delete account?", isPresented: $showDeleteConfirm) {
+            Button("Cancel", role: .cancel) {}
+            Button("Delete", role: .destructive) { deleteAccount() }
         } message: {
-            Text("계정과 클라우드에 저장된 집중 기록·생명체가 영구 삭제됩니다. 이 기기의 로컬 데이터는 남아요.")
+            Text("Your account and the focus history and creatures saved in the cloud will be permanently deleted. Local data on this device remains.")
         }
     }
 
@@ -94,10 +103,10 @@ struct MyPageView: View {
                         .font(AppFont.screenTitle)
                         .foregroundStyle(AppColor.textPrimary)
                         .lineLimit(1)
-                    Text("가입일 · 2026.05.01")
+                    Text("Joined · May 1, 2026")
                         .font(AppFont.cardTitle)
                         .foregroundStyle(AppColor.textSecondary)
-                    Text("누적 부화 \(hatchedCount ?? user.creatures.count)마리")
+                    Text("\(hatchedCount ?? user.creatures.count) hatched")
                         .font(AppFont.cardTitle)
                         .foregroundStyle(AppColor.eggAccent)
                 }
@@ -107,12 +116,12 @@ struct MyPageView: View {
         }
     }
 
-    // MARK: - 계정 섹션 (로그인 상태에 따라 분기)
+    // MARK: - Account 섹션 (로그인 상태에 따라 분기)
 
     @ViewBuilder
     private var accountSection: some View {
         VStack(alignment: .leading, spacing: AppSpacing.elementTight) {
-            Text("계정")
+            Text("Account")
                 .font(AppFont.cardTitle)
                 .foregroundStyle(AppColor.textSecondary)
 
@@ -127,7 +136,7 @@ struct MyPageView: View {
     /// 비로그인: Apple/Google 로그인 버튼. 로그인하면 기기 간 동기화가 켜진다는 안내.
     @ViewBuilder
     private var signedOutView: some View {
-        Text("로그인하면 집중 기록과 생명체가 클라우드에 백업되어 다른 기기에서도 이어집니다.")
+        Text("Sign in to back up your focus history and creatures to the cloud and continue on your other devices.")
             .font(AppFont.cardTitle)
             .foregroundStyle(AppColor.textSecondary)
             .fixedSize(horizontal: false, vertical: true)
@@ -147,7 +156,7 @@ struct MyPageView: View {
 
         #if canImport(GoogleSignIn)
         if GoogleAuth.isConfigured {
-            AuthButton(title: "Google로 계속하기", symbol: "g.circle", style: .outline) {
+            AuthButton(title: "Continue with Google", symbol: "g.circle", style: .outline) {
                 signInWithGoogle()
             }
             .disabled(isWorking)
@@ -159,13 +168,13 @@ struct MyPageView: View {
         }
     }
 
-    /// 로그인됨: 동기화 상태 + 로그아웃 + 계정 삭제(심사 요건).
+    /// 로그인됨: 동기화 상태 + Sign out + Delete account(심사 요건).
     @ViewBuilder
     private var signedInView: some View {
         AppCard {
             VStack(alignment: .leading, spacing: AppSpacing.element) {
                 Label {
-                    Text(sync?.isSyncing == true ? "동기화 중…" : "기기 간 동기화 켜짐")
+                    Text(sync?.isSyncing == true ? String(localized: "Syncing…") : String(localized: "Cross-device sync on"))
                         .font(AppFont.body)
                         .foregroundStyle(AppColor.textPrimary)
                 } icon: {
@@ -176,7 +185,7 @@ struct MyPageView: View {
                 SettingDivider()
 
                 Button { signOut() } label: {
-                    Text("로그아웃")
+                    Text("Sign out")
                         .font(AppFont.body)
                         .foregroundStyle(AppColor.textPrimary)
                         .frame(maxWidth: .infinity, alignment: .leading)
@@ -187,7 +196,7 @@ struct MyPageView: View {
                 SettingDivider()
 
                 Button { showDeleteConfirm = true } label: {
-                    Text("계정 삭제")
+                    Text("Delete account")
                         .font(AppFont.body)
                         .foregroundStyle(AppColor.danger)
                         .frame(maxWidth: .infinity, alignment: .leading)
@@ -209,14 +218,14 @@ struct MyPageView: View {
                 let idToken = String(data: tokenData, encoding: .utf8),
                 let nonce = appleNonce
             else {
-                errorMessage = "Apple 로그인 정보를 읽지 못했어요. 다시 시도해 주세요."
+                errorMessage = String(localized: "Couldn't read your Apple sign-in. Please try again.")
                 return
             }
             performSignIn { try await auth.signInWithApple(idToken: idToken, nonce: nonce) }
         case .failure(let error):
-            // 사용자가 취소(ASAuthorizationError.canceled)한 경우는 조용히 무시.
+            // 사용자가 Cancel(ASAuthorizationError.canceled)한 경우는 조용히 무시.
             if (error as? ASAuthorizationError)?.code != .canceled {
-                errorMessage = "Apple 로그인에 실패했어요: \(error.localizedDescription)"
+                errorMessage = String(localized: "Apple sign-in failed: \(error.localizedDescription)")
             }
         }
     }
@@ -239,7 +248,7 @@ struct MyPageView: View {
                 try await work()
                 await sync?.syncOnLogin()
             } catch {
-                errorMessage = "로그인에 실패했어요: \(error.localizedDescription)"
+                errorMessage = String(localized: "Sign-in failed: \(error.localizedDescription)")
             }
         }
     }
@@ -259,10 +268,145 @@ struct MyPageView: View {
             do {
                 try await sync?.deleteAccount()
             } catch {
-                errorMessage = "계정 삭제에 실패했어요: \(error.localizedDescription)"
+                errorMessage = String(localized: "Couldn't delete account: \(error.localizedDescription)")
             }
         }
     }
+
+    // MARK: - 개발자 (DEBUG 전용 · 릴리스 빌드엔 없음)
+
+    #if DEBUG
+    /// 강제 부화로 선택된 종(nil = Normal odds). UI 갱신용 로컬 미러.
+    @State private var debugForced: CreatureSpecies?
+    /// 강제 draw 횟수(nil = Actual focus length). UI 갱신용 로컬 미러.
+    @State private var debugDraws: Int?
+    /// 데모 시드 완료 피드백.
+    @State private var seedDone = false
+
+    /// 확률이 낮은 종(전설 등)을 검수하려고 Next 부화를 특정 종으로 고정한다.
+    /// 정상으로 되돌릴 때까지 유지된다.
+    private var debugSection: some View {
+        VStack(alignment: .leading, spacing: AppSpacing.elementTight) {
+            Text("Developer (DEBUG)")
+                .font(AppFont.cardTitle)
+                .foregroundStyle(AppColor.textSecondary)
+
+            AppCard {
+                VStack(alignment: .leading, spacing: AppSpacing.element) {
+                    Text("Force hatch")
+                        .font(AppFont.body.weight(.semibold))
+                        .foregroundStyle(AppColor.textPrimary)
+                    Text(debugForced.map { "Now: \($0.name) · \($0.rarity.label)" }
+                         ?? String(localized: "Now: normal odds"))
+                        .font(AppFont.cardTitle)
+                        .foregroundStyle(AppColor.eggAccent)
+                    Text("Every hatch is this species until you switch back.")
+                        .font(AppFont.cardTitle)
+                        .foregroundStyle(AppColor.textSecondary)
+
+                    SettingDivider()
+
+                    debugForceButton(nil, title: String(localized: "Normal odds"))
+                    ForEach(CreatureSpecies.allCases) { sp in
+                        debugForceButton(sp, title: "\(sp.name) · \(sp.rarity.label)")
+                    }
+                }
+            }
+
+            AppCard {
+                VStack(alignment: .leading, spacing: AppSpacing.element) {
+                    Text("Force hatch draws (best-of-N)")
+                        .font(AppFont.body.weight(.semibold))
+                        .foregroundStyle(AppColor.textPrimary)
+                    Text(debugDraws.map { "Now: \($0)× draws" }
+                         ?? String(localized: "Now: actual focus length"))
+                        .font(AppFont.cardTitle)
+                        .foregroundStyle(AppColor.eggAccent)
+                    Text("Rolls the tier this many times and keeps the best. Test odds without the long focus.")
+                        .font(AppFont.cardTitle)
+                        .foregroundStyle(AppColor.textSecondary)
+
+                    SettingDivider()
+
+                    debugDrawsButton(nil, title: String(localized: "Actual focus length"))
+                    ForEach([2, 3, 4], id: \.self) { n in
+                        debugDrawsButton(n, title: "\(n)× draw")
+                    }
+                }
+            }
+
+            if let history {
+                AppCard {
+                    VStack(alignment: .leading, spacing: AppSpacing.element) {
+                        Text("Seed demo stats (screenshots)")
+                            .font(AppFont.body.weight(.semibold))
+                            .foregroundStyle(AppColor.textPrimary)
+                        Text(seedDone ? "Seeded ✓ — open Progress" : "Replaces focus history with ~30 days of sessions (streak 14+). Sessions only; collection untouched.")
+                            .font(AppFont.cardTitle)
+                            .foregroundStyle(seedDone ? AppColor.success : AppColor.textSecondary)
+
+                        SettingDivider()
+
+                        Button {
+                            history.debugReplaceAll(DemoSeed.sessions())
+                            seedDone = true
+                        } label: {
+                            Text("Seed now")
+                                .font(AppFont.body.weight(.semibold))
+                                .foregroundStyle(AppColor.eggAccent)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+            }
+        }
+        .onAppear {
+            debugForced = DebugHatch.forcedSpecies
+            debugDraws = DebugHatch.forcedDraws
+        }
+    }
+
+    private func debugDrawsButton(_ draws: Int?, title: String) -> some View {
+        Button {
+            DebugHatch.forcedDraws = draws
+            debugDraws = draws
+        } label: {
+            HStack {
+                Text(title)
+                    .font(AppFont.body)
+                    .foregroundStyle(AppColor.textPrimary)
+                Spacer()
+                if debugDraws == draws {
+                    Image(systemName: "checkmark").foregroundStyle(AppColor.eggAccent)
+                }
+            }
+            .frame(maxWidth: .infinity)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func debugForceButton(_ species: CreatureSpecies?, title: String) -> some View {
+        Button {
+            DebugHatch.forcedSpecies = species
+            debugForced = species
+        } label: {
+            HStack {
+                Text(title)
+                    .font(AppFont.body)
+                    .foregroundStyle(species?.rarity.color ?? AppColor.textPrimary)
+                Spacer()
+                if debugForced == species {
+                    Image(systemName: "checkmark").foregroundStyle(AppColor.eggAccent)
+                }
+            }
+            .frame(maxWidth: .infinity)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+    }
+    #endif
 
 }
 
@@ -271,7 +415,7 @@ struct MyPageView: View {
 private struct AuthButton: View {
     enum Style { case light, outline }
 
-    let title: String
+    let title: LocalizedStringKey
     let symbol: String
     let style: Style
     let action: () -> Void

@@ -23,16 +23,24 @@ final class ProgressViewModel {
 
     var totalDurationDisplay: String { Self.durationText(StatsEngine.totalActiveMinutes(sessions)) }
     var sessionCount: Int { sessions.count }
-    var currentStreakDisplay: String { "\(StatsEngine.currentStreak(sessions))일" }
-    var averageScoreDisplay: String { "\(StatsEngine.averageFocusScore(sessions))점" }
+    var currentStreakDisplay: String { String(localized: "\(StatsEngine.currentStreak(sessions)) days") }
+    var averageScoreDisplay: String { String(localized: "\(StatsEngine.averageFocusScore(sessions)) / 100") }
 
-    // MARK: - 주간 막대그래프
+    // MARK: - Weekly 막대그래프
 
-    let weekdayLabels = ["월", "화", "수", "목", "금", "토", "일"]
+    let weekdayLabels = [
+        String(localized: "Mon"), String(localized: "Tue"), String(localized: "Wed"),
+        String(localized: "Thu"), String(localized: "Fri"), String(localized: "Sat"), String(localized: "Sun"),
+    ]
     var weeklyHours: [Double] { StatsEngine.weeklyHours(sessions) }
     var weeklyMax: Double { max(weeklyHours.max() ?? 0, 1) }
 
-    // MARK: - 최근 세션 (최신순, 최대 10건)
+    // MARK: - Monthly 추세 라인(최근 30일 일별)
+
+    var monthlyHours: [Double] { StatsEngine.dailyHours(sessions, days: 30) }
+    var monthlyMax: Double { max(monthlyHours.max() ?? 0, 1) }
+
+    // MARK: - Recent sessions (최신순, 최대 10건)
 
     var recentSessions: [FocusSessionResult] {
         Array(sessions.sorted { $0.startedAt > $1.startedAt }.prefix(10))
@@ -43,8 +51,8 @@ final class ProgressViewModel {
     private static func durationText(_ minutes: Int) -> String {
         let hours = minutes / 60
         let mins = minutes % 60
-        if hours > 0 && mins > 0 { return "\(hours)시간 \(mins)분" }
-        if hours > 0 { return "\(hours)시간" }
-        return "\(mins)분"
+        if hours > 0 && mins > 0 { return String(localized: "\(hours)h \(mins)m") }
+        if hours > 0 { return String(localized: "\(hours)h") }
+        return String(localized: "\(mins)m")
     }
 }

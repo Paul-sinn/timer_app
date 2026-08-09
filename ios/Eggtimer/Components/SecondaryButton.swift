@@ -3,16 +3,16 @@
 //  Eggtimer
 //
 //  보조 액션 버튼. 채움 없음 / 텍스트·보더 중립(textPrimary·border).
-//  Primary(흰 채움)와 Danger(빨강) 사이의 비파괴적 보조 선택지(예: 새 알 받기).
+//  Primary(흰 채움)와 Danger(빨강) 사이의 비파괴적 보조 선택지(예: Get new egg).
 //
 
 import SwiftUI
 
 struct SecondaryButton: View {
-    private let title: String
+    private let title: LocalizedStringKey
     private let action: () -> Void
 
-    init(_ title: String, action: @escaping () -> Void) {
+    init(_ title: LocalizedStringKey, action: @escaping () -> Void) {
         self.title = title
         self.action = action
     }
@@ -35,7 +35,7 @@ struct SecondaryButton: View {
 #Preview {
     ZStack {
         AppColor.pageBackground.ignoresSafeArea()
-        SecondaryButton("새 알 받기") {}
+        SecondaryButton("Get new egg") {}
             .padding(AppSpacing.element)
     }
     .preferredColorScheme(.dark)

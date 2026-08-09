@@ -3,7 +3,7 @@
 //  Eggtimer
 //
 //  부화 이력의 영속 모델(SwiftData, Phase 2-2). 생명체 1마리 = 1행.
-//  값 타입 Creature ↔ @Model 레코드를 상호 변환해 컬렉션이 앱 재시작 후에도 유지된다.
+//  값 타입 Creature ↔ @Model 레코드를 상호 변환해 컬렉션이 앱 재Start 후에도 유지된다.
 //  (종 단위 중복 집계는 creatures 배열을 species로 그룹핑해 파생 — FEATURE_DESIGN F3)
 //
 

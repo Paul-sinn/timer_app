@@ -2,7 +2,7 @@
 //  ReviewGalleryView.swift
 //  Eggtimer
 //
-//  화면 검수 갤러리(개발/검수 전용). 데이터·로그인 없이 모든 화면과 모든 상태
+//  Screen Review Gallery(개발/검수 전용). 데이터·로그인 없이 모든 화면과 모든 상태
 //  (빈/채움)를 한 곳에서 점프해 점검한다. 앞 step들이 만든 init 주입을 활용해
 //  각 화면을 지정한 더미 상태로 강제로 띄운다.
 //  실제 사용자 플로우(RootView 4탭)는 그대로 두고, 여기는 별도 진입점일 뿐이다.
@@ -53,10 +53,10 @@ struct ReviewGalleryView: View {
             }
             .scrollContentBackground(.hidden)
             .background(AppColor.pageBackground.ignoresSafeArea())
-            .navigationTitle("화면 검수 갤러리")
+            .navigationTitle("Screen Review Gallery")
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button("닫기") { dismiss() }
+                    Button("Close") { dismiss() }
                 }
             }
         }
@@ -67,7 +67,7 @@ struct ReviewGalleryView: View {
 
 /// 갤러리 행: 탭하면 지정한 더미 상태의 화면으로 push한다.
 private struct GalleryLink<Destination: View>: View {
-    let title: String
+    let title: LocalizedStringKey
     @ViewBuilder let destination: () -> Destination
 
     var body: some View {

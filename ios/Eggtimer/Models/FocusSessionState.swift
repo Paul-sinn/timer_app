@@ -3,8 +3,8 @@
 //  Eggtimer
 //
 //  진행 중인 집중 세션의 값 타입(Codable). 진실은 항상 "타임스탬프에서 재계산"한다.
-//  - accumulatedActiveSeconds: 이전 running 구간들의 누적(일시정지 보정).
-//  - lastResumedAt: 현재 running 구간의 시작 시각(running일 때만 non-nil).
+//  - accumulatedActiveSeconds: 이전 running 구간들의 누적(Pause 보정).
+//  - lastResumedAt: 현재 running 구간의 Start 시각(running일 때만 non-nil).
 //  유효 집중초 = accumulated + (running이면 now - lastResumedAt), 목표치로 캡.
 //  (FEATURE_DESIGN.md Feature 1)
 //
@@ -13,7 +13,7 @@ import Foundation
 
 enum SessionPhase: String, Codable {
     case running    // 집중 중
-    case paused     // 일시정지
+    case paused     // Pause
     case completed  // 목표 도달(부화 대기)
 }
 
@@ -33,13 +33,17 @@ struct ActiveSession: Codable, Equatable {
     var phase: SessionPhase
     /// 타이머 모드.
     var mode: TimerMode
-    /// 포모도로 휴식 종료 시각(non-nil = 휴식 중, 집중 누적 정지).
+    /// 포모도로 휴식 종료 시각(non-nil = On a break, 집중 누적 정지). 절대 시각이라 백그라운드/복원에 안전.
     var breakEndsAt: Date?
-    /// 다음 휴식이 시작될 누적 집중초(포모도로). free에선 Int.max(휴식 없음).
-    var nextBreakAt: Int
+    /// 포모도로: Done한 집중 블록 수. 롱브레이크 4주기·현재 블록번호 판정.
+    var completedBlocks: Int
+    /// 현재 휴식이 롱브레이크(4번째 블록 뒤)인지. 표시·복원용.
+    var currentBreakIsLong: Bool
+    /// 이번 블록(사이클)의 부화/진화 보상이 이미 지급됐는지. 크래시·백그라운드 휴식종료 재진입 시 중복 지급 차단.
+    var cycleRewardGranted: Bool
 
     init(id: UUID = UUID(), plannedSeconds: Int, startedAt: Date, phase: SessionPhase = .running,
-         mode: TimerMode = .free, nextBreakAt: Int = Int.max) {
+         mode: TimerMode = .free) {
         self.id = id
         self.plannedSeconds = plannedSeconds
         self.startedAt = startedAt
@@ -48,13 +52,15 @@ struct ActiveSession: Codable, Equatable {
         self.phase = phase
         self.mode = mode
         self.breakEndsAt = nil
-        self.nextBreakAt = nextBreakAt
+        self.completedBlocks = 0
+        self.currentBreakIsLong = false
+        self.cycleRewardGranted = false
     }
 
-    /// 휴식 중인지(포모도로).
+    /// On a break인지(포모도로).
     var isOnBreak: Bool { breakEndsAt != nil }
 
-    /// 유효 집중초(목표치로 캡). 시계 역행은 0으로 무시(안티치트). 휴식 중엔 누적만(running 보정 없음).
+    /// 유효 집중초(목표치로 캡). 시계 역행은 0으로 무시(안티치트). On a break엔 누적만(running 보정 없음).
     func activeSeconds(now: Date) -> Int {
         var total = accumulatedActiveSeconds
         if phase == .running, !isOnBreak, let resumed = lastResumedAt {

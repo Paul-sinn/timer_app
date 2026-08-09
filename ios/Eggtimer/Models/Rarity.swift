@@ -43,20 +43,20 @@ enum Rarity: String, CaseIterable, Identifiable, Comparable {
     /// 한글 표시 라벨.
     var label: String {
         switch self {
-        case .common:    return "일반"
-        case .uncommon:  return "고급"
-        case .rare:      return "레어"
-        case .legendary: return "전설"
+        case .common:    return String(localized: "Common")
+        case .uncommon:  return String(localized: "Uncommon")
+        case .rare:      return String(localized: "Rare")
+        case .legendary: return String(localized: "Legendary")
         }
     }
 
     /// 레어도 강조색. AppColor 토큰만 사용(신규 색상 도입 금지).
     var color: Color {
         switch self {
-        case .common:    return AppColor.textSecondary // 무채색 (#A3A3A3)
-        case .uncommon:  return AppColor.success        // 초록 (#22C55E)
-        case .rare:      return AppColor.rare           // 파랑 (#60A5FA)
-        case .legendary: return AppColor.eggAccent      // 골드 (#F5C451)
+        case .common:    return AppColor.textSecondary // 뮤트 토프 (#A89884)
+        case .uncommon:  return AppColor.success        // 세이지 (#9CB380)
+        case .rare:      return AppColor.rare           // 소프트 블루 (#7FA9E8)
+        case .legendary: return AppColor.legendary      // 전용 골드 (#F4B860)
         }
     }
 

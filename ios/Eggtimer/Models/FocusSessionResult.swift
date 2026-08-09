@@ -2,7 +2,7 @@
 //  FocusSessionResult.swift
 //  Eggtimer
 //
-//  끝난(완료/중단) 집중 세션 1건의 요약 값 타입. 통계·점수의 단위.
+//  끝난(Done/Stop) 집중 세션 1건의 요약 값 타입. 통계·점수의 단위.
 //  focusScore는 활동시간 달성도 + 이탈 페널티로 계산(keptScreenOn 대체, Feature 5·6).
 //
 
@@ -17,7 +17,7 @@ struct FocusSessionResult: Identifiable, Equatable {
     let interruptionCount: Int
     /// 10분+ 이탈이 한 번이라도 있었는지.
     let distracted: Bool
-    /// 목표 도달로 끝났는지(부화), 중단(abandon)인지.
+    /// 목표 도달로 끝났는지(부화), Stop(abandon)인지.
     let completed: Bool
     /// 이 세션을 함께한 동료 캐릭터 id(알 단계 세션은 nil). 진화 단계 귀속용.
     let companionID: UUID?

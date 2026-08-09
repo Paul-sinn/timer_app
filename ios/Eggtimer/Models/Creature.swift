@@ -4,7 +4,7 @@
 //
 //  부화한 생명체 인스턴스. 순수 Swift 값 타입(struct). SwiftData 미사용(Phase 0).
 //  종(CreatureSpecies)에서 이름·등급을 파생하고, 부화 시점에 확정된 이미지 변형을 보관한다.
-//  모든 종은 부화(0단계) 후 "이어서 집중" 1세션 완료마다 한 단계씩 진화하고,
+//  모든 종은 부화(0단계) 후 "Keep focusing" 1세션 Done마다 한 단계씩 진화하고,
 //  maxEvolutionStage에 도달하면 최종 진화한다. 전용 진화 아트(백호·피닉스)는 최종 단계에서
 //  이미지가 바뀌고, 그 외 종은 같은 아트 + 글로우·배지 연출로 단계를 표현한다.
 //
@@ -20,7 +20,8 @@ struct Creature: Identifiable, Hashable {
     let hatchedAt: Date
 
     /// 최종 진화까지의 진화 횟수. 부화(0단계) 후 이만큼 진화하면 최종 진화.
-    static let maxEvolutionStage = 3
+    /// 3상태 진화: 0=갓 부화 → 1=진화 → 2=최종. 진화 1회마다 아트가 실제로 바뀌어 보상감을 준다.
+    static let maxEvolutionStage = 2
 
     init(
         id: UUID = UUID(),
@@ -47,7 +48,7 @@ struct Creature: Identifiable, Hashable {
     /// 전용 최종 진화 아트를 가진 종인지(현재 백호·피닉스만). 그 외 종은 같은 아트 + 연출/배지로 단계 표현.
     var hasFinalArt: Bool { species.evolvedImageName != nil }
 
-    /// 진화 단계(0=갓 부화 … maxEvolutionStage=최종). 부화 후 완료한 집중 세션 수로 파생.
+    /// 진화 단계(0=갓 부화 … maxEvolutionStage=최종). 부화 후 Done한 집중 세션 수로 파생.
     func evolutionStage(completedSessionsSinceHatch n: Int) -> Int {
         max(0, min(n, Creature.maxEvolutionStage))
     }
@@ -65,15 +66,53 @@ struct Creature: Identifiable, Hashable {
     // MARK: - 부화
 
     /// 확률표에 따라 한 종을 뽑아 새 생명체를 부화시킨다.
-    static func hatch(at date: Date = Date()) -> Creature {
+    /// `draws`(집중 길이 보상, FocusReward)만큼 등급을 굴려 최고 등급을 채택한다(best-of-N). 기본 1.
+    static func hatch(draws: Int = 1, at date: Date = Date()) -> Creature {
         var generator = SystemRandomNumberGenerator()
-        return hatch(at: date, using: &generator)
+        #if DEBUG
+        // 개발자 강제 부화(마이페이지). 확률·draw를 무시하고 지정 종으로 부화한다. 릴리스엔 없음.
+        if let forced = DebugHatch.forcedSpecies {
+            return Creature(species: forced, imageName: forced.randomVariant(using: &generator), hatchedAt: date)
+        }
+        // 강제 draw(best-of-N 검수용). Settings 시 Actual focus length 대신 이 값으로 굴린다. 릴리스엔 없음.
+        let effectiveDraws = DebugHatch.forcedDraws ?? draws
+        return hatch(draws: effectiveDraws, at: date, using: &generator)
+        #else
+        return hatch(draws: draws, at: date, using: &generator)
+        #endif
     }
 
     /// 테스트 가능한 주입형 RNG 부화.
-    static func hatch<G: RandomNumberGenerator>(at date: Date = Date(), using generator: inout G) -> Creature {
-        let species = CreatureSpecies.roll(using: &generator)
+    static func hatch<G: RandomNumberGenerator>(draws: Int = 1, at date: Date = Date(), using generator: inout G) -> Creature {
+        let species = CreatureSpecies.roll(draws: draws, using: &generator)
         let image = species.randomVariant(using: &generator)
         return Creature(species: species, imageName: image, hatchedAt: date)
     }
 }
+
+#if DEBUG
+/// DEBUG 전용 Force hatch. 마이페이지 개발자 섹션에서 종을 고르면 Next 부화부터 그 종만 나온다
+/// (확률이 낮은 전설 등을 검수용으로 OK). UserDefaults에만 저장돼 릴리스 빌드엔 존재하지 않는다.
+enum DebugHatch {
+    private static let key = "debug.forcedHatchSpecies"
+    private static let drawsKey = "debug.forcedDraws"
+
+    /// 강제할 종. nil이면 Normal odds.
+    static var forcedSpecies: CreatureSpecies? {
+        get { UserDefaults.standard.string(forKey: key).flatMap { CreatureSpecies(rawValue: $0) } }
+        set { UserDefaults.standard.setValue(newValue?.rawValue, forKey: key) }
+    }
+
+    /// 강제 draw 횟수(best-of-N 검수용). nil이면 Actual focus length(FocusReward)로 계산한 draw 사용.
+    static var forcedDraws: Int? {
+        get {
+            let v = UserDefaults.standard.integer(forKey: drawsKey)
+            return v > 0 ? v : nil
+        }
+        set {
+            if let newValue { UserDefaults.standard.set(newValue, forKey: drawsKey) }
+            else { UserDefaults.standard.removeObject(forKey: drawsKey) }
+        }
+    }
+}
+#endif

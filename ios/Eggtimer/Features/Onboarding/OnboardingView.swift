@@ -3,13 +3,13 @@
 //  Eggtimer
 //
 //  첫 실행 온보딩. 앱의 핵심 루프(집중 → 알 부화 → 캐릭터 수집·진화)를 3장으로 소개한다.
-//  마지막 장의 "시작하기"를 누르면 onFinish가 호출되고 다시 보이지 않는다(@AppStorage 게이트는 RootView).
+//  마지막 장의 "Start하기"를 누르면 onFinish가 호출되고 다시 보이지 않는다(@AppStorage 게이트는 RootView).
 //
 
 import SwiftUI
 
 struct OnboardingView: View {
-    /// 온보딩 완료 콜백(RootView가 hasSeenOnboarding을 true로 전환).
+    /// 온보딩 Done 콜백(RootView가 hasSeenOnboarding을 true로 전환).
     var onFinish: () -> Void
 
     @State private var page = 0
@@ -18,23 +18,23 @@ struct OnboardingView: View {
         let id = UUID()
         let image: String      // 에셋 이미지명(픽셀 알/캐릭터)
         let systemFallback: String
-        let title: String
-        let body: String
+        let title: LocalizedStringKey
+        let body: LocalizedStringKey
     }
 
     private let pages: [Page] = [
-        Page(image: "Egg0", systemFallback: "timer",
-             title: "집중하면 알이 자라요",
-             body: "타이머를 켜고 집중하는 동안\n알이 6단계로 부화에 가까워져요."),
+        Page(image: "fullegg", systemFallback: "timer",
+             title: "Focus, and your egg grows",
+             body: "While the timer runs and you focus,\nyour egg cracks through 6 stages toward hatching."),
         Page(image: "Chicken1", systemFallback: "sparkles",
-             title: "부화한 친구를 모아요",
-             body: "집중을 끝내면 확률에 따라\n다양한 픽셀 생명체가 태어나 도감에 쌓여요."),
+             title: "Collect the friends you hatch",
+             body: "Finish a session and a pixel creature hatches by chance,\nfilling out your collection."),
         Page(image: "WhiteTigerEvolved", systemFallback: "wand.and.stars",
-             title: "이어서 집중하면 진화해요",
-             body: "전설 친구는 부화 후에도 함께\n집중을 이어가면 더 멋지게 진화해요."),
+             title: "Keep focusing to evolve",
+             body: "Keep focusing alongside a legendary friend\nand it evolves into something even cooler."),
         Page(image: "", systemFallback: "bell.badge.fill",
-             title: "집중 끝나면 알려드릴게요",
-             body: "앱을 잠깐 나가 있어도\n부화·휴식 시점을 놓치지 않게 알림을 보내드려요."),
+             title: "We'll tell you when it's time",
+             body: "Even if you step away for a bit,\nwe'll notify you at hatch and break time."),
     ]
 
     var body: some View {
@@ -116,7 +116,7 @@ struct OnboardingView: View {
                     withAnimation { page += 1 }
                 }
             } label: {
-                Text(isLast ? "알림 켜고 시작하기" : "다음")
+                Text(isLast ? String(localized: "Turn on notifications") : String(localized: "Next"))
                     .font(AppFont.cardTitle.weight(.bold))
                     .foregroundStyle(AppColor.pageBackground)
                     .frame(maxWidth: .infinity)
@@ -126,9 +126,9 @@ struct OnboardingView: View {
             }
             .buttonStyle(.plain)
 
-            // 마지막 페이지에서만 건너뛰기(알림 없이 시작). 설정에서 나중에 켤 수 있음.
+            // 마지막 페이지에서만 Skip(알림 없이 Start). Settings에서 나중에 켤 수 있음.
             if isLast {
-                Button("나중에 할게요") { onFinish() }
+                Button("Maybe later") { onFinish() }
                     .font(AppFont.body)
                     .foregroundStyle(AppColor.textSecondary)
                     .buttonStyle(.plain)

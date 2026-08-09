@@ -18,7 +18,12 @@ enum AppleSignInNonce {
         var remaining = length
         while remaining > 0 {
             var randoms = [UInt8](repeating: 0, count: 16)
-            _ = SecRandomCopyBytes(kSecRandomDefault, randoms.count, &randoms)
+            let status = SecRandomCopyBytes(kSecRandomDefault, randoms.count, &randoms)
+            // 안전 난수 실패 시 0으로 채워진(예측가능) nonce로 진행하면 리플레이 방어가 무력화된다.
+            // → 진행 금지, 즉시 트랩(iOS에서 사실상 발생 안 함).
+            guard status == errSecSuccess else {
+                fatalError("SecRandomCopyBytes failed: \(status)")
+            }
             for random in randoms where remaining > 0 {
                 if random < UInt8(charset.count) {
                     result.append(charset[Int(random)])

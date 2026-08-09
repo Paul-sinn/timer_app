@@ -3,7 +3,7 @@
 //  Eggtimer
 //
 //  탭 간 공유되는 도감 상태. 부화한 생명체가 여기에 쌓이고, 홈/컬렉션이 함께 본다.
-//  Phase 2-2: SwiftData(ModelContext) 백킹 — 앱 재시작 후에도 유지된다.
+//  Phase 2-2: SwiftData(ModelContext) 백킹 — 앱 재Start 후에도 유지된다.
 //  ModelContext 없이 생성하면(프리뷰/검수) 메모리 전용으로 동작한다.
 //
 
@@ -34,9 +34,10 @@ final class CollectionStore {
     }
 
     /// 확률표에 따라 새 생명체를 부화시켜 컬렉션 맨 앞에 추가하고 반환한다(영속 저장).
+    /// `draws`(집중 길이 보상)만큼 best-of-N으로 등급을 굴린다. 기본 1.
     @discardableResult
-    func hatch() -> Creature {
-        let creature = Creature.hatch()
+    func hatch(draws: Int = 1) -> Creature {
+        let creature = Creature.hatch(draws: draws)
         creatures.insert(creature, at: 0)
         if let context {
             context.insert(HatchedCreatureRecord(from: creature))

@@ -2,7 +2,7 @@
 //  AppSettings.swift
 //  Eggtimer
 //
-//  앱 환경설정(@AppStorage) 키·기본값의 단일 소스. 뷰마다 키 문자열을 직접 쓰면
+//  앱 환경Settings(@AppStorage) 키·기본값의 단일 소스. 뷰마다 키 문자열을 직접 쓰면
 //  오타로 값이 갈라지므로(다른 UserDefaults 슬롯) 여기 상수로 통일한다.
 //  화면 꺼짐 방지는 기존 `ScreenAwake.settingKey`를 그대로 재사용.
 //

@@ -3,16 +3,16 @@
 //  Eggtimer
 //
 //  주 액션 버튼. 채움 흰색 / 텍스트 검정 / 모서리 12.
-//  (UI_GUIDE.md 컴포넌트 > 버튼 > Primary, 예: 타이머 시작)
+//  (UI_GUIDE.md 컴포넌트 > 버튼 > Primary, 예: 타이머 Start)
 //
 
 import SwiftUI
 
 struct PrimaryButton: View {
-    private let title: String
+    private let title: LocalizedStringKey
     private let action: () -> Void
 
-    init(_ title: String, action: @escaping () -> Void) {
+    init(_ title: LocalizedStringKey, action: @escaping () -> Void) {
         self.title = title
         self.action = action
     }
@@ -33,7 +33,7 @@ struct PrimaryButton: View {
 #Preview {
     ZStack {
         AppColor.pageBackground.ignoresSafeArea()
-        PrimaryButton("타이머 시작") {}
+        PrimaryButton("Start timer") {}
             .padding(AppSpacing.element)
     }
     .preferredColorScheme(.dark)

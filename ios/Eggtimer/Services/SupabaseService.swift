@@ -9,7 +9,7 @@
 import Foundation
 import Supabase
 
-/// Supabase 프로젝트 연결 설정.
+/// Supabase 프로젝트 연결 Settings.
 /// publishable 키는 클라이언트 노출용으로 설계된 공개 키(service_role/secret 아님) — 소스에 둬도 안전하며 RLS가 실제 접근을 통제한다.
 enum SupabaseConfig {
     static let url = URL(string: "https://qvaqiuabsplcwfedoklu.supabase.co")!

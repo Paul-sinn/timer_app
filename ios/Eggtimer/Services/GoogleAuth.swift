@@ -22,10 +22,10 @@ enum GoogleAuth {
     /// URL scheme(reversed client ID)도 Info에 등록해야 콜백이 앱으로 돌아온다.
     static let iosClientID = "REPLACE_WITH_IOS_CLIENT_ID.apps.googleusercontent.com"
 
-    /// 설정값이 채워졌는지(플레이스홀더면 버튼 숨김 판단에 사용).
+    /// Settings값이 채워졌는지(플레이스홀더면 버튼 숨김 판단에 사용).
     static var isConfigured: Bool { !iosClientID.hasPrefix("REPLACE_WITH") }
 
-    /// 앱 시작 시 1회 호출.
+    /// 앱 Start 시 1회 호출.
     static func configure() {
         guard isConfigured else { return }
         GIDSignIn.sharedInstance.configuration = GIDConfiguration(clientID: iosClientID)

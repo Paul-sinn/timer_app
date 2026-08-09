@@ -35,16 +35,16 @@ enum CreatureSpecies: String, CaseIterable, Identifiable {
 
     var id: String { rawValue }
 
-    /// 한글 표시 이름.
+    /// 표시 이름.
     var name: String {
         switch self {
-        case .chicken:    return "빨간 토종닭"
-        case .slime:      return "슬라임"
-        case .dino:       return "아기 공룡"
-        case .blackCat:   return "검은 고양이"
-        case .goldChick:  return "황금 병아리"
-        case .whiteTiger: return "백호"
-        case .phoenix:    return "피닉스"
+        case .chicken:    return String(localized: "Red Hen")
+        case .slime:      return String(localized: "Slime")
+        case .dino:       return String(localized: "Baby Dino")
+        case .blackCat:   return String(localized: "Black Cat")
+        case .goldChick:  return String(localized: "Golden Chick")
+        case .whiteTiger: return String(localized: "White Tiger")
+        case .phoenix:    return String(localized: "Phoenix")
         }
     }
 
@@ -100,12 +100,12 @@ enum CreatureSpecies: String, CaseIterable, Identifiable {
     /// 빨간 토종닭은 표정마다 다른 이름으로 따로 수집된다(질림 방지 + 컬렉션 재미).
     func variantName(imageName: String) -> String {
         switch imageName {
-        case "Chicken1":       return "빨간 토종닭"
-        case "ChickenAnnoyed": return "심통난 토종닭"
-        case "ChickenSleepy":  return "잠꾸러기 토종닭"
-        case "ChickenSmart":   return "공부벌레 토종닭"
-        case "ChickenBro":     return "헬스 토종닭"
-        case "ChickenAngry":   return "버럭 토종닭"
+        case "Chicken1":       return String(localized: "Red Hen")
+        case "ChickenAnnoyed": return String(localized: "Grumpy Hen")
+        case "ChickenSleepy":  return String(localized: "Sleepy Hen")
+        case "ChickenSmart":   return String(localized: "Bookworm Hen")
+        case "ChickenBro":     return String(localized: "Buff Hen")
+        case "ChickenAngry":   return String(localized: "Angry Hen")
         default:               return name
         }
     }
@@ -143,8 +143,20 @@ enum CreatureSpecies: String, CaseIterable, Identifiable {
     /// 한 종을 뽑는다: ① 등급(`Rarity.tierWeight`, 합 100) ② 그 등급 안의 종(`weight` 상대가중).
     /// 주입형 RNG로 테스트 가능. **새 종을 추가해도 다른 등급의 확률은 불변**(해당 등급 내부만 재분배).
     static func roll<G: RandomNumberGenerator>(using generator: inout G) -> CreatureSpecies {
-        let rarity = rollRarity(using: &generator)
-        let pool = allCases.filter { $0.rarity == rarity }
+        roll(draws: 1, using: &generator)
+    }
+
+    /// best-of-N 추첨: 등급을 `draws`번 굴려 **최고 등급**을 채택한 뒤, 그 등급 안에서 종을 뽑는다.
+    /// 집중 길이 보상(FocusReward)이 이 draw 횟수로만 작동한다 — 등급/종 weight는 그대로.
+    /// draws=1이면 기존 단일 추첨과 완전히 동일(하위호환).
+    static func roll<G: RandomNumberGenerator>(draws: Int, using generator: inout G) -> CreatureSpecies {
+        let n = max(1, draws)
+        var best = rollRarity(using: &generator)
+        for _ in 1..<n {
+            let r = rollRarity(using: &generator)
+            if r > best { best = r }
+        }
+        let pool = allCases.filter { $0.rarity == best }
         return weightedPick(pool, using: &generator) ?? allCases[0]
     }
 

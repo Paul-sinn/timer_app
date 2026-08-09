@@ -33,10 +33,10 @@ struct AppCard<Content: View>: View {
         AppColor.pageBackground.ignoresSafeArea()
         AppCard {
             VStack(alignment: .leading, spacing: AppSpacing.elementTight) {
-                Text("오늘의 집중")
+                Text("Today's focus")
                     .font(AppFont.cardTitle)
                     .foregroundStyle(AppColor.textSecondary)
-                Text("1시간 24분")
+                Text("1h 24m")
                     .font(AppFont.screenTitle)
                     .foregroundStyle(AppColor.textPrimary)
             }

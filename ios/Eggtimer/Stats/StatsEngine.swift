@@ -19,7 +19,7 @@ enum StatsEngine {
         sessions.filter(\.completed).count
     }
 
-    /// 완료율 0...1 (완료 / 전체).
+    /// Done율 0...1 (Done / 전체).
     static func completionRate(_ sessions: [FocusSessionResult]) -> Double {
         guard !sessions.isEmpty else { return 0 }
         return Double(completedCount(sessions)) / Double(sessions.count)
@@ -49,6 +49,23 @@ enum StatsEngine {
         return hours
     }
 
+    /// 최근 `days`일(오늘 포함) 일별 집중 시간(시간 단위). index 0 = (days-1)일 전 … 마지막 = 오늘.
+    /// Monthly 추세 라인차트용(막대 30개 대신 시계열 라인).
+    static func dailyHours(_ sessions: [FocusSessionResult], days: Int = 30,
+                           now: Date = Date(), calendar: Calendar = .current) -> [Double] {
+        let n = max(1, days)
+        var hours = [Double](repeating: 0, count: n)
+        let today = calendar.startOfDay(for: now)
+        for s in sessions {
+            let day = calendar.startOfDay(for: s.startedAt)
+            let diff = calendar.dateComponents([.day], from: day, to: today).day ?? -1  // 0=오늘
+            if diff >= 0 && diff < n {
+                hours[n - 1 - diff] += Double(s.activeSeconds) / 3600.0                  // 오늘 = 마지막
+            }
+        }
+        return hours
+    }
+
     /// 오늘 누적 집중 시간(분).
     static func todayActiveMinutes(_ sessions: [FocusSessionResult],
                                    now: Date = Date(), calendar: Calendar = .current) -> Int {
@@ -57,7 +74,7 @@ enum StatsEngine {
             .reduce(0) { $0 + $1.activeSeconds } / 60
     }
 
-    /// 현재 연속 집중 일수. 오늘(또는 어제부터 이어진) 기준 완료 세션이 있는 연속 일자 수.
+    /// 현재 연속 집중 일수. 오늘(또는 어제부터 이어진) 기준 Done 세션이 있는 연속 일자 수.
     static func currentStreak(_ sessions: [FocusSessionResult],
                               now: Date = Date(), calendar: Calendar = .current) -> Int {
         let activeDays = Set(sessions
