@@ -5,7 +5,7 @@
 //  캐릭터 한마디(Feature 4 · dialoguesystem.md). 화자(알/생명체 성격) × 트리거(맥락)별 풀에서
 //  가중 랜덤 + 비반복 + 쿨다운으로 고른다.
 //
-//  설계 의도(dialoguesystem.md): 앱을 "살아있게" 만든다. 알은 장난스러운 의심꾼으로 시작해
+//  설계 의도(dialoguesystem.md): 앱을 "살아있게" 만든다. 알은 장난스러운 의심꾼으로 Start해
 //  집중 시간·연속일이 쌓일수록 의심 → 존중 → 자부심으로 톤이 진화한다. 생명체는 성격별로 말한다.
 //  영어·풍자 톤의 라인 본문은 현지화/AI 확장을 대비해 콘텐츠로 분리(카탈로그)한다.
 //
@@ -54,7 +54,7 @@ enum ReturnBucket: String, CaseIterable, Equatable, Hashable, Sendable {
 /// 대사를 띄우는 맥락.
 enum DialogueTrigger: Equatable, Hashable, Sendable {
     case idle                          // 홈 대기
-    case sessionStart                  // 세션 시작
+    case sessionStart                  // 세션 Start
     case focusTick                     // 집중 중 주기(3분)마다 한마디(화자별 풀)
     case focusMilestone(minutes: Int)  // 집중 경과 분(5·10·15·30·45·60)
     case appReturn(ReturnBucket)       // 복귀(이탈 시간 버킷)

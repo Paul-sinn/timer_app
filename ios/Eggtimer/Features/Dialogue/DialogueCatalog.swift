@@ -2,7 +2,7 @@
 //  DialogueCatalog.swift
 //  Eggtimer
 //
-//  대사 정적 카탈로그(dialoguesystem.md). 알 풀(시작/경과분/복귀/스트릭) + 생명체 성격별 풀.
+//  대사 정적 카탈로그(dialoguesystem.md). 알 풀(Start/경과분/복귀/스트릭) + 생명체 성격별 풀.
 //  라인 본문은 스펙의 영어·풍자 톤을 그대로 사용. 추후 리모트 컨피그/현지화/AI 확장으로 교체 가능.
 //
 
