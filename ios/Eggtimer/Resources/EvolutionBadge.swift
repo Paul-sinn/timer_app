@@ -24,7 +24,7 @@ struct EvolutionBadge: View {
         } else {
             HStack(spacing: 6) {
                 pips
-                Text(isFinal ? "최종 진화 ✨" : "진화 \(stage)/\(maxStage)")
+                Text(isFinal ? String(localized: "Final form ✨") : String(localized: "Evolution \(stage)/\(maxStage)"))
                     .font(.caption.weight(.semibold))
                     .foregroundStyle(isFinal ? AppColor.eggAccent : AppColor.textSecondary)
             }
