@@ -1,0 +1,23 @@
+# ── Git LFS: 원본 아트 자산 ──────────────────────────────────────────────
+# images/ 는 앱 번들에 들어가지 않는 "원본"이다.
+# (런타임 에셋은 Assets.xcassets의 파생본 — CLAUDE.md 캐릭터 아트 파이프라인 규칙)
+# 파일이 크고 앞으로 계속 늘어나므로 아래 3개 디렉토리의 바이너리만 LFS로 관리한다.
+#
+# 기존에 이미 커밋된 images/ 루트(19개) · images/charactor/(14개) · images/inapp/(3개)는
+# 경로가 겹치지 않아 전혀 영향받지 않는다(일반 git 객체로 그대로 유지).
+#
+# 옵션 의미:
+#   filter=lfs        실제 파일은 LFS로 보내고 git에는 포인터만 저장
+#   diff/merge=lfs    바이너리로 취급(텍스트처럼 비교/병합하지 않음)
+#   -text             줄바꿈 자동 변환 금지 — 없으면 이미지가 깨진다
+
+images/final-character/**/*.png filter=lfs diff=lfs merge=lfs -text
+images/final-character/**/*.zip filter=lfs diff=lfs merge=lfs -text
+
+images/eggs/**/*.png            filter=lfs diff=lfs merge=lfs -text
+images/eggs/**/*.gif            filter=lfs diff=lfs merge=lfs -text
+images/eggs/**/*.zip            filter=lfs diff=lfs merge=lfs -text
+
+images/pomodorobreak/**/*.png   filter=lfs diff=lfs merge=lfs -text
+
+# images/eggs/ 안의 .md 는 일반 텍스트로 둔다(작고, 변경 내용이 보여야 한다).
