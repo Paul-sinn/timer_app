@@ -4,7 +4,7 @@
 //
 //  집중 세션의 단일 소스(Feature 1). 상태머신(idle→running↔paused→completed)을
 //  타임스탬프 기반으로 운영하고, 화면 갱신용 1초 틱과 scenePhase 복귀 시 재계산을 한다.
-//  활성 세션 1건은 UserDefaults에 즉시 영속 → 강제종료/크래시 후 복구(이어하기/완료).
+//  활성 세션 1건은 UserDefaults에 즉시 영속 → 강제종료/크래시 후 복구(이어하기/Done).
 //  실제 영속 이력(SwiftData)·통계 연동은 Phase 2-2 범위.
 //
 //  성장/부화 규칙은 EggState와 동일: 진행도(0...1) → 6단계 알 이미지, 목표 도달 시 부화.
@@ -13,16 +13,19 @@
 import SwiftUI
 
 /// 포모도로 사이클 상수. DEBUG는 검수를 위해 대폭 단축한다.
+/// 모델: 25분 집중 → 휴식(짧은/롱) → 휴식 끝에 보상 1회 → Next 블록. 4블록마다 롱브레이크.
 enum PomodoroConfig {
     #if DEBUG
-    static let focusBlock = 10      // 집중 블록(초) — 검수용
-    static let breakLength = 5       // 휴식(초) — 검수용
-    static let hatchThreshold = 30   // 누적 집중 부화 임계(초) — 검수용
+    static let focusBlock = 10       // 집중 블록(초) — 검수용
+    static let breakLength = 5        // 짧은 휴식(초) — 검수용
+    static let longBreakLength = 8    // 롱 휴식(초) — 검수용
     #else
     static let focusBlock = 25 * 60      // 25분 집중
-    static let breakLength = 5 * 60      // 5분 휴식
-    static let hatchThreshold = 60 * 60  // 누적 1시간이면 부화
+    static let breakLength = 5 * 60      // 5분 짧은 휴식
+    static let longBreakLength = 15 * 60 // 15분 롱 휴식
     #endif
+    /// 롱브레이크 주기: 이 블록 수마다 짧은 휴식 대신 롱브레이크.
+    static let longBreakEvery = 4
 }
 
 @Observable
@@ -39,7 +42,7 @@ final class SessionManager {
 
     private var _plannedSeconds: Int
 
-    /// 다음 세션의 목표 시간(초). idle일 때만 변경 가능(진행 중엔 무시).
+    /// Next 세션의 목표 시간(초). idle일 때만 변경 가능(진행 중엔 무시).
     var plannedSeconds: Int {
         get { _plannedSeconds }
         set { if session == nil { _plannedSeconds = newValue } }
@@ -55,16 +58,18 @@ final class SessionManager {
     private var ticker: Timer?
     private let clock: () -> Date
     private let persists: Bool
-    private static let persistKey = "active_session_v2"
+    // v3: 포모도로 블록 체인(completedBlocks·currentBreakIsLong·cycleRewardGranted) 도입으로 포맷 변경.
+    // 구버전 진행중(transient) 세션은 무시(durable 부화·진화 이력은 SwiftData라 무손실).
+    private static let persistKey = "active_session_v3"
 
-    /// 세션이 끝날 때(완료/중단) 결과를 전달(영속/통계 기록용). HomeView가 주입.
+    /// 세션이 끝날 때(Done/Stop) 결과를 전달(영속/통계 기록용). HomeView가 주입.
     var onSessionEnd: ((FocusSessionResult) -> Void)?
 
     /// 현재 동료 캐릭터 id(HomeView가 동료 변화 시 주입). 세션 결과에 귀속 → 진화 단계 정확화.
     /// 알 단계(동료 없음)에선 nil.
     var companionID: UUID?
 
-    /// 충전 중 "찌릿" 보너스로 추가된 부화 진행 초(A+ 기믹). 세션 시작 시 0으로 리셋(비영속).
+    /// Charging "찌릿" 보너스로 추가된 부화 진행 초(A+ 기믹). 세션 Start 시 0으로 리셋(비영속).
     private var bonusSeconds = 0
 
     // 이탈 추적(Feature 6) — 현재 세션 누적.
@@ -75,7 +80,7 @@ final class SessionManager {
     private(set) var lastAwaySeconds: Int = 0
 
     init(plannedSeconds: Int = 25 * 60,
-         displayName: String = "집중하는 너구리",
+         displayName: String = String(localized: "Focused Racoon"),
          clock: @escaping () -> Date = { Date() },
          persists: Bool = true) {
         self._plannedSeconds = plannedSeconds
@@ -94,27 +99,24 @@ final class SessionManager {
     var isPaused: Bool { session?.phase == .paused }
     var isCompleted: Bool { session?.phase == .completed }
 
-    /// 포모도로 휴식 중인지.
+    /// 포모도로 On a break인지.
     var isOnBreak: Bool { session?.isOnBreak ?? false }
     /// 현재 모드(진행 중이면 세션 모드, idle이면 선택 모드).
     var activeMode: TimerMode { session?.mode ?? mode }
 
-    /// 표시용 목표 시간(idle이면 모드별 기본, 진행 중이면 세션값).
+    /// 표시용 목표 시간(idle이면 모드별 기본, 진행 중이면 세션값). 포모도로는 한 블록(=focusBlock).
     private var targetSeconds: Int {
-        session?.plannedSeconds ?? (mode == .pomodoro ? PomodoroConfig.hatchThreshold : plannedSeconds)
+        session?.plannedSeconds ?? (mode == .pomodoro ? PomodoroConfig.focusBlock : plannedSeconds)
     }
 
     /// 남은 시간(초). idle이면 목표 전체.
     var remainingSeconds: Int { max(targetSeconds - activeSecondsLive, 0) }
 
-    /// 타이머에 표시할 카운트다운(초). 휴식 중=휴식 남은시간, 포모도로 집중=다음 휴식/부화까지, free=목표까지.
+    /// 타이머에 표시할 카운트다운(초). On a break=휴식 남은시간, 그 외=현재 블록/목표까지.
     var countdownSeconds: Int {
         if isOnBreak { return breakRemainingSeconds }
         guard let s = session else {
             return mode == .pomodoro ? PomodoroConfig.focusBlock : plannedSeconds
-        }
-        if s.mode == .pomodoro {
-            return max(min(s.nextBreakAt, s.plannedSeconds) - activeSecondsLive, 0)
         }
         return max(s.plannedSeconds - activeSecondsLive, 0)
     }
@@ -125,11 +127,11 @@ final class SessionManager {
         return max(0, Int(end.timeIntervalSince(clock())))
     }
 
-    /// 현재(진행/완료한) 집중 블록 번호(1부터). 포모도로 캡션용.
-    var pomodoroBlock: Int {
-        let total = PomodoroConfig.hatchThreshold / PomodoroConfig.focusBlock
-        return min(activeSecondsLive / PomodoroConfig.focusBlock + 1, max(total, 1))
-    }
+    /// 현재 진행 중인 집중 블록 번호(1부터). 포모도로 캡션용. Done 블록 수 + 1.
+    var pomodoroBlock: Int { (session?.completedBlocks ?? 0) + 1 }
+
+    /// 현재 휴식이 롱브레이크인지(표시용).
+    var isLongBreak: Bool { session?.currentBreakIsLong ?? false }
 
     /// 진행도 0...1.
     var progress: Double {
@@ -142,9 +144,7 @@ final class SessionManager {
         min(max(Int(progress * Double(EggState.visualStages)), 0), EggState.visualStages - 1)
     }
 
-    /// 알 이미지 7단계 인덱스(0...6). 진행도 7분할.
-    /// Egg0(무결) → 2egg → secondcrack → thirdcrack → 3egg → 4egg → 4-2egg(부화 직전 황금 균열, 두근두근).
-    /// 목표 도달 시 부화 버스트(4-3egg→4-7egg) → 몬스터.
+    /// (사용 안 함) 이전 7단계 알 인덱스. 현재 알 표시는 `stageIndex`(6단계)를 쓴다.
     var eggStageIndex: Int {
         min(max(Int(progress * 7), 0), 6)
     }
@@ -160,12 +160,12 @@ final class SessionManager {
 
     /// 상태 문구.
     var statusText: String {
-        if isOnBreak { return "잠깐 쉬어가요 ☕" }
+        if isOnBreak { return String(localized: "Taking a break ☕") }
         switch phase {
-        case .running:   return activeMode == .pomodoro ? "집중 블록 \(pomodoroBlock) 진행 중" : "집중하는 중이에요"
-        case .paused:    return "잠시 멈췄어요"
-        case .completed: return "부화 준비 완료!"
-        case nil:        return "집중할 준비가 되었나요?"
+        case .running:   return activeMode == .pomodoro ? String(localized: "Focus block \(pomodoroBlock)") : String(localized: "Focusing")
+        case .paused:    return String(localized: "Paused")
+        case .completed: return String(localized: "Ready to hatch!")
+        case nil:        return String(localized: "Ready to focus?")
         }
     }
 
@@ -173,9 +173,9 @@ final class SessionManager {
 
     func start() {
         guard session == nil else { return }
-        let planned = mode == .pomodoro ? PomodoroConfig.hatchThreshold : plannedSeconds
-        let nextBreak = mode == .pomodoro ? PomodoroConfig.focusBlock : Int.max
-        var s = ActiveSession(plannedSeconds: planned, startedAt: clock(), mode: mode, nextBreakAt: nextBreak)
+        // 포모도로 한 블록 = focusBlock. free = 선택 시간. (포모도로는 블록마다 보상 → 블록 체인)
+        let planned = mode == .pomodoro ? PomodoroConfig.focusBlock : plannedSeconds
+        var s = ActiveSession(plannedSeconds: planned, startedAt: clock(), mode: mode)
         s.phase = .running
         session = s
         activeSecondsLive = 0
@@ -210,7 +210,7 @@ final class SessionManager {
         persist()
     }
 
-    /// 중단(부화 없음). 의미 있는 집중이 있었으면 미완료 세션으로 기록.
+    /// Stop(부화 없음). 의미 있는 집중이 있었으면 미Done 세션으로 기록.
     func stop() {
         recompute()
         if let s = session, activeSecondsLive > 0 {
@@ -219,7 +219,7 @@ final class SessionManager {
         clearSession()
     }
 
-    /// 완료 처리 후 호출 — 부화 소비가 끝났으니 idle로 리셋.
+    /// Done 처리 후 호출 — 부화 소비가 끝났으니 idle로 리셋.
     func acknowledgeCompletion() {
         guard session?.phase == .completed else { return }
         clearSession()
@@ -227,66 +227,95 @@ final class SessionManager {
 
     // MARK: - 틱 / 재계산
 
-    /// scenePhase 복귀·틱에서 호출. 휴식 종료/휴식 진입/목표 도달을 처리한다.
+    /// scenePhase 복귀·틱에서 호출. 휴식 종료(→보상)/블록 Done(→휴식)/목표 도달(free Done)을 처리한다.
     func recompute() {
         guard let s = session else { return }
         let now = clock()
 
-        // 휴식 중: 카운트다운만, 종료 시 집중 재개.
+        // On a break: 카운트다운만, 종료 시 이번 블록 보상 지급 + Next 블록.
         if s.isOnBreak {
-            if let end = s.breakEndsAt, now >= end { endBreak(at: now) }
+            if let end = s.breakEndsAt, now >= end { endBreakAndReward(at: now) }
             return
         }
 
         // 타임스탬프 유효 집중초 + 충전 보너스(목표치로 캡).
         activeSecondsLive = min(s.activeSeconds(now: now) + bonusSeconds, s.plannedSeconds)
 
-        // 포모도로: 다음 휴식 도달 & 아직 부화 전 → 휴식 진입.
-        if s.mode == .pomodoro, s.phase == .running,
-           activeSecondsLive >= s.nextBreakAt, activeSecondsLive < s.plannedSeconds {
-            enterBreak(at: now)
-            return
-        }
+        guard s.phase == .running, activeSecondsLive >= s.plannedSeconds else { return }
 
-        if s.phase == .running, activeSecondsLive >= s.plannedSeconds {
-            complete()
+        if s.mode == .pomodoro {
+            enterBreakAfterBlock(at: now)   // 블록 집중 Done → 휴식(보상은 휴식 끝에)
+        } else {
+            complete()                       // free: 목표 도달 → 즉시 Done·보상
         }
     }
 
-    /// 포모도로 휴식 진입: 집중 누적 고정 + 5분 휴식 시작 + 다음 휴식 지점 전진.
-    private func enterBreak(at now: Date) {
+    /// 포모도로 집중 블록 Done → 휴식 Start(4블록마다 롱). 보상은 휴식이 끝날 때 지급한다.
+    private func enterBreakAfterBlock(at now: Date) {
         guard var s = session else { return }
-        s.accumulatedActiveSeconds = s.activeSeconds(now: now)
+        s.accumulatedActiveSeconds = min(s.activeSeconds(now: now), s.plannedSeconds)
         s.lastResumedAt = nil
-        s.breakEndsAt = now.addingTimeInterval(Double(PomodoroConfig.breakLength))
-        s.nextBreakAt += PomodoroConfig.focusBlock
+        s.completedBlocks += 1
+        let isLong = s.completedBlocks % PomodoroConfig.longBreakEvery == 0
+        s.currentBreakIsLong = isLong
+        s.cycleRewardGranted = false
+        let length = isLong ? PomodoroConfig.longBreakLength : PomodoroConfig.breakLength
+        s.breakEndsAt = now.addingTimeInterval(Double(length))
         session = s
         activeSecondsLive = s.accumulatedActiveSeconds
-        ScreenAwake.set(false)
+        ScreenAwake.set(false)              // 틱은 유지(휴식 종료 자동 감지)
         persist()
     }
 
-    /// 휴식 종료(자동/건너뛰기) → 집중 재개.
-    private func endBreak(at now: Date) {
+    /// 휴식 종료 → 이번 블록 보상(부화/진화) **1회** 지급 → .completed 전이.
+    /// HomeView가 연출 후 `startNextBlock()`을 호출해 Next 블록으로 이어간다. 휴식 자체는 보상을 주지 않는다.
+    private func endBreakAndReward(at now: Date) {
         guard var s = session, s.isOnBreak else { return }
         s.breakEndsAt = nil
-        s.lastResumedAt = now
+        s.lastResumedAt = nil
+        s.phase = .completed
+        activeSecondsLive = s.plannedSeconds
+
+        if s.cycleRewardGranted {
+            // 이미 지급됨(크래시/재진입 방어) → 재지급 없이 Next 블록으로.
+            session = s
+            startNextBlock()
+            return
+        }
+        s.cycleRewardGranted = true          // 지급 플래그를 먼저 영속(중복 지급 차단)
+        session = s
+        stopTicker()
+        ScreenAwake.set(false)
+        persist()
+        onSessionEnd?(buildResult(from: s, completed: true))   // 이력 기록(진화 카운트). 부화 연출은 HomeView가 .completed 관찰
+    }
+
+    /// 포모도로: 보상 연출이 끝난 뒤 Next 집중 블록 Start(누적 리셋, .running).
+    func startNextBlock() {
+        guard var s = session, s.mode == .pomodoro else { return }
+        s.accumulatedActiveSeconds = 0
+        s.lastResumedAt = clock()
+        s.breakEndsAt = nil
+        s.currentBreakIsLong = false
+        s.cycleRewardGranted = false
         s.phase = .running
         session = s
+        activeSecondsLive = 0
+        bonusSeconds = 0
         ScreenAwake.set(true)
-        recompute()
+        startTicker()
         persist()
     }
 
-    /// 휴식 건너뛰고 바로 다음 집중 블록 시작.
+    /// 휴식 건너뛰고 바로 이번 블록 보상 지급 + Next 블록.
     func skipBreak() {
         guard isOnBreak else { return }
-        endBreak(at: clock())
+        endBreakAndReward(at: clock())
     }
 
-    /// 백그라운드 진입 시: 집중 중이면 **자동 일시정지**(누적 고정, 백그라운드 시간 미포함).
-    /// 세션은 유지되므로 복귀/재실행 시 이어서 진행(초기화 아님). 이탈 시작 시각도 기록(복귀 분류용).
-    /// 휴식 중 이탈은 집중 이탈로 치지 않으며 휴식 카운트다운은 계속 흐른다.
+    /// 백그라운드 진입 시: 집중 중이면 **자동 Pause**(누적 고정, 백그라운드 시간 미포함).
+    /// 세션은 유지되므로 복귀/재실행 시 이어서 진행(초기화 아님). 이탈 Start 시각도 기록(복귀 분류용).
+    /// On a break 이탈은 집중 이탈로 치지 않으며 휴식 카운트다운은 계속 흐른다.
     func handleBackground() {
         if isRunning, var s = session {
             leftAt = clock()
@@ -348,7 +377,7 @@ final class SessionManager {
         )
     }
 
-    /// 충전 중 "찌릿" 부화 보너스(A+ 기믹). 집중 중일 때만, 목표의 fraction만큼 진행도 추가.
+    /// Charging "찌릿" 부화 보너스(A+ 기믹). 집중 중일 때만, 목표의 fraction만큼 진행도 추가.
     /// 반환: 실제 적용된 보너스 비율(0이면 미적용). 표시용.
     @discardableResult
     func applyChargeBonus(fraction: Double) -> Double {
@@ -399,7 +428,7 @@ final class SessionManager {
         else { return }
 
         // 콜드런치 = 포그라운드 진입. 백그라운드에서 얼려둔(lastResumedAt=nil) 집중을 재개.
-        // 휴식 중이면 건드리지 않음(휴식 카운트다운은 recompute가 처리).
+        // On a break이면 건드리지 않음(휴식 카운트다운은 recompute가 처리).
         if s.phase == .running, !s.isOnBreak, s.lastResumedAt == nil {
             s.lastResumedAt = clock()
         }
@@ -409,6 +438,9 @@ final class SessionManager {
         case .running:
             startTicker()
             recompute()   // 백그라운드 동안의 휴식 종료/목표 도달을 즉시 반영
+        case .completed where s.mode == .pomodoro && s.cycleRewardGranted:
+            // 포모도로 블록 보상은 이미 지급됨(재Start 전 크래시/종료) → 재지급 없이 Next 블록 이어가기.
+            startNextBlock()
         case .paused, .completed:
             break
         }
@@ -416,9 +448,9 @@ final class SessionManager {
 }
 
 extension SessionManager {
-    /// 검수/프리뷰용: 특정 진행도에서 일시정지된 세션을 가진 매니저(영속 X).
+    /// 검수/프리뷰용: 특정 진행도에서 Pause된 세션을 가진 매니저(영속 X).
     static func preview(progress: Double, plannedSeconds: Int = 60 * 60,
-                        displayName: String = "집중하는 너구리") -> SessionManager {
+                        displayName: String = String(localized: "Focused Racoon")) -> SessionManager {
         let m = SessionManager(plannedSeconds: plannedSeconds, displayName: displayName, persists: false)
         var s = ActiveSession(plannedSeconds: plannedSeconds, startedAt: Date(), phase: .paused)
         s.accumulatedActiveSeconds = Int(Double(plannedSeconds) * min(max(progress, 0), 1))

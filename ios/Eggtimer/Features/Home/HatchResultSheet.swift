@@ -17,7 +17,7 @@ struct HatchResultSheet: View {
             AppColor.pageBackground.ignoresSafeArea()
 
             VStack(spacing: AppSpacing.section) {
-                Text("새로운 친구가 부화했어요!")
+                Text("A new friend hatched!")
                     .font(AppFont.cardTitle)
                     .foregroundStyle(AppColor.textSecondary)
 
@@ -30,7 +30,8 @@ struct HatchResultSheet: View {
                             )
                         )
                         .frame(width: 280, height: 280)
-                    CreatureImage(imageName: creature.displayImageName(stage: 0), rarity: creature.rarity, size: 180)
+                    CreatureImage(imageName: creature.displayImageName(stage: 0), rarity: creature.rarity,
+                                  size: 180, stage: 0, animated: true)
                         .scaleEffect(appeared ? 1 : 0.6)
                         .animation(.spring(response: 0.5, dampingFraction: 0.55), value: appeared)
                 }
@@ -43,13 +44,13 @@ struct HatchResultSheet: View {
                         .font(AppFont.cardTitle)
                         .foregroundStyle(creature.rarity.color)
                     if creature.hasFinalArt {
-                        Text("이어서 집중하면 진화해요 ✨")
+                        Text("Keep focusing to evolve ✨")
                             .font(AppFont.body)
                             .foregroundStyle(AppColor.textSecondary)
                     }
                 }
 
-                Text("컬렉션에 추가되었어요")
+                Text("Added to your collection")
                     .font(AppFont.body)
                     .foregroundStyle(AppColor.textSecondary)
             }
@@ -61,12 +62,12 @@ struct HatchResultSheet: View {
     }
 }
 
-#Preview("일반") {
+#Preview("Common") {
     HatchResultSheet(creature: Creature(species: .chicken, imageName: "ChickenBro", hatchedAt: .now))
         .preferredColorScheme(.dark)
 }
 
-#Preview("전설") {
+#Preview("Legendary") {
     HatchResultSheet(creature: Creature(species: .phoenix, hatchedAt: .now))
         .preferredColorScheme(.dark)
 }

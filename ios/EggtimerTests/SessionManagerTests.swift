@@ -137,7 +137,7 @@ struct SessionManagerTests {
         #expect(m.plannedSeconds == 200)
     }
 
-    // MARK: - 포모도로
+    // MARK: - 포모도로 (블록 체인: 집중 → 휴식 → 휴식 끝에 보상 1회 → 다음 블록)
 
     private func makePomodoro(_ clock: ClockBox) -> SessionManager {
         let m = SessionManager(plannedSeconds: 100, clock: { clock.now }, persists: false)
@@ -145,52 +145,92 @@ struct SessionManagerTests {
         return m
     }
 
-    @Test func pomodoroEntersBreakAfterFocusBlock() {
+    /// 한 블록을 끝까지 진행(집중 완료 → 휴식 → 휴식 종료 보상 → 다음 블록 시작). 반환: 이번이 롱브레이크였는지.
+    @discardableResult
+    private func runOneBlock(_ m: SessionManager, _ clock: ClockBox) -> Bool {
+        clock.advance(PomodoroConfig.focusBlock); m.recompute()          // 집중 완료 → 휴식
+        let wasLong = m.isLongBreak
+        let breakLen = wasLong ? PomodoroConfig.longBreakLength : PomodoroConfig.breakLength
+        clock.advance(breakLen + 1); m.recompute()                       // 휴식 종료 → 보상(.completed)
+        m.startNextBlock()                                               // 다음 블록
+        return wasLong
+    }
+
+    @Test func pomodoroEntersShortBreakAfterFirstBlock() {
         let clock = ClockBox()
         let m = makePomodoro(clock)
         m.start()
         #expect(m.isRunning)
         clock.advance(PomodoroConfig.focusBlock); m.recompute()
         #expect(m.isOnBreak)
-        #expect(!m.isRunning)                 // 휴식 중엔 집중 아님
+        #expect(!m.isRunning)          // 휴식 중엔 집중 아님
+        #expect(!m.isLongBreak)        // 1블록째 → 짧은 휴식
+        #expect(!m.isCompleted)        // 보상은 휴식 끝에 → 아직 미지급
     }
 
-    @Test func pomodoroSkipBreakResumesFocus() {
+    @Test func pomodoroGrantsRewardExactlyOnceWhenBreakEnds() {
         let clock = ClockBox()
         let m = makePomodoro(clock)
+        var rewards = 0
+        m.onSessionEnd = { r in if r.completed { rewards += 1 } }
         m.start()
-        clock.advance(PomodoroConfig.focusBlock); m.recompute()
+        clock.advance(PomodoroConfig.focusBlock); m.recompute()          // → 휴식
+        #expect(rewards == 0)                                            // 휴식 자체는 보상 X
+        clock.advance(PomodoroConfig.breakLength + 1); m.recompute()     // 휴식 종료 → 보상
+        #expect(m.isCompleted)
+        #expect(rewards == 1)
+        // 재진입(추가 recompute)해도 재지급 없음(cycleRewardGranted 가드).
+        clock.advance(5); m.recompute()
+        clock.advance(5); m.recompute()
+        #expect(rewards == 1)
+    }
+
+    @Test func pomodoroSkipBreakGrantsRewardImmediately() {
+        let clock = ClockBox()
+        let m = makePomodoro(clock)
+        var rewards = 0
+        m.onSessionEnd = { r in if r.completed { rewards += 1 } }
+        m.start()
+        clock.advance(PomodoroConfig.focusBlock); m.recompute()          // → 휴식
         #expect(m.isOnBreak)
         m.skipBreak()
-        #expect(!m.isOnBreak)
-        #expect(m.isRunning)
-    }
-
-    @Test func pomodoroBreakAutoEndsAndAccumulationFreezesDuringBreak() {
-        let clock = ClockBox()
-        let m = makePomodoro(clock)
-        m.start()
-        clock.advance(PomodoroConfig.focusBlock); m.recompute()   // → 휴식
-        #expect(m.isOnBreak)
-        clock.advance(PomodoroConfig.breakLength + 1); m.recompute()  // 휴식 자동 종료
-        #expect(!m.isOnBreak)
-        #expect(m.isRunning)
-        #expect(m.activeSecondsLive == PomodoroConfig.focusBlock)  // 휴식 동안 누적 동결
-        clock.advance(3); m.recompute()
-        #expect(m.activeSecondsLive == PomodoroConfig.focusBlock + 3)  // 재개 후 다시 누적
-    }
-
-    @Test func pomodoroHatchesAtCumulativeThreshold() {
-        let clock = ClockBox()
-        let m = makePomodoro(clock)
-        m.start()
-        var steps = 0
-        while !m.isCompleted && steps < PomodoroConfig.hatchThreshold * 4 {
-            if m.isOnBreak { m.skipBreak() }   // 휴식은 건너뛰며 집중만 누적
-            clock.advance(1); m.recompute()
-            steps += 1
-        }
         #expect(m.isCompleted)
-        #expect(m.activeSecondsLive == PomodoroConfig.hatchThreshold)  // 누적 1시간(컨셉)에 부화
+        #expect(rewards == 1)
+    }
+
+    @Test func pomodoroStartNextBlockResetsFocus() {
+        let clock = ClockBox()
+        let m = makePomodoro(clock)
+        m.start()
+        clock.advance(PomodoroConfig.focusBlock); m.recompute()
+        clock.advance(PomodoroConfig.breakLength + 1); m.recompute()     // 보상
+        #expect(m.isCompleted)
+        m.startNextBlock()
+        #expect(m.isRunning)
+        #expect(m.activeSecondsLive == 0)                                // 새 블록은 0부터
+        #expect(m.pomodoroBlock == 2)                                    // 완료 1블록 + 1
+        clock.advance(3); m.recompute()
+        #expect(m.activeSecondsLive == 3)
+    }
+
+    @Test func pomodoroLongBreakEveryFourthBlock() {
+        let clock = ClockBox()
+        let m = makePomodoro(clock)
+        m.start()
+        #expect(runOneBlock(m, clock) == false)   // 1블록 → 짧은
+        #expect(runOneBlock(m, clock) == false)   // 2블록 → 짧은
+        #expect(runOneBlock(m, clock) == false)   // 3블록 → 짧은
+        #expect(runOneBlock(m, clock) == true)    // 4블록 → 롱브레이크
+        #expect(runOneBlock(m, clock) == false)   // 5블록 → 다시 짧은
+    }
+
+    @Test func pomodoroRewardFiresPerBlock() {
+        let clock = ClockBox()
+        let m = makePomodoro(clock)
+        var rewards = 0
+        m.onSessionEnd = { r in if r.completed { rewards += 1 } }
+        m.start()
+        for _ in 0..<4 { runOneBlock(m, clock) }
+        #expect(rewards == 4)   // 블록마다 보상 정확히 1회 (누적 아님)
     }
 }

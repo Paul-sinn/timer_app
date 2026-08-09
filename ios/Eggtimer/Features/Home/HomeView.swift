@@ -3,7 +3,7 @@
 //  Eggtimer
 //
 //  홈 탭. 다크+골드 톤. 헤더 / 집중 시간 선택 칩 / 대형 타이머 / 중앙 픽셀 알 /
-//  6단계 부화 진행도 / 시작·일시정지·이어서·중단 컨트롤.
+//  6단계 Hatch progress / Start·Pause·이어서·Stop 컨트롤.
 //  실제 동작: SessionManager가 타임스탬프 기반으로 카운트다운하고, 목표 도달 시
 //  확률표대로 자동 부화 → 결과 시트 → 컬렉션 반영. (Feature 1·2·7)
 //
@@ -18,7 +18,7 @@ struct HomeView: View {
     private let history: FocusHistoryStore
     /// 로그인 시 부화·세션종료를 원격에 동기화(비로그인 시 무시).
     private let sync: SyncCoordinator?
-    /// 부화 후 알 자리를 대체해 표시 중인 생명체("새 알 받기" 전까지 유지).
+    /// 부화 후 알 자리를 대체해 표시 중인 생명체("Get new egg" 전까지 유지).
     @State private var hatchling: Creature?
     /// 캐릭터 말풍선 대사 선택기(Feature 4).
     @State private var dialogue = DialogueManager()
@@ -28,22 +28,27 @@ struct HomeView: View {
     @State private var lastMilestone = 0
     /// 방금 진화한 단계(연출/문구 노출용, 잠시 후 nil). nil = 진화 연출 없음.
     @State private var justEvolvedStage: Int?
-    /// 현재 동료의 id(영속). 콜드런치(앱 재시작) 후 컬렉션에서 같은 개체를 복원해 홈에 다시 표시.
-    /// 빈 문자열 = 동료 없음(첫 부화 전 또는 '새 알 받기' 직후).
+    /// 현재 동료의 id(영속). 콜드런치(앱 재Start) 후 컬렉션에서 같은 개체를 복원해 홈에 다시 표시.
+    /// 빈 문자열 = 동료 없음(첫 부화 전 또는 'Get new egg' 직후).
     @AppStorage("companionCreatureID") private var companionID = ""
     /// 부화 순간 borneffect.png 버스트 연출 활성(잠시 후 false).
     @State private var bornEffect = false
-    /// 충전 감지(A+ 기믹). 충전 중 집중하면 알이 찌릿하며 부화 살짝 가속.
+    /// 충전 감지(A+ 기믹). Charging 집중하면 알이 찌릿하며 부화 살짝 가속.
     @State private var battery = BatteryMonitor()
     /// 찌릿 스파크 연출 순간 토글.
     @State private var zapFlash = false
     /// 직전 찌릿으로 받은 보너스 %(표시용, 잠시 후 nil).
     @State private var zapBonusPercent: Int?
-    /// 설정 시트 표시(우상단 기어).
+    /// Settings 시트 표시(우상단 기어).
     @State private var showSettings = false
-    /// "새 알" 확인 다이얼로그 표시(실수 탭 방지).
+    /// "New egg" OK 다이얼로그 표시(실수 탭 방지).
     @State private var showNewEggConfirm = false
-    /// 효과음(부화·진화 시스템 사운드) 사용 여부. 설정 시트와 같은 키를 공유.
+    /// 집중 시간 보상 안내 시트 표시("?" 버튼·첫 실행 1회).
+    @State private var showLuckCard = false
+    @State private var showPomodoroInfo = false
+    /// 보상 안내를 이미 봤는지(첫 실행에만 자동 노출). 이후엔 "?" 버튼으로만.
+    @AppStorage("home.seenFocusLuckTip") private var seenFocusLuckTip = false
+    /// 효과음(부화·진화 시스템 사운드) 사용 여부. Settings 시트와 같은 키를 공유.
     @AppStorage(AppSettings.soundKey) private var soundEnabled = AppSettings.defaultOn
     /// 진동(부화·진화·휴식 진입 햅틱) 사용 여부.
     @AppStorage(AppSettings.hapticsKey) private var hapticsEnabled = AppSettings.defaultOn
@@ -72,49 +77,69 @@ struct HomeView: View {
     /// 집중 시간 선택지(초). DEBUG에서는 빠른 검수용 10초 포함.
     private var durationOptions: [(label: String, seconds: Int)] {
         #if DEBUG
-        return [("10초 (테스트)", 10), ("25분", 25 * 60), ("50분", 50 * 60)]
+        return [(String(localized: "10 sec (test)"), 10), (String(localized: "25 min"), 25 * 60), (String(localized: "50 min"), 50 * 60), (String(localized: "75 min"), 75 * 60)]
         #else
-        return [("25분", 25 * 60), ("50분", 50 * 60)]
+        return [(String(localized: "25 min"), 25 * 60), (String(localized: "50 min"), 50 * 60), (String(localized: "75 min"), 75 * 60)]
         #endif
     }
 
     private var selectedDurationLabel: String {
-        durationOptions.first { $0.seconds == session.plannedSeconds }?.label ?? "집중 모드"
+        durationOptions.first { $0.seconds == session.plannedSeconds }?.label ?? String(localized: "Focus mode")
     }
 
-    /// 포모도로 안내 캡션(집중/휴식/부화 임계).
+    /// 포모도로 안내 캡션(집중/휴식/보상 규칙).
     private var pomodoroCaption: String {
-        let f = PomodoroConfig.focusBlock, b = PomodoroConfig.breakLength, h = PomodoroConfig.hatchThreshold
-        func fmt(_ s: Int) -> String { s >= 60 ? "\(s / 60)분" : "\(s)초" }
-        return "\(fmt(f)) 집중 · \(fmt(b)) 휴식 · 누적 \(fmt(h))이면 부화"
+        let f = PomodoroConfig.focusBlock, b = PomodoroConfig.breakLength
+        let lb = PomodoroConfig.longBreakLength, every = PomodoroConfig.longBreakEvery
+        func fmt(_ s: Int) -> String { s >= 60 ? String(localized: "\(s / 60) min") : String(localized: "\(s) sec") }
+        return String(localized: "\(fmt(f)) focus · hatch/evolve after each \(fmt(b)) break · long \(fmt(lb)) break every \(every) blocks")
+    }
+
+    /// 현재 휴식에 보여줄 장면. 롱브레이크=낮잠, 짧은 휴식=커피/스트레칭 번갈아.
+    private var breakScene: BreakScene {
+        if session.isLongBreak { return .nap }
+        return session.pomodoroBlock % 2 == 0 ? .stretch : .coffee
     }
 
     /// 부화 처리(자동·수동 공통 단일 진입점). 캐릭터를 알 자리에 유지하고 성격대로 인사시킨다.
     private func triggerHatch() {
         guard hatchling == nil, !bornEffect else { return }   // 중복 방지(버스트 중 재진입 차단)
-        let born = store.hatch()                      // 확률 부화 + 컬렉션 반영(영속)
+        let draws = FocusReward.draws(focusSeconds: session.activeSecondsLive)  // 집중 길이 보상(best-of-N)
+        let born = store.hatch(draws: draws)          // 확률 부화 + 컬렉션 반영(영속)
         sync?.pushNewCreature(born)                   // 로그인 시 원격 동기화
-        if soundEnabled { AudioServicesPlaySystemSound(1025) }   // 부화 효과음(설정 게이트)
+        if soundEnabled { AudioServicesPlaySystemSound(1025) }   // 부화 효과음(Settings 게이트)
         bornEffect = true                             // 알 자리에 버스트 재생(몬스터 아직 X)
         Task { @MainActor in
-            try? await Task.sleep(for: .milliseconds(660))   // 버스트 재생(5프레임 × 120ms + 여유)
+            // 버스트 전체 재생(abouttocrack 유지 + 충전 2 + 폭발 4) 후 캐릭터 노출.
+            try? await Task.sleep(for: .seconds(HatchBurstView.totalDuration + 0.05))
             hatchling = born                          // 버스트 끝 → 태어난 캐릭터 노출
             companionID = born.id.uuidString          // 콜드런치 복원용 영속
             session.companionID = born.id             // 이후 세션을 이 캐릭터에 귀속(진화 단계)
             dialogue.fire(.greeting, speaker: .creature(born.personality))  // 성격 대사
-            session.acknowledgeCompletion()           // 완료 소비 → idle, 인라인 리빌 노출
+            advanceAfterReward(startFresh: false)     // 포모도로=Next 블록 / free=idle(인라인 리빌)
             bornEffect = false
         }
     }
 
-    /// 집중 시작(시작/이어서 집중) — 알림 권한을 1회 요청하고 세션을 시작한다.
+    /// 보상 소비 후 Next 상태로. 포모도로는 끊김없이 Next 집중 블록으로 이어가고,
+    /// free는 idle로 돌아간다(startFresh=최종진화 후 새 세션 자동 Start으로 흐름 유지).
+    private func advanceAfterReward(startFresh: Bool) {
+        if session.activeMode == .pomodoro {
+            session.startNextBlock()
+        } else {
+            session.acknowledgeCompletion()
+            if startFresh { session.start() }
+        }
+    }
+
+    /// 집중 Start(Start/Keep focusing) — 알림 권한을 1회 요청하고 세션을 Start한다.
     private func beginFocus() {
         justEvolvedStage = nil
         if notificationsEnabled { Task { await FocusNotifier.requestAuthorization() } }
         session.start()
     }
 
-    /// 현재 동료를 보내고 새 알을 받는다(진행 중이면 세션 중단·기록 후 알로 리셋).
+    /// 현재 동료를 보내고 New egg을 받는다(진행 중이면 세션 Stop·기록 후 알로 리셋).
     private func takeNewEgg() {
         session.stop()
         hatchling = nil
@@ -130,32 +155,32 @@ struct HomeView: View {
             hatchling = saved
             session.companionID = saved.id            // 복원된 동료에 이후 세션 귀속
         } else {
-            companionID = ""                          // 개체가 사라졌으면(삭제 등) 플래그 정리
+            companionID = ""                          // 개체가 사라졌으면(Delete 등) 플래그 정리
         }
     }
 
     /// 백그라운드 진입 시 알림 예약.
-    /// - 휴식 중: 벽시계로 계속 흐르므로 "휴식 끝" 단건 예약(유효).
-    /// - 집중 중: 이탈=자동 일시정지라 백그라운드에서 진행 안 됨 → 진행 알림 대신
-    ///   "돌아와" 이탈 넛지를 드물게(2·15·40분) 예약. 복귀 시 cancel()로 전부 취소.
+    /// - On a break: 벽시계로 계속 흐르므로 "휴식 끝" 단건 예약(유효).
+    /// - 집중 중: 이탈=자동 Pause라 백그라운드에서 진행 안 됨 → 진행 알림 대신
+    ///   "돌아와" 이탈 넛지를 드물게(2·15·40분) 예약. 복귀 시 cancel()로 전부 Cancel.
     private func scheduleFocusNotification() {
         guard notificationsEnabled else { return }   // 알림 끄면 예약 안 함
         if session.isOnBreak {
-            FocusNotifier.schedule(title: "휴식 끝! ☕️",
-                                   body: "다시 집중할 시간이에요.",
+            FocusNotifier.schedule(title: String(localized: "Break's over! ☕️"),
+                                   body: String(localized: "Time to focus again."),
                                    after: session.breakRemainingSeconds)
         } else if session.isRunning {
             FocusNotifier.scheduleDistractionNudges([
-                ("hatchly", "🐣 집중이 멈췄어요. 돌아와서 이어가요", 120),
-                ("hatchly", "⏰ 아직 딴 데 있어요? 잠깐 돌아올까요?", 900),
-                ("hatchly", "😴 기다리다 지쳐요… 잠깐이라도 돌아와요", 2400),
+                ("Hatcho", String(localized: "🐣 Your focus paused — come back and continue"), 120),
+                ("Hatcho", String(localized: "⏰ Still away? Come back for a bit?"), 900),
+                ("Hatcho", String(localized: "😴 Tired of waiting… come back soon"), 2400),
             ])
         }
     }
 
     var body: some View {
         ZStack {
-            AppColor.pageBackground.ignoresSafeArea()
+            ThemedBackground()
 
             VStack(spacing: 0) {
                 header
@@ -193,20 +218,19 @@ struct HomeView: View {
         .onChange(of: session.isCompleted) { _, completed in
             guard completed else { return }
             if hatchling == nil {
-                triggerHatch()                    // 첫 부화: 알 → 캐릭터
+                triggerHatch()                    // 첫 부화(첫 블록): 알 → 캐릭터
             } else if companionStage >= Creature.maxEvolutionStage {
-                // 최종 진화 상태: 더 진화할 게 없으니 멈춤·연출·선택 없이 다음 집중을 끊김없이 이어감.
-                session.acknowledgeCompletion()
-                session.start()
+                // 최종 진화: 더 진화 없음 → 포모도로는 Next 블록, free는 Next 세션으로 끊김없이.
+                advanceAfterReward(startFresh: true)
             } else {
-                session.acknowledgeCompletion()   // 비최종: idle → 진화 연출 + 이어서/새 알 선택
+                advanceAfterReward(startFresh: false)   // 진화 연출 후 이어감(포모도로)/idle(free)
             }
         }
         .onChange(of: companionStage) { old, new in
-            // 동료가 한 단계 진화(이어서 집중 1세션 완료). 등장 연출은 centerStage의 .id 변화가 재생.
+            // 동료가 한 단계 진화(Keep focusing 1세션 Done). 등장 연출은 centerStage의 .id 변화가 재생.
             guard new > old, hatchling != nil else { return }
             justEvolvedStage = new
-            if soundEnabled { AudioServicesPlaySystemSound(1025) }   // 진화 효과음(설정 게이트)
+            if soundEnabled { AudioServicesPlaySystemSound(1025) }   // 진화 효과음(Settings 게이트)
             Task { @MainActor in
                 try? await Task.sleep(for: .seconds(3))
                 if justEvolvedStage == new { justEvolvedStage = nil }   // 연출 문구 자동 해제
@@ -216,7 +240,7 @@ struct HomeView: View {
             if onBreak { dialogue.fire(.breakStart) }   // 휴식 진입 시 알 한마디
         }
         .onChange(of: session.isRunning) { _, running in
-            // 새 시작(activeSecondsLive == 0)에만 시작/스트릭 대사. resume에는 발화 안 함.
+            // 새 Start(activeSecondsLive == 0)에만 Start/스트릭 대사. resume에는 발화 안 함.
             guard running, session.activeSecondsLive == 0 else { return }
             lastTickMinute = 0
             lastMilestone = 0
@@ -248,14 +272,14 @@ struct HomeView: View {
         .onChange(of: scenePhase) { _, phase in
             switch phase {
             case .active:
-                FocusNotifier.cancel()             // 복귀 시 예약 알림 취소(화면에서 직접 보임)
+                FocusNotifier.cancel()             // 복귀 시 예약 알림 Cancel(화면에서 직접 보임)
                 session.handleForeground()
                 if session.lastAwaySeconds > 0 {   // 집중 중 이탈했다가 복귀
                     dialogue.fire(.appReturn(ReturnBucket.from(awaySeconds: session.lastAwaySeconds)))
                 }
             case .background:
                 session.handleBackground()
-                scheduleFocusNotification()        // 백그라운드에서 다음 전환(부화/휴식 종료) 알림 예약
+                scheduleFocusNotification()        // 백그라운드에서 Next 전환(부화/휴식 종료) 알림 예약
             default:
                 break
             }
@@ -264,23 +288,32 @@ struct HomeView: View {
         .sensoryFeedback(trigger: companionStage) { _, _ in hapticsEnabled ? .success : nil }       // 진화 순간 햅틱
         .sensoryFeedback(trigger: session.isOnBreak) { _, _ in hapticsEnabled ? .impact(weight: .medium) : nil }  // 휴식 진입 햅틱
         .sheet(isPresented: $showSettings) { SettingsView() }
-        .alert("새 알을 받을까요?", isPresented: $showNewEggConfirm) {
-            Button("새 알 받기", role: .destructive) { takeNewEgg() }
-            Button("취소", role: .cancel) {}
+        .overlay { if showLuckCard { luckCardModal } }
+        .overlay { if showPomodoroInfo { pomodoroInfoModal } }
+        .alert("Get a new egg?", isPresented: $showNewEggConfirm) {
+            Button("Get new egg", role: .destructive) { takeNewEgg() }
+            Button("Cancel", role: .cancel) {}
         } message: {
-            Text("지금 친구는 컬렉션에 남지만, 홈에서는 새 알부터 다시 시작해요.")
+            Text("Your current friend stays in your collection, but Home restarts from a new egg.")
         }
         .onAppear {
             restoreCompanionIfNeeded()   // 콜드런치 후 동료 복원(알이 아니라 키우던 캐릭터로)
-            // 세션 종료(완료/중단) 시 이력에 기록(영속 + 통계) + 로그인 시 원격 동기화.
+            // 세션 종료(Done/Stop) 시 이력에 기록(영속 + 통계) + 로그인 시 원격 동기화.
             session.onSessionEnd = { result in
                 history.record(result)
                 sync?.pushNewSession(result)
             }
             if session.isIdle && hatchling == nil { dialogue.fire(.idle) }
+            // 첫 실행 1회만 보상 안내 자동 노출(이후엔 "?" 버튼으로).
+            if !seenFocusLuckTip {
+                seenFocusLuckTip = true
+                withAnimation(.spring(response: 0.4, dampingFraction: 0.85)) { showLuckCard = true }
+            }
+            // 부화 버스트 프레임 사전 로딩 → 첫 재생 시 디코딩 버벅임 방지.
+            for name in HatchBurstView.assetNames { _ = UIImage(named: name) }
         }
         .task {
-            // 충전 중 집중하면 랜덤 주기로 "찌릿" → 부화 +1~2% 보너스(A+). 실기기에서만 충전 감지됨.
+            // Charging 집중하면 랜덤 주기로 "찌릿" → 부화 +1~2% 보너스(A+). 실기기에서만 충전 감지됨.
             while !Task.isCancelled {
                 try? await Task.sleep(for: .seconds(Double.random(in: 8...15)))
                 guard battery.isCharging, session.isRunning else { continue }
@@ -296,11 +329,11 @@ struct HomeView: View {
         }
     }
 
-    /// 알 옆 충전 표시. 평소 "충전 중", 찌릿 순간엔 "+N%"로 바뀌며 강조.
+    /// 알 옆 충전 표시. 평소 "Charging", 찌릿 순간엔 "+N%"로 바뀌며 강조.
     private var chargeBadge: some View {
         HStack(spacing: 3) {
             Image(systemName: "bolt.fill").font(.caption2)
-            Text(zapBonusPercent.map { "+\($0)%" } ?? "충전 중").font(.caption2.weight(.semibold))
+            Text(zapBonusPercent.map { String(localized: "+\($0)%") } ?? String(localized: "Charging")).font(.caption2.weight(.semibold))
         }
         .foregroundStyle(AppColor.eggAccent)
         .padding(.horizontal, 8)
@@ -321,7 +354,7 @@ struct HomeView: View {
                 .foregroundStyle(AppColor.textPrimary)
             Spacer()
             // 최종 진화 상태에선 집중이 끊김없이 이어지므로, 새 종을 받고 싶은 유저용
-            // 작은 "새 알" 토글을 우상단에 배치(UI 방해 최소화). 그 외엔 설정 아이콘.
+            // 작은 "New egg" 토글을 우상단에 배치(UI 방해 최소화). 그 외엔 Settings 아이콘.
             if hasCompanion && companionStage >= Creature.maxEvolutionStage {
                 newEggButton
             } else {
@@ -336,13 +369,13 @@ struct HomeView: View {
         .padding(.top, AppSpacing.elementTight)
     }
 
-    /// 우상단 소형 "새 알 받기" 토글(최종 진화 시 노출).
+    /// 우상단 소형 "Get new egg" 토글(최종 진화 시 노출).
     private var newEggButton: some View {
         Button { showNewEggConfirm = true } label: {
             HStack(spacing: 4) {
                 Image(systemName: "arrow.triangle.2.circlepath")
                     .font(.caption2)
-                Text("새 알")
+                Text("New egg")
                     .font(.caption.weight(.semibold))
             }
             .foregroundStyle(AppColor.textSecondary)
@@ -361,22 +394,36 @@ struct HomeView: View {
         VStack(spacing: AppSpacing.elementTight) {
             modeToggle
             if session.mode == .free {
-                durationChip
+                HStack(spacing: 8) {
+                    durationChip
+                    luckHelpButton
+                }
             } else {
-                Text(pomodoroCaption)
-                    .font(AppFont.cardTitle)
+                // 규칙 문장이 길어 잘리므로 "?" 버튼으로 접고, 탭하면 전체를 카드로 보여준다.
+                Button {
+                    withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) { showPomodoroInfo = true }
+                } label: {
+                    HStack(spacing: 6) {
+                        Text("Pomodoro rules")
+                            .font(AppFont.cardTitle)
+                        Image(systemName: "questionmark.circle")
+                            .font(.system(size: 18))
+                    }
                     .foregroundStyle(AppColor.textSecondary)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(Text("How Pomodoro works"))
             }
         }
     }
 
-    /// 일반 / 뽀모도로 세그먼트 토글.
+    /// 일반 / Pomodoro 세그먼트 토글.
     private var modeToggle: some View {
         HStack(spacing: 0) {
             ForEach(TimerMode.allCases, id: \.self) { m in
                 let selected = session.mode == m
                 Button { session.mode = m } label: {
-                    Text(m == .free ? "일반" : "뽀모도로")
+                    Text(m == .free ? String(localized: "mode.normal", defaultValue: "Timer") : String(localized: "Pomodoro"))
                         .font(AppFont.cardTitle.weight(selected ? .bold : .regular))
                         .foregroundStyle(selected ? AppColor.pageBackground : AppColor.textSecondary)
                         .frame(maxWidth: .infinity)
@@ -423,7 +470,7 @@ struct HomeView: View {
     /// 방금 부화해 쉬는 중(축하 카드·탄생 문구 노출 — 집중 중에는 숨김).
     private var justHatched: Bool { hatchling != nil && session.isIdle }
 
-    /// 현재 동료의 진화 단계(부화 후 완료한 집중 세션 수로 파생, 0…max).
+    /// 현재 동료의 진화 단계(부화 후 Done한 집중 세션 수로 파생, 0…max).
     private var companionStage: Int {
         guard let h = hatchling else { return 0 }
         return h.evolutionStage(completedSessionsSinceHatch: history.completedSessions(forCompanion: h.id))
@@ -434,10 +481,10 @@ struct HomeView: View {
         let name = hatchling?.name ?? ""
         if let s = justEvolvedStage {
             return s >= Creature.maxEvolutionStage
-                ? ("\(name)이(가) 최종 진화했어요! ✨", true)
-                : ("\(name)이(가) 진화했어요! (\(s)/\(Creature.maxEvolutionStage))", true)
+                ? (String(localized: "\(name) reached its final form! ✨"), true)
+                : (String(localized: "\(name) evolved! (\(s)/\(Creature.maxEvolutionStage))"), true)
         }
-        if justHatched { return ("\(name)이(가) 태어났어요! 🎉", true) }
+        if justHatched { return (String(localized: "\(name) hatched! 🎉"), true) }
         return (session.statusText, false)
     }
 
@@ -446,15 +493,15 @@ struct HomeView: View {
         if bornEffect {
             HatchBurstView()          // 부화 버스트 재생 중(알도 몬스터도 아님) → 끝나면 몬스터 노출
         } else if session.isOnBreak {
-            BreakView()
+            BreakView(scene: breakScene)
                 .transition(.scale.combined(with: .opacity))
         } else if let hatchling {
-            // 부화 후엔 idle/집중 무관하게 캐릭터가 알 자리를 유지(집중 세션 완료마다 단계 진화).
+            // 부화 후엔 idle/집중 무관하게 캐릭터가 알 자리를 유지(집중 세션 Done마다 단계 진화).
             HatchedCenter(creature: hatchling, stage: companionStage)
                 .id("\(hatchling.id.uuidString)-\(companionStage)")   // 캐릭터·단계 바뀔 때마다 등장(진화) 연출 재생
                 .transition(.scale(scale: 0.6).combined(with: .opacity))
         } else {
-            EggView(stageIndex: session.eggStageIndex)   // 알은 첫 부화 전까지만(15분마다 crack)
+            EggView(stageIndex: session.stageIndex)   // 알은 첫 부화 전까지만(진행도 → crack 6단계)
                 .transition(.opacity)
         }
     }
@@ -502,12 +549,12 @@ struct HomeView: View {
         }
     }
 
-    // MARK: - 부화 진행도 (6단계 스텝퍼)
+    // MARK: - Hatch progress (6단계 스텝퍼)
 
     private var progressSection: some View {
         VStack(alignment: .leading, spacing: AppSpacing.elementTight) {
             HStack {
-                Text("부화 진행도")
+                Text("Hatch progress")
                     .font(AppFont.cardTitle)
                     .foregroundStyle(AppColor.textSecondary)
                 Spacer()
@@ -519,32 +566,156 @@ struct HomeView: View {
         }
     }
 
+    /// 집중 시간 칩 옆 도움말 "?" 버튼 — 중앙 카드형 보상 안내를 연다.
+    private var luckHelpButton: some View {
+        Button {
+            withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) { showLuckCard = true }
+        } label: {
+            Image(systemName: "questionmark.circle")
+                .font(.system(size: 18))
+                .foregroundStyle(AppColor.textSecondary)
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(Text("About focus rewards"))
+    }
+
+    private func dismissLuckCard() {
+        withAnimation(.spring(response: 0.3, dampingFraction: 0.9)) { showLuckCard = false }
+    }
+
+    private func dismissPomodoroInfo() {
+        withAnimation(.spring(response: 0.3, dampingFraction: 0.9)) { showPomodoroInfo = false }
+    }
+
+    /// 포모도로 규칙 안내 카드("?" 버튼). 잘리던 전체 캡션을 여기서 다 보여준다. 스크림 탭·CTA로 닫힘.
+    private var pomodoroInfoModal: some View {
+        ZStack {
+            Color.black.opacity(0.55).ignoresSafeArea()
+                .onTapGesture { dismissPomodoroInfo() }
+
+            VStack(spacing: AppSpacing.element) {
+                Image(systemName: "timer")
+                    .font(.system(size: 40))
+                    .foregroundStyle(AppColor.eggAccent)
+                Text("How Pomodoro works")
+                    .font(AppFont.screenTitle)
+                    .foregroundStyle(AppColor.textPrimary)
+                    .multilineTextAlignment(.center)
+                Text(pomodoroCaption)
+                    .font(AppFont.body)
+                    .foregroundStyle(AppColor.textBody)
+                    .multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
+                PrimaryButton("Got it") { dismissPomodoroInfo() }
+                    .padding(.top, AppSpacing.elementTight)
+            }
+            .padding(AppSpacing.section)
+            .frame(maxWidth: 320)
+            .background(AppColor.cardBackground)
+            .clipShape(RoundedRectangle(cornerRadius: AppSpacing.cardCornerRadius))
+            .overlay(RoundedRectangle(cornerRadius: AppSpacing.cardCornerRadius)
+                .stroke(AppColor.border, lineWidth: AppSpacing.borderWidth))
+            .padding(AppSpacing.section)
+            .transition(.scale(scale: 0.9).combined(with: .opacity))
+        }
+    }
+
+    /// 중앙 카드형 보상 안내(첫 실행 1회 + "?" 버튼). 스크림 탭 또는 CTA로 닫힘. 결과 중심 문구.
+    private var luckCardModal: some View {
+        ZStack {
+            Color.black.opacity(0.55).ignoresSafeArea()
+                .onTapGesture { dismissLuckCard() }
+
+            VStack(spacing: AppSpacing.element) {
+                ZStack {
+                    Circle()
+                        .fill(RadialGradient(colors: [AppColor.eggAccent.opacity(0.28), .clear],
+                                             center: .center, startRadius: 2, endRadius: 72))
+                        .frame(width: 132, height: 132)
+                    Image("ChickenSmartStage1Idle")   // 너드 닭(Bookworm Hen) 히어로
+                        .interpolation(.none)
+                        .resizable()
+                        .scaledToFit()
+                        .frame(height: 100)
+                }
+                Text("Focus longer, luckier hatches")
+                    .font(AppFont.screenTitle)
+                    .foregroundStyle(AppColor.textPrimary)
+                    .multilineTextAlignment(.center)
+                Text("The longer you focus in one session, the better your odds of hatching a rarer friend.")
+                    .font(AppFont.body)
+                    .foregroundStyle(AppColor.textBody)
+                    .multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
+                HStack(spacing: AppSpacing.elementTight) {
+                    luckOddsPill("25 min", "Base", filled: 1)
+                    luckOddsPill("50 min", "Higher", filled: 2)
+                    luckOddsPill("75 min+", "Best", filled: 3)
+                }
+                .padding(.top, 2)
+                PrimaryButton("Let's focus") { dismissLuckCard() }
+                    .padding(.top, AppSpacing.elementTight)
+            }
+            .padding(AppSpacing.section)
+            .frame(maxWidth: 320)
+            .background(AppColor.cardBackground)
+            .clipShape(RoundedRectangle(cornerRadius: AppSpacing.cardCornerRadius))
+            .overlay(RoundedRectangle(cornerRadius: AppSpacing.cardCornerRadius)
+                .stroke(AppColor.border, lineWidth: AppSpacing.borderWidth))
+            .padding(AppSpacing.section)
+            .transition(.scale(scale: 0.9).combined(with: .opacity))
+        }
+    }
+
+    /// 확률 상승을 시각화하는 작은 pill(시간 + 채워진 점 + 라벨).
+    private func luckOddsPill(_ time: String, _ label: String, filled: Int) -> some View {
+        VStack(spacing: 5) {
+            Text(time)
+                .font(AppFont.cardTitle)
+                .foregroundStyle(AppColor.textPrimary)
+            HStack(spacing: 3) {
+                ForEach(0..<3, id: \.self) { i in
+                    Circle()
+                        .fill(i < filled ? AppColor.eggAccent : AppColor.border)
+                        .frame(width: 5, height: 5)
+                }
+            }
+            Text(label)
+                .font(.caption2)
+                .foregroundStyle(AppColor.textSecondary)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, AppSpacing.elementTight)
+        .background(AppColor.pageBackground)
+        .clipShape(RoundedRectangle(cornerRadius: 10))
+    }
+
     // MARK: - 컨트롤 (상태별)
 
     @ViewBuilder
     private var controlButtons: some View {
         VStack(spacing: AppSpacing.elementTight) {
             if session.isOnBreak {
-                PrimaryButton("건너뛰기") { session.skipBreak() }
-                DangerButton("중단") { session.stop() }
+                PrimaryButton("Skip") { session.skipBreak() }
+                DangerButton("Stop") { session.stop() }
             } else {
                 switch session.phase {
                 case nil:
                     if hatchling != nil {
-                        // 부화 후: 동료를 유지한 채 집중을 이어가거나(진화), 새 알을 받아 다른 종 수집.
-                        PrimaryButton("이어서 집중") { beginFocus() }       // 캐릭터 유지(알 X)
-                        SecondaryButton("새 알 받기") { takeNewEgg() }  // 알만 리셋(컬렉션은 유지)
+                        // 부화 후: 동료를 유지한 채 집중을 이어가거나(진화), New egg을 받아 다른 종 수집.
+                        PrimaryButton("Keep focusing") { beginFocus() }       // 캐릭터 유지(알 X)
+                        SecondaryButton("Get new egg") { takeNewEgg() }  // 알만 리셋(컬렉션은 유지)
                     } else {
-                        PrimaryButton("시작") { beginFocus() }
+                        PrimaryButton("Start") { beginFocus() }
                     }
                 case .running:
-                    PrimaryButton("일시정지") { session.pause() }
-                    DangerButton("중단") { session.stop() }
+                    PrimaryButton("Pause") { session.pause() }
+                    DangerButton("Stop") { session.stop() }
                 case .paused:
-                    PrimaryButton("이어서 집중") { session.resume() }
-                    DangerButton("중단") { session.stop() }
+                    PrimaryButton("Keep focusing") { session.resume() }
+                    DangerButton("Stop") { session.stop() }
                 case .completed:
-                    PrimaryButton("부화 확인") { triggerHatch() }
+                    PrimaryButton("Reveal") { triggerHatch() }
                 }
             }
         }
@@ -592,10 +763,8 @@ private struct HatchedCenter: View {
                     .animation(.easeOut(duration: 0.7), value: burst)
             }
 
-            Image(creature.displayImageName(stage: stage))
-                .interpolation(.none)            // 픽셀아트 선명하게
-                .resizable()
-                .scaledToFit()
+            // 진화 단계별 아트 + idle/action 2프레임 모션(에셋이 없는 종은 기존 이미지로 폴백).
+            AnimatedCreatureView(base: creature.displayImageName(stage: stage), stage: stage)
                 .frame(height: height * 0.82)
                 .scaleEffect(appeared ? 1 : 0.4)
                 .rotationEffect(.degrees(appeared ? 0 : -8))
@@ -622,10 +791,10 @@ private struct HatchRevealCard: View {
             Text(creature.rarity.label)
                 .font(AppFont.cardTitle)
                 .foregroundStyle(creature.rarity.color)
-            Text("이어서 집중하면 진화해요 ✨")
+            Text("Keep focusing to evolve ✨")
                 .font(AppFont.body)
                 .foregroundStyle(AppColor.textSecondary)
-            Text("컬렉션에 추가됐어요")
+            Text("Added to your collection")
                 .font(AppFont.body)
                 .foregroundStyle(AppColor.textSecondary)
                 .padding(.top, 2)
@@ -641,32 +810,36 @@ private struct HatchRevealCard: View {
     }
 }
 
-/// 포모도로 휴식 중앙 화면. 따뜻한 톤의 휴식 안내.
+/// 포모도로 On a break앙 화면. 따뜻한 톤의 휴식 안내.
 private struct BreakView: View {
+    let scene: BreakScene
     var height: CGFloat = 240
-    @State private var pulse = false
 
     var body: some View {
         ZStack {
             Circle()
-                .fill(RadialGradient(colors: [AppColor.success.opacity(0.22), .clear],
-                                     center: .center, startRadius: 4, endRadius: height * 0.55))
-                .frame(width: height * 1.25, height: height * 1.25)
+                .fill(RadialGradient(colors: [AppColor.eggAccent.opacity(0.16), .clear],
+                                     center: .center, startRadius: 4, endRadius: height * 0.6))
+                .frame(width: height * 1.3, height: height * 1.3)
 
             VStack(spacing: AppSpacing.elementTight) {
-                Image(systemName: "cup.and.saucer.fill")
-                    .font(.system(size: 64))
-                    .foregroundStyle(AppColor.success)
-                    .scaleEffect(pulse ? 1.06 : 0.94)
-                    .animation(.easeInOut(duration: 1.6).repeatForever(autoreverses: true), value: pulse)
-                Text("잠깐 쉬어가요")
+                BreakSceneView(scene: scene)
+                    .frame(height: height * 0.62)   // 비율 유지(scaledToFit), 아래 문구 자리 확보
+                Text(caption)
                     .font(AppFont.cardTitle)
                     .foregroundStyle(AppColor.textSecondary)
             }
         }
         .frame(height: height)
-        .onAppear { pulse = true }
-        .accessibilityLabel(Text("휴식 중"))
+        .accessibilityLabel(Text("On a break"))
+    }
+
+    private var caption: String {
+        switch scene {
+        case .coffee:  return String(localized: "Coffee break ☕")
+        case .nap:     return String(localized: "Rest up 💤")
+        case .stretch: return String(localized: "Stretch it out 🌱")
+        }
     }
 }
 
@@ -691,51 +864,70 @@ private struct StageStepper: View {
     }
 }
 
-/// 부화 순간 알이 쩍 갈라져 "빡!" 터지는 프레임 시퀀스(4-2egg → 4-7egg). 한 번 재생 후 몬스터 노출.
-/// 6프레임 모두 1254² 동일 캔버스 → 정렬 안정. 높이 340pt면 알 코어(캔버스의 ~68%)가 정적 알(240)과 일치.
-/// 프레임 에셋이 없으면 단일 borneffect 플래시로 폴백.
+/// 부화 순간 연출: abouttocrack 유지 → 금빛 충전 2프레임 → 폭발 4프레임. 끝나면 몬스터 노출.
+/// 6프레임 + abouttocrack 모두 crack 에셋과 **동일 공통 캔버스(590×566)** 라 알 축·바닥선이 안 튄다.
+/// 충전 2프레임(4-2egg·4-3egg)만 부드러운 opacity·scale 보간, 폭발 4프레임은 crossfade 없이 즉시 교체.
+/// 배경이 투명하므로 사각 마스크가 불필요(파편이 잘리지 않게 마스크 제거).
 private struct HatchBurstView: View {
-    // 부화 버스트: 4-3egg→4-7egg 순서대로(알 쩍→황금 폭발). 모두 665×864 동일 박스라 정렬 일관.
-    // (4-5~4-7은 흰 배경이라 흰색→투명 키잉 처리 — 흰 플래시 자리는 황금 광선이 채움.)
-    private let frames = ["4-3egg", "4-4egg", "4-5egg", "4-6egg", "4-7egg"]
-    private let frameDuration: Double = 0.12
-    /// 알과 동일 크기(4egg와 일치). centerStage 알 높이와 같게.
+    /// 한 프레임: 에셋명 · 유지 시간(초) · 금빛 충전 여부(부드러운 보간 대상).
+    private struct Frame { let name: String; let duration: Double; let charge: Bool }
+
+    // README 권장 타이밍. abouttocrack 0.30s 유지 → 충전(0.60/0.50) → 폭발(0.13/0.11/0.10/0.16).
+    private static let sequence: [Frame] = [
+        Frame(name: "abouttocrack_egg", duration: 0.30, charge: false),  // 벌어지기 직전 유지
+        Frame(name: "4-2egg",           duration: 0.60, charge: true),   // 약한 금빛 충전
+        Frame(name: "4-3egg",           duration: 0.50, charge: true),   // 강한 금빛 충전
+        Frame(name: "4-4egg",           duration: 0.13, charge: false),  // 윗껍질 첫 파열
+        Frame(name: "4-5eggopacity",    duration: 0.11, charge: false),  // 폭발 가속
+        Frame(name: "4-6oppacity",      duration: 0.10, charge: false),  // 폭발 정점
+        Frame(name: "4-7eggoppacity",   duration: 0.16, charge: false),  // 파편 확산·전환
+    ]
+
+    /// 전체 재생 시간(초). triggerHatch가 이 시간 후 몬스터를 노출한다.
+    static var totalDuration: Double { sequence.reduce(0) { $0 + $1.duration } }
+
+    /// 첫 재생 버벅임 방지용 사전 로딩 대상.
+    static var assetNames: [String] { sequence.map(\.name) }
+
     var height: CGFloat = 240
     @State private var idx = 0
+    @State private var chargePulse = false
 
-    private var hasFrames: Bool { UIImage(named: frames[0]) != nil }
+    private var hasFrames: Bool { UIImage(named: Self.sequence[0].name) != nil }
 
     var body: some View {
+        let frame = Self.sequence[min(idx, Self.sequence.count - 1)]
         Group {
             if hasFrames {
-                Image(frames[min(idx, frames.count - 1)])
+                Image(frame.name)
                     .interpolation(.none)
                     .resizable()
                     .scaledToFit()
                     .frame(height: height)
+                    // 충전 프레임만 살짝 커지며 밝아진다. 폭발 프레임은 값 고정(즉시 교체).
+                    .scaleEffect(frame.charge && chargePulse ? 1.04 : 1.0)
+                    .opacity(frame.charge && !chargePulse ? 0.9 : 1.0)
             } else if UIImage(named: "borneffect") != nil {
                 Image("borneffect")
                     .interpolation(.none).resizable().scaledToFit().frame(height: height)
             }
         }
-        // 방사형 비네트로 사각 경계를 페이드 → 폭발 프레임의 하드컷 아웃라인을 글로우처럼 녹인다.
-        // 중앙 66% 반경은 완전 불투명(알·광선 선명 유지), 바깥 rim만 부드럽게 사라짐.
-        .mask(
-            RadialGradient(
-                gradient: Gradient(stops: [
-                    .init(color: .white, location: 0.0),
-                    .init(color: .white, location: 0.66),
-                    .init(color: .white.opacity(0), location: 1.0),
-                ]),
-                center: .center, startRadius: 0, endRadius: height * 0.72
-            )
-        )
         .onAppear {
             guard hasFrames else { return }
             Task { @MainActor in
-                for i in frames.indices {
-                    idx = i
-                    try? await Task.sleep(for: .seconds(frameDuration))
+                for (i, f) in Self.sequence.enumerated() {
+                    if f.charge {
+                        chargePulse = false
+                        withAnimation(.easeInOut(duration: f.duration * 0.9)) {
+                            idx = i
+                            chargePulse = true
+                        }
+                    } else {
+                        // 폭발·유지 프레임: 애니메이션 없이 즉시 교체.
+                        var tx = Transaction(); tx.disablesAnimations = true
+                        withTransaction(tx) { idx = i }
+                    }
+                    try? await Task.sleep(for: .seconds(f.duration))
                 }
             }
         }
