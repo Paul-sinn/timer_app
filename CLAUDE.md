@@ -140,3 +140,8 @@ xcrun xcresulttool get test-results summary --path /tmp/res.xcresult
   - 증상: 백그라운드 `xcodebuild test ... | tail -30`이 "completed exit 0"으로 알림 왔길래 두 번째 test를 띄움 → `error: unable to attach DB: database is locked. Possibly there are two concurrent builds` → TEST FAILED(EXIT 65). 코드 실패 아님.
   - 원인: `| tail`은 xcodebuild가 **stdout을 닫으면**(테스트 출력 끝) 종료 → 백그라운드 태스크가 "완료"로 알림. 하지만 xcodebuild **프로세스는 xcresult 마무리 중**이라 아직 살아서 build.db 락을 쥐고 있음. tail 파이프의 exit도 xcodebuild의 실제 exit를 마스킹(항상 0).
   - 교훈: 백그라운드 xcodebuild는 (1) `| tail` 대신 `> log 2>&1; echo EXIT=$?`로 **실제 exit 캡처**, (2) 다음 build/test 띄우기 전에 `pgrep -f xcodebuild`로 **프로세스 실제 종료 확인**(태스크 "완료" 알림 ≠ 프로세스 종료), (3) 빌드는 **직렬화**(동시 실행 금지, 같은 DerivedData 공유). kill 금지(로그의 결과번들 손상 교훈).
+
+- **2026-08-09 · `xcodebuild build` 성공을 "테스트 코드도 컴파일된다"로 오해**
+  - 증상: 킬스위치 작업 후 `xcodebuild build`가 BUILD SUCCEEDED / error 0으로 통과해 "빌드 통과"라고 보고했는데, 바로 뒤 `xcodebuild test`가 EXIT 65로 실패. 원인은 새 테스트 파일의 `import Foundation` 누락(`JSONEncoder`·`Data` not in scope).
+  - 원인: `xcodebuild build`는 **앱 타깃만** 컴파일한다. 테스트 타깃은 `test` 액션에서야 컴파일된다. 그래서 build 통과가 테스트 코드의 컴파일을 전혀 보장하지 않는다.
+  - 교훈: 테스트 파일을 새로 쓰면 **build 결과로 "통과"라고 말하지 말 것**. `xcodebuild test`까지 끝나야 판정이다. 그리고 EXIT 65는 "테스트 실패"가 아니라 **테스트가 아예 안 돈 것**일 수 있다 — `xcresulttool`이 `result=unknown / passed=0 / failed=0`을 주면 컴파일 단계에서 죽은 것이니 로그의 `error:` 라인부터 볼 것.

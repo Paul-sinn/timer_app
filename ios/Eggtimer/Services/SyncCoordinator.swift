@@ -46,6 +46,12 @@ final class SyncCoordinator {
     /// 백그라운드 push 차단기. 연속 실패가 쌓이면 잠시 멈춘다.
     private var breaker: SyncCircuitBreaker
 
+    /// 원격 킬스위치. 서버에서 app_config.sync_enabled 를 false 로 바꾸면
+    /// 앱 업데이트 없이 원격 동기화가 멈춘다(로컬 저장은 그대로 동작).
+    private let remoteConfig: RemoteConfig
+
+    /// 명시적 @MainActor 타입은 init 기본인자로 만들 수 없다(기본인자는 nonisolated 맥락에서 평가된다).
+    /// nil 을 받아 init 본문에서 만든다 — RootView 가 sync 를 다루는 방식과 같다.
     init(auth: AuthService,
          store: CollectionStore,
          history: FocusHistoryStore,
@@ -53,7 +59,8 @@ final class SyncCoordinator {
          pullPolicy: SyncRetryPolicy = .loginPull,
          pushPolicy: SyncRetryPolicy = .loginPush,
          backgroundPolicy: SyncRetryPolicy = .backgroundPush,
-         breaker: SyncCircuitBreaker = SyncCircuitBreaker()) {
+         breaker: SyncCircuitBreaker = SyncCircuitBreaker(),
+         remoteConfig: RemoteConfig? = nil) {
         self.auth = auth
         self.store = store
         self.history = history
@@ -62,6 +69,7 @@ final class SyncCoordinator {
         self.pushPolicy = pushPolicy
         self.backgroundPolicy = backgroundPolicy
         self.breaker = breaker
+        self.remoteConfig = remoteConfig ?? RemoteConfig()
     }
 
     var isAuthenticated: Bool { auth.isAuthenticated }
@@ -75,6 +83,10 @@ final class SyncCoordinator {
     /// 차단기가 열려 백그라운드 push를 쉬는 중인지.
     var isBackgroundSyncPaused: Bool { !breaker.allowsRequest(at: Date()) }
 
+    /// 서버 킬스위치로 동기화가 꺼져 있는지. 뷰가 "지금은 이 기기에만 저장됩니다" 같은
+    /// 안내를 띄우고 싶을 때 쓴다(장애가 아니라 의도된 상태라 실패로 표시하면 안 된다).
+    var isSyncDisabledByServer: Bool { !remoteConfig.isSyncEnabled }
+
     // MARK: - 로그인 시 양방향 머지
 
     /// 로그인 직후 1회: 원격을 풀해 로컬과 합집합 머지하고, 로컬에만 있던 항목을 원격에 올린다.
@@ -83,6 +95,16 @@ final class SyncCoordinator {
         guard let userId = auth.currentUserID else { return }
         isSyncing = true
         defer { isSyncing = false }
+
+        // 킬스위치 확인. 여기서 한 번만 조회하고, 이후 백그라운드 push는 이 값을 재사용한다
+        // (push마다 조회하면 부하를 줄이려는 목적 자체가 무너진다).
+        await remoteConfig.refresh()
+        guard remoteConfig.isSyncEnabled else {
+            // 실패가 아니라 의도된 중단이므로 lastSyncStatus 를 건드리지 않는다.
+            // 로컬 데이터는 그대로 남고, 스위치를 다시 켜면 합집합 머지가 밀린 항목을 올린다.
+            Self.log.notice("sync skipped: disabled by remote config (app_config.sync_enabled=false)")
+            return
+        }
 
         // 명시적 사용자 액션 → 이전 장애로 열린 차단기를 푼다.
         breaker.reset()
@@ -170,9 +192,14 @@ final class SyncCoordinator {
         }
     }
 
-    /// 차단기가 열려 있으면 네트워크를 아예 두드리지 않는다.
+    /// 킬스위치가 꺼져 있거나 차단기가 열려 있으면 네트워크를 아예 두드리지 않는다.
     /// 건너뛴 항목은 로컬에 남아 있고 다음 syncOnLogin()의 합집합 머지가 올린다.
     private func allowsBackgroundPush(_ label: String) -> Bool {
+        // 마지막으로 받아둔 플래그를 쓴다(여기서 조회하면 부하 감소 목적이 무너진다).
+        guard remoteConfig.isSyncEnabled else {
+            Self.log.notice("\(label, privacy: .public) skipped: sync disabled by remote config")
+            return false
+        }
         guard breaker.allowsRequest(at: Date()) else {
             Self.log.notice("\(label, privacy: .public) skipped: background sync paused (circuit open)")
             return false
