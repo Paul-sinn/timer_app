@@ -9,7 +9,7 @@ Hatcho ("the App", "we", "us") is a focus-timer and creature-collection app. Thi
 ## Summary
 
 - You can use Hatcho **without signing in**. In that case, your data stays **on your device only**.
-- If you choose to **sign in** (with Apple or Google), your focus history and collection are **backed up to our server** so they survive across devices and reinstalls.
+- If you choose to **sign in** (with Sign in with Apple), your focus history and collection are **backed up to our server** so they survive across devices and reinstalls.
 - We do **not** sell your data, show ads, or use third-party advertising or tracking.
 
 ## Information We Collect
@@ -21,7 +21,7 @@ Hatcho ("the App", "we", "us") is a focus-timer and creature-collection app. Thi
 If you are **not signed in**, this data is stored only in the App's local database on your device (and in your device's own backup, e.g. iCloud device backup, which we do not control or access).
 
 ### 2. Account information (only if you sign in)
-When you sign in with **Sign in with Apple** or **Google**, we receive a unique account identifier and, depending on your choices with those providers, an email address. We use this solely to create and secure your account and to associate your backed-up data with you. We do not receive your password.
+When you sign in with **Sign in with Apple**, we receive a unique account identifier and, depending on your choices with Apple, an email address. We use this solely to create and secure your account and to associate your backed-up data with you. We do not receive your password.
 
 ### 3. Device permissions
 - **Notifications** — if you allow them, we schedule **local notifications** on your device (for example, when a focus session finishes). These are generated on-device; we do not send push notifications from a server.
@@ -41,7 +41,7 @@ We do not use your data for advertising, profiling, or sale to third parties.
 
 When you are signed in, your data is stored on our backend infrastructure provided by **Supabase** (a hosted PostgreSQL platform), which processes and stores data on our behalf. Access is protected by row-level security so that you can only read and write your own records.
 
-We authenticate accounts through **Apple** and/or **Google**. Their handling of your sign-in is governed by their own privacy policies.
+We authenticate accounts through **Sign in with Apple**. Apple's handling of your sign-in is governed by their own privacy policy.
 
 We do not share your personal data with any other third parties except as required to operate the App, comply with the law, or protect our rights.
 
