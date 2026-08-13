@@ -168,18 +168,73 @@ struct MyPageView: View {
         }
     }
 
+    /// 동기화 카드에 표시할 내용. 색·폰트는 전부 디자인 토큰만 쓴다.
+    private struct SyncStateDisplay {
+        let title: String
+        /// 추가 안내(정상일 땐 nil).
+        let detail: String?
+        let symbol: String
+        let tint: Color
+    }
+
+    /// 우선순위대로 판정한다: 진행중 > 서버 일시중지 > 실패 > 정상.
+    ///
+    /// 서버 일시중지가 실패보다 먼저인 이유: 킬스위치가 켜져 있으면 동기화를 아예 시도하지 않으므로
+    /// 직전에 남은 실패 메시지가 계속 떠 있게 된다. 지금 상태를 말해주는 쪽이 정확하다.
+    private var syncState: SyncStateDisplay {
+        if sync?.isSyncing == true {
+            return SyncStateDisplay(
+                title: String(localized: "Syncing…"),
+                detail: nil,
+                symbol: "arrow.triangle.2.circlepath.icloud",
+                tint: AppColor.eggAccent)
+        }
+
+        // 장애가 아니라 의도된 중단이다 → 경고색(danger)을 쓰지 않는다.
+        if sync?.isSyncDisabledByServer == true {
+            return SyncStateDisplay(
+                title: String(localized: "Cloud sync paused"),
+                detail: String(localized: "Everything is saved on this device. Syncing resumes automatically."),
+                symbol: "icloud.slash",
+                tint: AppColor.textSecondary)
+        }
+
+        if let message = sync?.lastSyncFailureMessage {
+            return SyncStateDisplay(
+                title: String(localized: "Sync needs attention"),
+                detail: message,
+                symbol: "exclamationmark.icloud",
+                tint: AppColor.danger)
+        }
+
+        return SyncStateDisplay(
+            title: String(localized: "Cross-device sync on"),
+            detail: nil,
+            symbol: "checkmark.icloud",
+            tint: AppColor.eggAccent)
+    }
+
     /// 로그인됨: 동기화 상태 + Sign out + Delete account(심사 요건).
     @ViewBuilder
     private var signedInView: some View {
         AppCard {
             VStack(alignment: .leading, spacing: AppSpacing.element) {
                 Label {
-                    Text(sync?.isSyncing == true ? String(localized: "Syncing…") : String(localized: "Cross-device sync on"))
+                    Text(syncState.title)
                         .font(AppFont.body)
                         .foregroundStyle(AppColor.textPrimary)
                 } icon: {
-                    Image(systemName: "checkmark.icloud")
-                        .foregroundStyle(AppColor.eggAccent)
+                    Image(systemName: syncState.symbol)
+                        .foregroundStyle(syncState.tint)
+                }
+
+                // 실패·일시중지 사유를 그대로 보여준다. 예전엔 상태가 코드에만 있고
+                // 화면은 항상 정상으로 보여서, 며칠째 동기화가 안 돼도 알 수가 없었다.
+                if let detail = syncState.detail {
+                    Text(detail)
+                        .font(AppFont.body)
+                        .foregroundStyle(AppColor.textSecondary)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
 
                 SettingDivider()

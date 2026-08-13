@@ -54,38 +54,30 @@
 
 ---
 
-## B. 코드는 있는데 화면에 안 붙음 — **마무리 필요**
+## B. 화면 연결
 
-### B1. 🔴 동기화 상태를 사용자에게 보여주기
+### B1. ✅ 동기화 상태를 사용자에게 보여주기 — **완료**
 
-`SyncCoordinator`가 아래를 노출하는데 **어떤 화면도 쓰지 않는다.** 확인 결과 `Features/` 전체에서 참조 0건.
+`MyPageView`가 `isSyncing`만 보고 아이콘을 **항상 `checkmark.icloud`로 고정**해서 그리고 있었다. 동기화가 며칠째 실패해도 화면에는 정상으로 보였다.
 
-```swift
-lastSyncFailure          // 실패 종류
-lastSyncFailureMessage   // 그대로 띄울 수 있는 문구(문자열 카탈로그 경유)
-isSyncDisabledByServer   // 킬스위치로 꺼진 상태
-isBackgroundSyncPaused   // 차단기 열림
-```
+`MyPageView.syncState`가 우선순위대로 판정한다:
 
-지금 `MyPageView`는 `isSyncing`만 보고 아이콘을 **항상 `checkmark.icloud`로 고정**해서 그린다. 즉 동기화가 며칠째 실패해도 화면에는 정상으로 보인다.
+| 상태 | 아이콘 | 색 | 추가 안내 |
+|---|---|---|---|
+| 진행 중 | `arrow.triangle.2.circlepath.icloud` | `eggAccent` | — |
+| 서버 일시중지(킬스위치) | `icloud.slash` | `textSecondary` | "이 기기에 저장됨, 자동 재개" |
+| 실패 | `exclamationmark.icloud` | `danger` | 실패 종류별 문구 |
+| 정상 | `checkmark.icloud` | `eggAccent` | — |
 
-붙일 위치는 `MyPageView.signedInView` (177행 부근):
+설계 판단 두 가지:
+- **일시중지를 실패보다 먼저 판정한다.** 킬스위치가 켜져 있으면 동기화를 아예 시도하지 않아서, 직전에 남은 실패 메시지가 계속 떠 있게 된다. 지금 상태를 말해주는 쪽이 정확하다.
+- **일시중지에 경고색(`danger`)을 쓰지 않는다.** 장애가 아니라 의도된 중단이다.
 
-```swift
-} icon: {
-    Image(systemName: sync?.lastSyncFailure == nil ? "checkmark.icloud" : "exclamationmark.icloud")
-        .foregroundStyle(sync?.lastSyncFailure == nil ? AppColor.eggAccent : AppColor.danger)
-}
-// 아래 한 줄 추가
-if let message = sync?.lastSyncFailureMessage {
-    Text(message).font(AppFont.cardTitle).foregroundStyle(AppColor.textSecondary)
-}
-```
+> 새 문자열 3개가 아직 `Localizable.xcstrings`에 없다. 앱이 영어 단일 언어이고 키 자체가
+> 영문 문장이라 **런타임 표시는 정상**이다. Xcode에서 빌드하면 자동 추출된다.
+> 한국어를 재도입할 때(B2) 확인할 것.
 
-주의:
-- 색은 `AppColor`만 쓸 것(하드코딩 금지)
-- 킬스위치로 꺼진 상태는 **장애가 아니다.** 빨간 경고 말고 "지금은 이 기기에만 저장됩니다" 같은 중립 안내로
-- 인증 실패(`.auth`)일 때만 재로그인 유도
+**남은 검증**: 실기기/시뮬레이터에서 눈으로 확인 — 특히 킬스위치를 켠 상태의 카드 모양.
 
 ### B2. 🟡 한국어 재도입 (선택)
 
@@ -154,7 +146,7 @@ CORS 제한·POST 강제·예외 메시지 비노출까지 고쳐뒀지만 **배
 ## 권장 순서
 
 ```
-1.0.1  →  A1~A4 (이미 커밋됨) + B1 (동기화 상태 UI)  + C1 (크래시 리포팅)
+1.0.1  →  A1~A4 + B1 (완료) + C1 (크래시 리포팅, 남음)
           └ A1이 확정 버그라 이것만으로도 업데이트 명분이 충분하다
           └ A3 킬스위치가 들어가야 이후 서버 제어가 가능해진다
 
