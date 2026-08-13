@@ -177,41 +177,56 @@ struct MyPageView: View {
         let tint: Color
     }
 
+    // 상태별 표시는 여기 한 곳에서만 만든다. DEBUG 미리보기도 같은 함수를 쓰므로
+    // 미리보기와 실제 화면이 서로 어긋날 수 없다.
+
+    private static var syncingDisplay: SyncStateDisplay {
+        SyncStateDisplay(
+            title: String(localized: "Syncing…"),
+            detail: nil,
+            symbol: "arrow.triangle.2.circlepath.icloud",
+            tint: AppColor.eggAccent)
+    }
+
+    /// 장애가 아니라 의도된 중단이다 → 경고색(danger)을 쓰지 않는다.
+    private static var pausedDisplay: SyncStateDisplay {
+        SyncStateDisplay(
+            title: String(localized: "Cloud sync paused"),
+            detail: String(localized: "Everything is saved on this device. Syncing resumes automatically."),
+            symbol: "icloud.slash",
+            tint: AppColor.textSecondary)
+    }
+
+    private static func failureDisplay(message: String) -> SyncStateDisplay {
+        SyncStateDisplay(
+            title: String(localized: "Sync needs attention"),
+            detail: message,
+            symbol: "exclamationmark.icloud",
+            tint: AppColor.danger)
+    }
+
+    private static var okDisplay: SyncStateDisplay {
+        SyncStateDisplay(
+            title: String(localized: "Cross-device sync on"),
+            detail: nil,
+            symbol: "checkmark.icloud",
+            tint: AppColor.eggAccent)
+    }
+
     /// 우선순위대로 판정한다: 진행중 > 서버 일시중지 > 실패 > 정상.
     ///
     /// 서버 일시중지가 실패보다 먼저인 이유: 킬스위치가 켜져 있으면 동기화를 아예 시도하지 않으므로
     /// 직전에 남은 실패 메시지가 계속 떠 있게 된다. 지금 상태를 말해주는 쪽이 정확하다.
     private var syncState: SyncStateDisplay {
-        if sync?.isSyncing == true {
-            return SyncStateDisplay(
-                title: String(localized: "Syncing…"),
-                detail: nil,
-                symbol: "arrow.triangle.2.circlepath.icloud",
-                tint: AppColor.eggAccent)
-        }
+        #if DEBUG
+        // 검수용 미리보기가 켜져 있으면 그걸 그린다(릴리스 빌드엔 이 분기 코드 자체가 없다).
+        if let preview = debugSyncPreview { return preview.display }
+        #endif
 
-        // 장애가 아니라 의도된 중단이다 → 경고색(danger)을 쓰지 않는다.
-        if sync?.isSyncDisabledByServer == true {
-            return SyncStateDisplay(
-                title: String(localized: "Cloud sync paused"),
-                detail: String(localized: "Everything is saved on this device. Syncing resumes automatically."),
-                symbol: "icloud.slash",
-                tint: AppColor.textSecondary)
-        }
-
-        if let message = sync?.lastSyncFailureMessage {
-            return SyncStateDisplay(
-                title: String(localized: "Sync needs attention"),
-                detail: message,
-                symbol: "exclamationmark.icloud",
-                tint: AppColor.danger)
-        }
-
-        return SyncStateDisplay(
-            title: String(localized: "Cross-device sync on"),
-            detail: nil,
-            symbol: "checkmark.icloud",
-            tint: AppColor.eggAccent)
+        if sync?.isSyncing == true { return Self.syncingDisplay }
+        if sync?.isSyncDisabledByServer == true { return Self.pausedDisplay }
+        if let message = sync?.lastSyncFailureMessage { return Self.failureDisplay(message: message) }
+        return Self.okDisplay
     }
 
     /// 로그인됨: 동기화 상태 + Sign out + Delete account(심사 요건).
@@ -338,6 +353,48 @@ struct MyPageView: View {
     /// 데모 시드 완료 피드백.
     @State private var seedDone = false
 
+    /// 동기화 카드 검수용 미리보기(nil = 실제 상태). UI 갱신용 로컬 상태.
+    ///
+    /// 왜 필요한가: 실제로는 "일시중지"를 보려면 프로덕션 킬스위치를 꺼야 하고,
+    /// "실패"를 보려면 네트워크를 끊거나 서버를 고장내야 한다. 심사 중에 그러면
+    /// 심사원이 그 화면을 보게 된다. 이 토글로 서버를 건드리지 않고 검수한다.
+    @State private var debugSyncPreview: DebugSyncPreview?
+
+    /// 미리보기 대상 상태. display 를 실제 화면과 같은 함수에서 만들기 때문에
+    /// 미리보기와 프로덕션 화면이 서로 어긋날 수 없다.
+    private enum DebugSyncPreview: Hashable, Identifiable {
+        case syncing
+        case paused
+        case failure(SyncFailureKind)
+
+        var id: Self { self }
+
+        /// 사용자에게 보일 문구가 있는 실패 종류만 대상이다(취소는 화면에 표시하지 않는다).
+        /// SyncFailureKind 에 종류가 추가되면 여기도 자동으로 늘어난다.
+        static var all: [DebugSyncPreview] {
+            [.syncing, .paused]
+                + SyncFailureKind.allCases
+                    .filter { $0.userMessage != nil }
+                    .map(DebugSyncPreview.failure)
+        }
+
+        var buttonTitle: String {
+            switch self {
+            case .syncing:           return "Syncing"
+            case .paused:            return "Paused (kill switch)"
+            case .failure(let kind): return "Failure · \(kind.rawValue)"
+            }
+        }
+
+        var display: SyncStateDisplay {
+            switch self {
+            case .syncing:           return MyPageView.syncingDisplay
+            case .paused:            return MyPageView.pausedDisplay
+            case .failure(let kind): return MyPageView.failureDisplay(message: kind.userMessage ?? "")
+            }
+        }
+    }
+
     /// 확률이 낮은 종(전설 등)을 검수하려고 Next 부화를 특정 종으로 고정한다.
     /// 정상으로 되돌릴 때까지 유지된다.
     private var debugSection: some View {
@@ -364,6 +421,28 @@ struct MyPageView: View {
                     debugForceButton(nil, title: String(localized: "Normal odds"))
                     ForEach(CreatureSpecies.allCases) { sp in
                         debugForceButton(sp, title: "\(sp.name) · \(sp.rarity.label)")
+                    }
+                }
+            }
+
+            AppCard {
+                VStack(alignment: .leading, spacing: AppSpacing.element) {
+                    Text("Sync card preview")
+                        .font(AppFont.body.weight(.semibold))
+                        .foregroundStyle(AppColor.textPrimary)
+                    Text(debugSyncPreview.map { "Now: \($0.buttonTitle)" }
+                         ?? String(localized: "Now: real sync state"))
+                        .font(AppFont.cardTitle)
+                        .foregroundStyle(AppColor.eggAccent)
+                    Text("Draws the Account card above in each state — no server kill switch, no network needed. Scroll up to see it.")
+                        .font(AppFont.cardTitle)
+                        .foregroundStyle(AppColor.textSecondary)
+
+                    SettingDivider()
+
+                    debugSyncPreviewButton(nil, title: String(localized: "Real sync state"))
+                    ForEach(DebugSyncPreview.all) { preview in
+                        debugSyncPreviewButton(preview, title: preview.buttonTitle)
                     }
                 }
             }
@@ -433,6 +512,26 @@ struct MyPageView: View {
                     .foregroundStyle(AppColor.textPrimary)
                 Spacer()
                 if debugDraws == draws {
+                    Image(systemName: "checkmark").foregroundStyle(AppColor.eggAccent)
+                }
+            }
+            .frame(maxWidth: .infinity)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+    }
+
+    /// 동기화 카드 미리보기 선택 버튼. nil = 실제 상태로 되돌리기.
+    private func debugSyncPreviewButton(_ preview: DebugSyncPreview?, title: String) -> some View {
+        Button {
+            debugSyncPreview = preview
+        } label: {
+            HStack {
+                Text(title)
+                    .font(AppFont.body)
+                    .foregroundStyle(AppColor.textPrimary)
+                Spacer()
+                if debugSyncPreview == preview {
                     Image(systemName: "checkmark").foregroundStyle(AppColor.eggAccent)
                 }
             }
