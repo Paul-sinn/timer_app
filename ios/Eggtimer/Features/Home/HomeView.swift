@@ -32,8 +32,16 @@ struct HomeView: View {
     /// 현재 동료의 id(영속). 콜드런치(앱 재Start) 후 컬렉션에서 같은 개체를 복원해 홈에 다시 표시.
     /// 빈 문자열 = 동료 없음(첫 부화 전 또는 'Get new egg' 직후).
     @AppStorage("companionCreatureID") private var companionID = ""
-    /// 부화 순간 borneffect.png 버스트 연출 활성(잠시 후 false).
+    /// 부화 버스트 영상 재생 중(캐릭터 등장 시점에 false).
     @State private var bornEffect = false
+    /// 화면 전체 섬광 오버레이 활성. 영상보다 조금 더 오래 남아 캐릭터를 빛 속에서 드러낸다.
+    @State private var revealFlash = false
+    /// 임팩트 화면 흔들림 진행도(0 → 1). 애니메이션되며 HatchReveal.shakeOffset을 그린다.
+    @State private var shakeProgress: Double = 0
+    /// 알의 화면 좌표. 섬광이 화면 중앙이 아니라 알 자리에서 터지게 한다.
+    @State private var revealOrigin: CGPoint?
+    /// "동작 줄이기"가 켜져 있으면 화면 흔들림을 건너뛴다(멀미·광과민성 배려).
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     /// 충전 감지(A+ 기믹). Charging 집중하면 알이 찌릿하며 부화 살짝 가속.
     @State private var battery = BatteryMonitor()
     /// 찌릿 스파크 연출 순간 토글.
@@ -109,16 +117,29 @@ struct HomeView: View {
         let born = store.hatch(draws: draws)          // 확률 부화 + 컬렉션 반영(영속)
         sync?.pushNewCreature(born)                   // 로그인 시 원격 동기화
         if soundEnabled { AudioServicesPlaySystemSound(1025) }   // 부화 효과음(Settings 게이트)
-        bornEffect = true                             // 알 자리에 버스트 재생(몬스터 아직 X)
+        bornEffect = true                             // 알 자리에 버스트 영상 재생(몬스터 아직 X)
+        revealFlash = true                            // 화면 전체 섬광 시작(영상보다 오래 남는다)
+        HatchHaptics.shared.play(enabled: hapticsEnabled)   // 충전 떨림 → 임팩트 → 등장(영상과 같은 시계)
         Task { @MainActor in
-            // 버스트 전체 재생(영상 2.8초 / PNG 폴백 1.8초) 후 캐릭터 노출.
-            try? await Task.sleep(for: .seconds(HatchBurstView.totalDuration + 0.05))
-            hatchling = born                          // 버스트 끝 → 태어난 캐릭터 노출
+            // ── 임팩트: 껍질이 벌어지는 순간(영상 1.28초). 화면을 한 번 흔든다. ──
+            try? await Task.sleep(for: .seconds(HatchReveal.impact))
+            if !reduceMotion {
+                shakeProgress = 0
+                withAnimation(.linear(duration: HatchReveal.shakeDuration)) { shakeProgress = 1 }
+            }
+
+            // ── 등장: 섬광이 아직 사그라드는 중에 캐릭터가 빛 속에서 나온다. ──
+            try? await Task.sleep(for: .seconds(HatchReveal.creatureEntry - HatchReveal.impact))
+            hatchling = born                          // 태어난 캐릭터 노출
+            bornEffect = false                        // 영상 내림 → 캐릭터가 알 자리를 차지
             companionID = born.id.uuidString          // 콜드런치 복원용 영속
             session.companionID = born.id             // 이후 세션을 이 캐릭터에 귀속(진화 단계)
             dialogue.fire(.greeting, speaker: .creature(born.personality))  // 성격 대사
             advanceAfterReward(startFresh: false)     // 포모도로=Next 블록 / free=idle(인라인 리빌)
-            bornEffect = false
+
+            // ── 잔광: 섬광이 완전히 꺼질 때까지 오버레이를 유지한다. ──
+            try? await Task.sleep(for: .seconds(HatchReveal.flashEnd - HatchReveal.creatureEntry))
+            revealFlash = false
         }
     }
 
@@ -199,6 +220,7 @@ struct HomeView: View {
                     }
                     .overlay { if zapFlash { ZapBurstView().allowsHitTesting(false) } }    // 찌릿 스파크
                     .padding(.vertical, AppSpacing.elementTight)
+                    .reportsHatchRevealOrigin()   // 섬광이 알 자리에서 터지도록 좌표를 올린다
                 if hasCompanion && !session.isOnBreak {
                     EvolutionBadge(stage: companionStage)
                         .animation(.easeInOut(duration: 0.3), value: companionStage)
@@ -215,7 +237,11 @@ struct HomeView: View {
             }
             .padding(.horizontal, AppSpacing.section)
             .animation(.easeInOut(duration: 0.3), value: hasCompanion)
+            .screenShake(progress: shakeProgress)   // 임팩트 순간 화면이 한 번 흔들린다(배경은 고정)
         }
+        // 화면을 가득 채우는 부화 섬광. 탭바·안전영역까지 덮도록 ZStack 바깥에 얹는다.
+        .onPreferenceChange(HatchRevealOriginKey.self) { revealOrigin = $0 }
+        .overlay { if revealFlash { HatchRevealOverlay(origin: revealOrigin) } }
         .onChange(of: session.isCompleted) { _, completed in
             guard completed else { return }
             if hatchling == nil {
@@ -285,7 +311,8 @@ struct HomeView: View {
                 break
             }
         }
-        .sensoryFeedback(trigger: hatchling?.id) { _, _ in hapticsEnabled ? .success : nil }        // 부화 순간 햅틱
+        // 부화 햅틱은 HatchHaptics(CoreHaptics)가 폭발 순간에 맞춰 재생한다.
+        // 여기서 .sensoryFeedback을 또 걸면 캐릭터 등장 시점에 한 번 더 울려 박자가 흐트러진다.
         .sensoryFeedback(trigger: companionStage) { _, _ in hapticsEnabled ? .success : nil }       // 진화 순간 햅틱
         .sensoryFeedback(trigger: session.isOnBreak) { _, _ in hapticsEnabled ? .impact(weight: .medium) : nil }  // 휴식 진입 햅틱
         .sheet(isPresented: $showSettings) { SettingsView() }
@@ -317,6 +344,8 @@ struct HomeView: View {
             } else {
                 for name in HatchBurstView.assetNames { _ = UIImage(named: name) }
             }
+            // 햅틱 엔진도 미리 세운다. 부화 순간에 처음 만들면 첫 진동이 늦게 온다.
+            if hapticsEnabled { HatchHaptics.shared.prepare() }
         }
         .task {
             // Charging 집중하면 랜덤 주기로 "찌릿" → 부화 +1~2% 보너스(A+). 실기기에서만 충전 감지됨.

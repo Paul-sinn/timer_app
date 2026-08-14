@@ -32,4 +32,9 @@ enum AppColor {
 
     // 보더 (카드/입력 필드 공통 1px 보더)
     static let border = Color(hex: 0x332A22)
+
+    // 부화 리빌 섬광. 화면을 가득 채우는 순간의 빛 — 가운데 흰 코어에서 앰버로 번진다.
+    // 순백(0xFFFFFF)이 아니라 살짝 따뜻한 흰색이라 앰버와 이어질 때 경계가 안 진다.
+    static let hatchFlashCore = Color(hex: 0xFFFBF0)
+    static let hatchFlashEdge = Color(hex: 0xF2B44E)
 }

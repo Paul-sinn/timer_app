@@ -177,13 +177,19 @@ private struct HatchBurstFrameView: View {
 
 
 #if DEBUG
-/// 부화 버스트 아트 검수 화면. CREATURE_GALLERY와 같은 방식의 DEBUG 전용 환경변수 훅이라
+/// 부화 리빌 검수 화면. CREATURE_GALLERY와 같은 방식의 DEBUG 전용 환경변수 훅이라
 /// 프로덕션 UI에는 어떤 진입 버튼도 생기지 않는다(릴리스 빌드엔 이 코드 자체가 없다).
 ///   SIMCTL_CHILD_HATCH_BURST=1 xcrun simctl launch <device> com.paulsin.hatchly
-/// 실제 홈 화면 배경 위에서 반복 재생하므로 알파 합성(투명 배경)이 맞는지 바로 보인다.
+///
+/// 영상 + 화면 섬광 + 화면 흔들림을 **홈 화면과 같은 타이밍으로** 반복 재생한다.
+/// 세션을 완주하지 않고도 연출 전체를 볼 수 있어야 아트·타이밍을 손볼 수 있다.
 struct HatchBurstPreviewView: View {
     /// 재생을 처음부터 다시 트리거하는 키. 값이 바뀌면 뷰가 재생성되며 onAppear가 다시 돈다.
     @State private var take = 0
+    @State private var showVideo = true
+    @State private var showFlash = true
+    @State private var shakeProgress: Double = 0
+    @State private var revealOrigin: CGPoint?
 
     var body: some View {
         ZStack {
@@ -192,17 +198,36 @@ struct HatchBurstPreviewView: View {
                 Text(HatchBurstAsset.isAvailable ? "HEVC+alpha video" : "PNG fallback")
                     .font(AppFont.cardTitle)
                     .foregroundStyle(AppColor.textSecondary)
-                HatchBurstView()
-                    .id(take)
+                // 영상이 내려간 뒤엔 알을 놓아 "빛 속에서 무언가 드러난다"를 확인한다.
+                Group {
+                    if showVideo {
+                        HatchBurstView().id(take)
+                    } else {
+                        EggView(stageIndex: 0, height: 240)
+                    }
+                }
+                .reportsHatchRevealOrigin()
                 Text("take \(take)")
                     .font(AppFont.cardTitle)
                     .foregroundStyle(AppColor.textSecondary)
             }
+            .screenShake(progress: shakeProgress)
         }
+        .onPreferenceChange(HatchRevealOriginKey.self) { revealOrigin = $0 }
+        .overlay { if showFlash { HatchRevealOverlay(origin: revealOrigin).id(take) } }
         .task {
-            // 스크린샷 검수용 무한 반복. 재생 시간 + 여유를 두고 다시 튼다.
+            // 스크린샷 검수용 무한 반복. 홈 화면 triggerHatch와 같은 순서·간격.
             while !Task.isCancelled {
-                try? await Task.sleep(for: .seconds(HatchBurstView.totalDuration + 0.6))
+                showVideo = true
+                showFlash = true
+                try? await Task.sleep(for: .seconds(HatchReveal.impact))
+                shakeProgress = 0
+                withAnimation(.linear(duration: HatchReveal.shakeDuration)) { shakeProgress = 1 }
+                try? await Task.sleep(for: .seconds(HatchReveal.creatureEntry - HatchReveal.impact))
+                showVideo = false
+                try? await Task.sleep(for: .seconds(HatchReveal.flashEnd - HatchReveal.creatureEntry))
+                showFlash = false
+                try? await Task.sleep(for: .seconds(0.8))
                 take += 1
             }
         }
