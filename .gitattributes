@@ -17,6 +17,7 @@ images/final-character/**/*.zip filter=lfs diff=lfs merge=lfs -text
 images/eggs/**/*.png            filter=lfs diff=lfs merge=lfs -text
 images/eggs/**/*.gif            filter=lfs diff=lfs merge=lfs -text
 images/eggs/**/*.zip            filter=lfs diff=lfs merge=lfs -text
+images/eggs/**/*.mp4            filter=lfs diff=lfs merge=lfs -text
 
 images/pomodorobreak/**/*.png   filter=lfs diff=lfs merge=lfs -text
 

@@ -145,3 +145,13 @@ xcrun xcresulttool get test-results summary --path /tmp/res.xcresult
   - 증상: 킬스위치 작업 후 `xcodebuild build`가 BUILD SUCCEEDED / error 0으로 통과해 "빌드 통과"라고 보고했는데, 바로 뒤 `xcodebuild test`가 EXIT 65로 실패. 원인은 새 테스트 파일의 `import Foundation` 누락(`JSONEncoder`·`Data` not in scope).
   - 원인: `xcodebuild build`는 **앱 타깃만** 컴파일한다. 테스트 타깃은 `test` 액션에서야 컴파일된다. 그래서 build 통과가 테스트 코드의 컴파일을 전혀 보장하지 않는다.
   - 교훈: 테스트 파일을 새로 쓰면 **build 결과로 "통과"라고 말하지 말 것**. `xcodebuild test`까지 끝나야 판정이다. 그리고 EXIT 65는 "테스트 실패"가 아니라 **테스트가 아예 안 돈 것**일 수 있다 — `xcresulttool`이 `result=unknown / passed=0 / failed=0`을 주면 컴파일 단계에서 죽은 것이니 로그의 `error:` 라인부터 볼 것.
+
+- **2026-08-13 · 투명 영상(HEVC 알파)에서 `premultiply` 필터 누락 → 앱 배경 위에 회색 판**
+  - 증상: 부화 버스트를 mp4→HEVC+알파로 교체했더니 영상 사각형이 회색(59,53,60)으로 보임. 알파 자체는 정상(AVFoundation이 `ContainsAlphaChannel=1`, 파일을 빨강 배경 위에 올리면 파편이 깔끔히 합성됨).
+  - 원인: ffmpeg `colorkey`는 **알파만 0으로 만들고 RGB는 원본 배경색(#25232A)을 남긴다.** VideoToolbox가 결과를 `PremultipliedAlpha`로 태깅 → CoreAnimation이 `src + (1-a)*dst`로 합성 → 투명 영역마다 그 색이 **더해짐**. 산수로 확정: 앱 배경 (23,19,16) + (37,35,42) = 측정값 (59,53,60), 초록 위 (0,255,0)+(37,35,42)=(37,255,44) ✓.
+  - 교훈: 컬러키로 알파를 만들면 반드시 `premultiply=inplace=1`을 붙인다. 그리고 **"레이어 배경색이 이상하다"고 추측하지 말고 배경색을 빨강/초록으로 바꿔 픽셀값을 재라** — `out = src + (1-a)*dst`가 성립하면 premultiply 문제다(배경색 자체가 원인이면 배경만 바뀌고 더해지진 않는다). ffprobe는 알파 유무를 못 보여준다(보조 레이어) → AVFoundation/유닛테스트로 판정.
+
+- **2026-08-13 · 투명 영상 캔버스를 원본 그대로 쓰면 캐릭터가 작아진다**
+  - 증상: 942×1672 영상을 `.scaledToFit().frame(height: 240)`에 넣으면 알이 기존 PNG(590×566 캔버스)의 1/3 크기.
+  - 원인: `scaledToFit`은 **캔버스 기준**으로 맞춘다. 기존 PNG는 941×1672 원본을 `x=175,y=672,590×566`으로 이미 크롭해 쓰고 있었다.
+  - 교훈: 같은 자리에 들어가는 새 에셋은 **캔버스 크롭을 기존 에셋과 맞춘다**(특히 `.frame(height:)` 기준인 세로). 크롭 전에 전 프레임 알파 bbox를 재서 잘리는 게 없는지 확인할 것(여기선 왼쪽 5px이 잘려 좌우 8px씩 확장했다).

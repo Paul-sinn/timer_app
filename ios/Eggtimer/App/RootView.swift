@@ -51,6 +51,9 @@ struct RootView: View {
         //   SIMCTL_CHILD_CREATURE_GALLERY=1 환경변수를 주면 된다.
         if ProcessInfo.processInfo.environment["CREATURE_GALLERY"] == "1" {
             CreatureGalleryView()
+        } else if ProcessInfo.processInfo.environment["HATCH_BURST"] == "1" {
+            // 부화 버스트 반복 재생(투명 배경 합성·타이밍 검수용).
+            HatchBurstPreviewView()
         } else {
             tabs
         }

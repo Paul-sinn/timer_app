@@ -10,6 +10,7 @@
 
 import SwiftUI
 import AudioToolbox
+import AVFoundation
 
 struct HomeView: View {
     @Environment(\.scenePhase) private var scenePhase
@@ -110,7 +111,7 @@ struct HomeView: View {
         if soundEnabled { AudioServicesPlaySystemSound(1025) }   // 부화 효과음(Settings 게이트)
         bornEffect = true                             // 알 자리에 버스트 재생(몬스터 아직 X)
         Task { @MainActor in
-            // 버스트 전체 재생(abouttocrack 유지 + 충전 2 + 폭발 4) 후 캐릭터 노출.
+            // 버스트 전체 재생(영상 2.8초 / PNG 폴백 1.8초) 후 캐릭터 노출.
             try? await Task.sleep(for: .seconds(HatchBurstView.totalDuration + 0.05))
             hatchling = born                          // 버스트 끝 → 태어난 캐릭터 노출
             companionID = born.id.uuidString          // 콜드런치 복원용 영속
@@ -309,8 +310,13 @@ struct HomeView: View {
                 seenFocusLuckTip = true
                 withAnimation(.spring(response: 0.4, dampingFraction: 0.85)) { showLuckCard = true }
             }
-            // 부화 버스트 프레임 사전 로딩 → 첫 재생 시 디코딩 버벅임 방지.
-            for name in HatchBurstView.assetNames { _ = UIImage(named: name) }
+            // 부화 버스트 사전 로딩 → 첫 재생 시 디코딩 버벅임 방지.
+            // 영상 경로면 플레이어를 미리 세워두고, PNG 폴백 경로면 이미지를 미리 디코딩한다.
+            if HatchBurstAsset.isAvailable {
+                HatchBurstPlayback.shared.prepare()
+            } else {
+                for name in HatchBurstView.assetNames { _ = UIImage(named: name) }
+            }
         }
         .task {
             // Charging 집중하면 랜덤 주기로 "찌릿" → 부화 +1~2% 보너스(A+). 실기기에서만 충전 감지됨.
@@ -864,77 +870,6 @@ private struct StageStepper: View {
     }
 }
 
-/// 부화 순간 연출: abouttocrack 유지 → 금빛 충전 2프레임 → 폭발 4프레임. 끝나면 몬스터 노출.
-/// 6프레임 + abouttocrack 모두 crack 에셋과 **동일 공통 캔버스(590×566)** 라 알 축·바닥선이 안 튄다.
-/// 충전 2프레임(4-2egg·4-3egg)만 부드러운 opacity·scale 보간, 폭발 4프레임은 crossfade 없이 즉시 교체.
-/// 배경이 투명하므로 사각 마스크가 불필요(파편이 잘리지 않게 마스크 제거).
-private struct HatchBurstView: View {
-    /// 한 프레임: 에셋명 · 유지 시간(초) · 금빛 충전 여부(부드러운 보간 대상).
-    private struct Frame { let name: String; let duration: Double; let charge: Bool }
-
-    // README 권장 타이밍. abouttocrack 0.30s 유지 → 충전(0.60/0.50) → 폭발(0.13/0.11/0.10/0.16).
-    private static let sequence: [Frame] = [
-        Frame(name: "abouttocrack_egg", duration: 0.30, charge: false),  // 벌어지기 직전 유지
-        Frame(name: "4-2egg",           duration: 0.60, charge: true),   // 약한 금빛 충전
-        Frame(name: "4-3egg",           duration: 0.50, charge: true),   // 강한 금빛 충전
-        Frame(name: "4-4egg",           duration: 0.13, charge: false),  // 윗껍질 첫 파열
-        Frame(name: "4-5eggopacity",    duration: 0.11, charge: false),  // 폭발 가속
-        Frame(name: "4-6oppacity",      duration: 0.10, charge: false),  // 폭발 정점
-        Frame(name: "4-7eggoppacity",   duration: 0.16, charge: false),  // 파편 확산·전환
-    ]
-
-    /// 전체 재생 시간(초). triggerHatch가 이 시간 후 몬스터를 노출한다.
-    static var totalDuration: Double { sequence.reduce(0) { $0 + $1.duration } }
-
-    /// 첫 재생 버벅임 방지용 사전 로딩 대상.
-    static var assetNames: [String] { sequence.map(\.name) }
-
-    var height: CGFloat = 240
-    @State private var idx = 0
-    @State private var chargePulse = false
-
-    private var hasFrames: Bool { UIImage(named: Self.sequence[0].name) != nil }
-
-    var body: some View {
-        let frame = Self.sequence[min(idx, Self.sequence.count - 1)]
-        Group {
-            if hasFrames {
-                Image(frame.name)
-                    .interpolation(.none)
-                    .resizable()
-                    .scaledToFit()
-                    .frame(height: height)
-                    // 충전 프레임만 살짝 커지며 밝아진다. 폭발 프레임은 값 고정(즉시 교체).
-                    .scaleEffect(frame.charge && chargePulse ? 1.04 : 1.0)
-                    .opacity(frame.charge && !chargePulse ? 0.9 : 1.0)
-            } else if UIImage(named: "borneffect") != nil {
-                Image("borneffect")
-                    .interpolation(.none).resizable().scaledToFit().frame(height: height)
-            }
-        }
-        .onAppear {
-            guard hasFrames else { return }
-            Task { @MainActor in
-                for (i, f) in Self.sequence.enumerated() {
-                    if f.charge {
-                        chargePulse = false
-                        withAnimation(.easeInOut(duration: f.duration * 0.9)) {
-                            idx = i
-                            chargePulse = true
-                        }
-                    } else {
-                        // 폭발·유지 프레임: 애니메이션 없이 즉시 교체.
-                        var tx = Transaction(); tx.disablesAnimations = true
-                        withTransaction(tx) { idx = i }
-                    }
-                    try? await Task.sleep(for: .seconds(f.duration))
-                }
-            }
-        }
-    }
-}
-
-/// 말풍선 모양 — 둥근 사각형 본체 + 하단 중앙 아래로 향하는 작은 꼬리(아래의 캐릭터를 가리킴).
 private struct BubbleShape: Shape {
     var radius: CGFloat = 14
     var tailWidth: CGFloat = 14
