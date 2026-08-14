@@ -13,8 +13,11 @@
 
 import SwiftUI
 
-/// 화면을 채우는 섬광 + 빛줄기. 부화 연출 동안만 올라오며 스스로 시계를 돌린다.
+/// 화면을 채우는 섬광. 부화 연출 동안만 올라오며 스스로 시계를 돌린다.
 /// 영상과 같은 순간에 올라오므로 두 시계가 자동으로 맞는다.
+///
+/// 한때 중심에서 뻗는 빛줄기(rays)를 같이 그렸는데, 화면 크기에서 선이 얇게 뽑혀
+/// 조잡해 보여서 걷어냈다. 부드러운 방사 그라디언트 하나가 픽셀아트와 더 잘 붙는다.
 struct HatchRevealOverlay: View {
     /// 빛이 터져나오는 지점(전역 좌표). 알이 있는 자리 — nil이면 화면 중앙.
     /// 알은 화면 정중앙이 아니라 위쪽에 있어서, 중앙에서 터뜨리면 빛과 알이 어긋난다.
@@ -42,18 +45,10 @@ struct HatchRevealOverlay: View {
                 let scale = HatchReveal.flashScale(progress)
                 let opacity = HatchReveal.flashOpacity(progress, peak: peakOpacity)
 
-                ZStack {
-                    rays(radius: coverRadius)
-                        // 빛줄기는 코어보다 조금 크게 뻗고 천천히 돈다(살아있는 느낌).
-                        .scaleEffect(scale * 1.15)
-                        .rotationEffect(.degrees(progress * 22))
-                        .opacity(opacity * 0.7)
-
-                    core(radius: coverRadius)
-                        .scaleEffect(scale)
-                        .opacity(opacity)
-                }
-                .position(center)
+                core(radius: coverRadius)
+                    .scaleEffect(scale)
+                    .opacity(opacity)
+                    .position(center)
             }
         }
         .ignoresSafeArea()
@@ -94,62 +89,10 @@ struct HatchRevealOverlay: View {
             .frame(width: radius * 2, height: radius * 2)
     }
 
-    private func rays(radius: CGFloat) -> some View {
-        RaysShape()
-            .fill(
-                RadialGradient(
-                    stops: [
-                        .init(color: AppColor.hatchFlashCore.opacity(0.75), location: 0),
-                        .init(color: AppColor.hatchFlashEdge.opacity(0.35), location: 0.5),
-                        .init(color: AppColor.hatchFlashEdge.opacity(0), location: 1),
-                    ],
-                    center: .center,
-                    startRadius: 0,
-                    endRadius: radius
-                )
-            )
-            .frame(width: radius * 2, height: radius * 2)
-    }
-
     /// 시작 시각 기준 경과 → 섬광 진행도. 아직 시작 전이면 0(아무것도 안 그림).
     private func flashProgress(now: Date) -> Double {
         guard let start else { return 0 }
         return HatchReveal.flashProgress(atAbsolute: now.timeIntervalSince(start))
-    }
-}
-
-/// 중심에서 뻗는 빛줄기 다발. 길이를 번갈아 다르게 해 규칙적인 바퀴살처럼 안 보이게 한다.
-private struct RaysShape: Shape {
-    var count: Int = 14
-    /// 광선 하나의 반각(전체 원 대비 비율).
-    var halfWidth: Double = 0.012
-
-    func path(in rect: CGRect) -> Path {
-        let center = CGPoint(x: rect.midX, y: rect.midY)
-        let maxRadius = min(rect.width, rect.height) / 2
-        var path = Path()
-
-        for index in 0..<count {
-            let angle = Double(index) / Double(count)
-            // 긴 광선과 짧은 광선을 번갈아 — 실제 섬광의 불규칙함.
-            let length = maxRadius * (index.isMultiple(of: 2) ? 1.0 : 0.62)
-            let inner = maxRadius * 0.04
-
-            let a0 = (angle - halfWidth) * 2 * .pi
-            let a1 = (angle + halfWidth) * 2 * .pi
-            let tip = angle * 2 * .pi
-
-            path.move(to: point(center, radius: inner, angle: a0))
-            path.addLine(to: point(center, radius: length, angle: tip))
-            path.addLine(to: point(center, radius: inner, angle: a1))
-            path.closeSubpath()
-        }
-        return path
-    }
-
-    private func point(_ center: CGPoint, radius: CGFloat, angle: Double) -> CGPoint {
-        CGPoint(x: center.x + radius * CGFloat(cos(angle)),
-                y: center.y + radius * CGFloat(sin(angle)))
     }
 }
 
