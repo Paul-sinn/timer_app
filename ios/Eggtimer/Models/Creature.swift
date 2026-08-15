@@ -75,8 +75,7 @@ struct Creature: Identifiable, Hashable {
             return Creature(species: forced, imageName: forced.randomVariant(using: &generator), hatchedAt: date)
         }
         // 강제 draw(best-of-N 검수용). Settings 시 Actual focus length 대신 이 값으로 굴린다. 릴리스엔 없음.
-        let effectiveDraws = DebugHatch.forcedDraws ?? draws
-        return hatch(draws: effectiveDraws, at: date, using: &generator)
+        return hatch(draws: DebugHatch.effectiveDraws(for: draws), at: date, using: &generator)
         #else
         return hatch(draws: draws, at: date, using: &generator)
         #endif
@@ -102,6 +101,10 @@ enum DebugHatch {
         get { UserDefaults.standard.string(forKey: key).flatMap { CreatureSpecies(rawValue: $0) } }
         set { UserDefaults.standard.setValue(newValue?.rawValue, forKey: key) }
     }
+
+    /// 실제로 굴릴 draw 수. `Creature.hatch`와 부화 로그가 **같은 값**을 보도록 단일 출처로 둔다
+    /// (따로 계산하면 로그가 거짓말을 하게 된다).
+    static func effectiveDraws(for draws: Int) -> Int { forcedDraws ?? draws }
 
     /// 강제 draw 횟수(best-of-N 검수용). nil이면 Actual focus length(FocusReward)로 계산한 draw 사용.
     static var forcedDraws: Int? {

@@ -151,6 +151,84 @@ struct CreatureSpeciesTests {
         #expect(r1 < r2 && r2 < r3)      // 단조 증가
     }
 
+    // MARK: - "닭이 잘 안 나온다" 체감 검증 (2026-08-15)
+
+    /// 닭 6표정이 균등하게 나오는지. **여기가 치우쳐 있으면 특정 표정만 안 나와서
+    /// "닭이 잘 안 나온다"로 느껴진다** — rollDistributionMatchesWeights는 종 단위라 이걸 못 잡는다.
+    @Test func chickenVariantsAreUniform() {
+        var gen = SeededGenerator(seed: 0xFEED)
+        let n = 200_000
+        var counts: [String: Int] = [:]
+        for _ in 0..<n {
+            counts[CreatureSpecies.chicken.randomVariant(using: &gen), default: 0] += 1
+        }
+        let variants = CreatureSpecies.chicken.imageVariants
+        // 6표정이 전부 등장해야 한다(하나라도 빠지면 도감을 못 채운다).
+        #expect(counts.count == variants.count)
+
+        let expected = 100.0 / Double(variants.count)   // 16.67%
+        for variant in variants {
+            let observed = Double(counts[variant] ?? 0) / Double(n) * 100
+            #expect(abs(observed - expected) <= 1.0,
+                    "\(variant): 기대 \(expected)% / 관측 \(observed)%")
+        }
+    }
+
+    /// 유저가 실제로 세는 단위는 **종이 아니라 폼**이다(닭은 6이름으로 따로 수집).
+    /// 닭 종 합계는 55%지만 표정 하나당 9.17%라 슬라임(25%) 하나에 밀린다 — 이게 체감의 정체.
+    /// 밸런스를 바꾸면 이 테스트가 깨지므로, 바꿨다는 사실이 자동으로 드러난다.
+    @Test func perFormRatesExplainThePerception() {
+        let chickenTotal = effectiveProbability(.chicken)
+        let perFace = chickenTotal / Double(CreatureSpecies.chicken.imageVariants.count)
+        let slime = effectiveProbability(.slime)
+
+        #expect(abs(chickenTotal - 55.0) < 0.01)
+        #expect(abs(perFace - 9.1667) < 0.01)
+        #expect(abs(slime - 25.0) < 0.01)
+        // 종 합계로는 닭이 1등인데, 폼 단위로는 슬라임 하나가 닭 표정 하나를 이긴다.
+        #expect(chickenTotal > slime)
+        #expect(slime > perFace)
+    }
+
+    /// draws 2·3·4의 **종별** 분포. 기존 moreDrawsRaiseLegendaryOdds는 전설 비율만 봐서
+    /// "긴 집중에서 공룡이 1등이 된다" 같은 종 단위 쏠림을 못 잡는다.
+    @Test func speciesDistributionHoldsAcrossDraws() {
+        /// best-of-N 등급 확률: P(최고=X) = P(≤X)^N − P(<X)^N.
+        func tierProbability(_ rarity: Rarity, draws: Int) -> Double {
+            var below = 0.0, upTo = 0.0
+            for r in Rarity.allCases {
+                if r < rarity { below += Double(r.tierWeight) }
+                if !(rarity < r) { upTo += Double(r.tierWeight) }
+            }
+            let n = Double(draws)
+            return (pow(upTo / 100, n) - pow(below / 100, n)) * 100
+        }
+        /// 등급 확률 × 등급 내 상대가중.
+        func expectedRate(_ species: CreatureSpecies, draws: Int) -> Double {
+            let tierSum = CreatureSpecies.allCases
+                .filter { $0.rarity == species.rarity }
+                .reduce(0) { $0 + $1.weight }
+            return tierProbability(species.rarity, draws: draws)
+                * Double(species.weight) / Double(tierSum)
+        }
+
+        for draws in 2...4 {
+            var gen = SeededGenerator(seed: 0xD0E0 &+ UInt64(draws))
+            let n = 200_000
+            var counts: [CreatureSpecies: Int] = [:]
+            for _ in 0..<n {
+                counts[CreatureSpecies.roll(draws: draws, using: &gen), default: 0] += 1
+            }
+            for species in CreatureSpecies.allCases {
+                let observed = Double(counts[species] ?? 0) / Double(n) * 100
+                let expected = expectedRate(species, draws: draws)
+                let tolerance = expected >= 5 ? 2.0 : 0.5
+                #expect(abs(observed - expected) <= tolerance,
+                        "draws=\(draws) \(species.name): 기대 \(expected)% / 관측 \(observed)%")
+            }
+        }
+    }
+
     /// draws가 0/음수여도 최소 1회는 굴려 유효한 종을 낸다(방어).
     @Test func drawsClampedToAtLeastOne() {
         var gen = SeededGenerator(seed: 99)

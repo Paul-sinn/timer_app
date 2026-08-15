@@ -11,6 +11,7 @@
 import SwiftUI
 import AudioToolbox
 import AVFoundation
+import OSLog
 
 struct HomeView: View {
     @Environment(\.scenePhase) private var scenePhase
@@ -115,6 +116,7 @@ struct HomeView: View {
         guard hatchling == nil, !bornEffect else { return }   // 중복 방지(버스트 중 재진입 차단)
         let draws = FocusReward.draws(focusSeconds: session.activeSecondsLive)  // 집중 길이 보상(best-of-N)
         let born = store.hatch(draws: draws)          // 확률 부화 + 컬렉션 반영(영속)
+        logHatchForDebug(focusSeconds: session.activeSecondsLive, draws: draws, born: born)
         sync?.pushNewCreature(born)                   // 로그인 시 원격 동기화
         if soundEnabled { AudioServicesPlaySystemSound(1025) }   // 부화 효과음(Settings 게이트)
         bornEffect = true                             // 알 자리에 버스트 영상 재생(몬스터 아직 X)
@@ -142,6 +144,35 @@ struct HomeView: View {
             revealFlash = false
         }
     }
+
+    /// 부화 1회의 입력·결과를 한 줄로 남긴다(DEBUG 전용, 릴리스엔 코드 자체가 없음).
+    /// "특정 종만 자주 나온다"는 체감을 코드로는 판정할 수 없어서 실기기 실측용으로 둔다.
+    ///
+    /// 보는 법: Xcode 콘솔에서 `hatch`로 필터. 폰만 있을 땐 Console.app에서
+    /// subsystem `com.paulsin.hatchly`, category `hatch`.
+    ///
+    /// 가장 먼저 볼 것은 `forcedSpecies`·`forcedDraws`다. 마이페이지 개발자 섹션에서
+    /// 한 번이라도 만졌으면 UserDefaults에 남아 확률을 통째로 무시한다.
+    private func logHatchForDebug(focusSeconds: Int, draws: Int, born: Creature) {
+        #if DEBUG
+        // privacy: .public 없이는 OSLog가 값을 <private>로 가려서 기기에서 숫자가 안 보인다.
+        Self.hatchLog.debug("""
+            hatch | focusSec=\(focusSeconds, privacy: .public) \
+            draws=\(draws, privacy: .public) \
+            forcedDraws=\(DebugHatch.forcedDraws.map(String.init) ?? "nil", privacy: .public) \
+            effective=\(DebugHatch.effectiveDraws(for: draws), privacy: .public) \
+            forcedSpecies=\(DebugHatch.forcedSpecies?.rawValue ?? "nil", privacy: .public) \
+            | rarity=\(born.species.rarity.rawValue, privacy: .public) \
+            species=\(born.species.rawValue, privacy: .public) \
+            form=\(born.imageName, privacy: .public)
+            """)
+        #endif
+    }
+
+    #if DEBUG
+    /// 기존 로깅 패턴과 동일한 subsystem(RemoteConfig·SyncCoordinator 참고).
+    private static let hatchLog = Logger(subsystem: "com.paulsin.hatchly", category: "hatch")
+    #endif
 
     /// 보상 소비 후 Next 상태로. 포모도로는 끊김없이 Next 집중 블록으로 이어가고,
     /// free는 idle로 돌아간다(startFresh=최종진화 후 새 세션 자동 Start으로 흐름 유지).
