@@ -32,6 +32,13 @@ struct MyPageView: View {
     /// Delete account OK 알림 표시.
     @State private var showDeleteConfirm = false
 
+    /// 유저가 직접 정한 프로필 닉네임(빈 문자열 = 미설정). 규칙은 `ProfileName`이 단일 출처.
+    @AppStorage(AppSettings.displayNameKey) private var storedDisplayName = ""
+    /// 닉네임 편집 시트 표시.
+    @State private var showNameEditor = false
+    /// 편집 중인 입력값(확인을 눌러야 저장된다).
+    @State private var nameDraft = ""
+
     /// 실제 누적 부화 수(주입). nil이면 더미(user.creatures.count) 사용.
     private let hatchedCount: Int?
 
@@ -81,6 +88,16 @@ struct MyPageView: View {
         } message: {
             Text(errorMessage ?? "")
         }
+        .alert("Your name", isPresented: $showNameEditor) {
+            TextField("Name", text: $nameDraft)
+            Button("Cancel", role: .cancel) {}
+            Button("Save") {
+                // 공백뿐이면 저장하지 않고 미설정으로 되돌린다(빈 헤더 방지).
+                storedDisplayName = ProfileName.normalize(nameDraft) ?? ""
+            }
+        } message: {
+            Text("Shown on this page only. Stored on this device.")
+        }
         .alert("Delete account?", isPresented: $showDeleteConfirm) {
             Button("Cancel", role: .cancel) {}
             Button("Delete", role: .destructive) { deleteAccount() }
@@ -99,13 +116,23 @@ struct MyPageView: View {
                     .foregroundStyle(AppColor.eggAccent)
 
                 VStack(alignment: .leading, spacing: 4) {
-                    Text(user.displayName)
-                        .font(AppFont.screenTitle)
-                        .foregroundStyle(AppColor.textPrimary)
-                        .lineLimit(1)
-                    Text("Joined · May 1, 2026")
-                        .font(AppFont.cardTitle)
-                        .foregroundStyle(AppColor.textSecondary)
+                    Button {
+                        nameDraft = ProfileName.normalize(storedDisplayName) ?? ""
+                        showNameEditor = true
+                    } label: {
+                        HStack(spacing: 6) {
+                            Text(ProfileName.display(stored: storedDisplayName))
+                                .font(AppFont.screenTitle)
+                                .foregroundStyle(AppColor.textPrimary)
+                                .lineLimit(1)
+                            Image(systemName: "pencil")
+                                .font(AppFont.cardTitle)
+                                .foregroundStyle(AppColor.textSecondary)
+                        }
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel(Text("Edit your name"))
+
                     Text("\(hatchedCount ?? user.creatures.count) hatched")
                         .font(AppFont.cardTitle)
                         .foregroundStyle(AppColor.eggAccent)
