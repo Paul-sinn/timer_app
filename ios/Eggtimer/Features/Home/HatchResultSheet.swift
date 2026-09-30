@@ -16,48 +16,55 @@ struct HatchResultSheet: View {
         ZStack {
             AppColor.pageBackground.ignoresSafeArea()
 
-            VStack(spacing: AppSpacing.section) {
-                Text("A new friend hatched!")
-                    .font(AppFont.cardTitle)
-                    .foregroundStyle(AppColor.textSecondary)
-
-                ZStack {
-                    Circle()
-                        .fill(
-                            RadialGradient(
-                                colors: [creature.rarity.color.opacity(0.35), .clear],
-                                center: .center, startRadius: 6, endRadius: 150
-                            )
-                        )
-                        .frame(width: 280, height: 280)
-                    CreatureImage(imageName: creature.displayImageName(stage: 0), rarity: creature.rarity,
-                                  size: 180, stage: 0, animated: true)
-                        .scaleEffect(appeared ? 1 : 0.6)
-                        .animation(.spring(response: 0.5, dampingFraction: 0.55), value: appeared)
-                }
-
-                VStack(spacing: AppSpacing.elementTight) {
-                    Text(creature.name)
-                        .font(AppFont.screenTitle)
-                        .foregroundStyle(AppColor.textPrimary)
-                    Text(creature.rarity.label)
+            // 아이패드 폼시트·짧은 창에서도 아래가 잘리지 않게 스크롤(들어가면 스크롤 없음).
+            ScrollView {
+                VStack(spacing: AppSpacing.section) {
+                    Text("A new friend hatched!")
                         .font(AppFont.cardTitle)
-                        .foregroundStyle(creature.rarity.color)
-                    if creature.hasFinalArt {
-                        Text("Keep focusing to evolve ✨")
-                            .font(AppFont.body)
-                            .foregroundStyle(AppColor.textSecondary)
-                    }
-                }
+                        .foregroundStyle(AppColor.textSecondary)
 
-                Text("Added to your collection")
-                    .font(AppFont.body)
-                    .foregroundStyle(AppColor.textSecondary)
+                    ZStack {
+                        Circle()
+                            .fill(
+                                RadialGradient(
+                                    colors: [creature.rarity.color.opacity(0.35), .clear],
+                                    center: .center, startRadius: 6, endRadius: 150
+                                )
+                            )
+                            .frame(width: 280, height: 280)
+                        CreatureImage(imageName: creature.displayImageName(stage: 0), rarity: creature.rarity,
+                                      size: 180, stage: 0, animated: true)
+                            .scaleEffect(appeared ? 1 : 0.6)
+                            .animation(.spring(response: 0.5, dampingFraction: 0.55), value: appeared)
+                    }
+
+                    VStack(spacing: AppSpacing.elementTight) {
+                        Text(creature.name)
+                            .font(AppFont.screenTitle)
+                            .foregroundStyle(AppColor.textPrimary)
+                        Text(creature.rarity.label)
+                            .font(AppFont.cardTitle)
+                            .foregroundStyle(creature.rarity.color)
+                        if creature.hasFinalArt {
+                            Text("Keep focusing to evolve ✨")
+                                .font(AppFont.body)
+                                .foregroundStyle(AppColor.textSecondary)
+                        }
+                    }
+
+                    Text("Added to your collection")
+                        .font(AppFont.body)
+                        .foregroundStyle(AppColor.textSecondary)
+                }
+                .padding(AppSpacing.section)
+                .frame(maxWidth: .infinity)
             }
-            .padding(AppSpacing.section)
+            .scrollBounceBehavior(.basedOnSize)
+            .defaultScrollAnchor(.center, for: .alignment)   // 들어가면 예전처럼 세로 가운데
         }
         .onAppear { appeared = true }
         .presentationDetents([.medium, .large])
+        .presentationSizing(.form)   // 아이패드: 화면 가운데 폼시트 크기
         .preferredColorScheme(.dark)
     }
 }

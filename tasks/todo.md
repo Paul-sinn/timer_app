@@ -1,3 +1,28 @@
+# iPad 대응 (App Review Guideline 4 리젝) — 2026-09-30
+
+## 원인
+- 앱이 iPhone 전용(`TARGETED_DEVICE_FAMILY=1`) → iPad에선 **호환 모드**(작은 아이폰 크기 창)로 실행.
+- 그 작은 높이에서 화면 하단이 잘림 = 스크롤 불가 고정 레이아웃 문제. **작은 아이폰(SE급)에서도 같은 버그.**
+
+## 결정
+- 유니버설 앱으로 전환(`TARGETED_DEVICE_FAMILY="1,2"`), iPad 전 방향 + 멀티태스킹(Split View) 지원.
+- 레이아웃 판단은 기기 종류가 아니라 **창 크기**(`AppLayout`) 기준 → Split View 좁은 창도 자동 대응.
+- 아이폰 화면은 **바뀌지 않는다**(회귀 금지).
+
+## 작업
+- [x] `AppLayout`(열 개수·2단 여부·readableWidth) + `AppLayoutTests` (오케스트레이터)
+- [x] device family 1 → "1,2"
+- [x] 에이전트 A: Home(타이머·부화 오버레이) — 가로 2단, 작은 높이 스크롤
+- [x] 에이전트 B: Collection + Progress — 적응형 그리드, readableWidth
+- [x] 에이전트 C: MyPage + Settings + Onboarding + 시트류
+- [x] 빌드 + 유닛테스트 — 231/231 통과 (1회, 재시도 없음)
+- [x] 1차 시각검수(사용자): iPhone OK · iPad 가로 홈 OK · MyPage/Progress OK
+- [x] 2차: iPhone 알 240→260 · iPad 세로 홈 여백6%+알~450+타이머~87pt · 도감 카드 4/6열+내용 배율 · 온보딩 iPad 세로 ×1.39 — 테스트 248 통과
+- [ ] 2차 시각검수(사용자)
+- [ ] 수정 반영 후 재검수, App Review 회신 문안
+
+---
+
 # 하이프 대비 — 보안 하드닝 + 동기화 스케일 (2026-08-09)
 
 ## 배경

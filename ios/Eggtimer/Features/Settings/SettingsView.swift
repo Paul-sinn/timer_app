@@ -66,6 +66,8 @@ struct SettingsView: View {
                             #endif
                         }
                     }
+                    // 넓은 창(아이패드 전체화면 시트 등)에서 행이 끝까지 늘어나지 않게.
+                    .readableWidth()
                     .padding(.horizontal, AppSpacing.section)
                     .padding(.vertical, AppSpacing.section)
                 }

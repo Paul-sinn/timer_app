@@ -23,6 +23,7 @@ struct ThemePickerView: View {
                     card(for: theme)
                 }
             }
+            .readableWidth()
             .padding(AppSpacing.section)
 
             #if DEBUG
@@ -91,6 +92,7 @@ struct ThemePickerView: View {
         .tint(AppColor.eggAccent)
         .font(AppFont.body)
         .foregroundStyle(AppColor.textSecondary)
+        .readableWidth()
         .padding(.horizontal, AppSpacing.section)
         .padding(.bottom, AppSpacing.section)
     }

@@ -37,7 +37,9 @@ struct HatchRevealOverlay: View {
         GeometryReader { geometry in
             // 화면 어느 구석까지도 덮어야 한다. 발광 지점이 중앙에서 벗어날수록 더 멀리 가야 하므로
             // 네 모서리까지의 거리 중 최댓값을 반경으로 쓴다.
-            let center = origin ?? CGPoint(x: geometry.size.width / 2, y: geometry.size.height / 2)
+            // origin은 전역(창) 좌표라 이 뷰의 좌표로 바꿔야 한다 — 아이패드 Split View·가로 모드에서
+            // 홈이 창 원점에 붙어 있지 않으면 빛이 알에서 비껴 터진다.
+            let center = Self.localCenter(origin: origin, overlayFrame: geometry.frame(in: .global))
             let coverRadius = Self.radiusCovering(size: geometry.size, from: center)
 
             TimelineView(.animation) { timeline in
@@ -55,6 +57,12 @@ struct HatchRevealOverlay: View {
         .blendMode(.plusLighter)   // 빛은 더해진다(아래 픽셀아트를 덮어 지우지 않게)
         .allowsHitTesting(false)
         .onAppear { start = Date() }
+    }
+
+    /// 전역 좌표 발광 지점 → 오버레이 로컬 좌표. 발광 지점을 모르면 오버레이 중앙.
+    static func localCenter(origin: CGPoint?, overlayFrame: CGRect) -> CGPoint {
+        guard let origin else { return CGPoint(x: overlayFrame.width / 2, y: overlayFrame.height / 2) }
+        return CGPoint(x: origin.x - overlayFrame.minX, y: origin.y - overlayFrame.minY)
     }
 
     /// 주어진 점에서 사각형의 가장 먼 모서리까지의 거리. 이만큼이면 화면 전체가 덮인다.

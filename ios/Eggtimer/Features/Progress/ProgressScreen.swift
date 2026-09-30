@@ -104,20 +104,39 @@ struct ProgressScreen: View {
 
     // MARK: - 본문
 
+    /// 크기 판단은 기기 종류가 아니라 실제로 받은 창 크기로(아이패드 Split View는 아이폰만큼 좁을 수 있다).
+    /// - 좁은 창(아이폰·Split View·아이패드 세로): 기존 1단. 폭은 readableWidth로 캡(아이폰은 변화 없음).
+    /// - 넓은 가로 창(아이패드 가로): 좌(요약+차트) / 우(최근 세션) 2단 — 차트가 과하게 늘어나지 않는다.
     private var content: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: AppSpacing.section) {
-                Text("Progress")
-                    .font(.title.weight(.bold))
-                    .foregroundStyle(AppColor.textPrimary)
+        GeometryReader { geo in
+            let sideBySide = AppLayout.usesSideBySide(width: geo.size.width, height: geo.size.height)
+            ScrollView {
+                VStack(alignment: .leading, spacing: AppSpacing.section) {
+                    Text("Progress")
+                        .font(.title.weight(.bold))
+                        .foregroundStyle(AppColor.textPrimary)
 
-                summarySection
-                chartSection
-                sessionSection
+                    if sideBySide {
+                        HStack(alignment: .top, spacing: AppSpacing.section) {
+                            VStack(alignment: .leading, spacing: AppSpacing.section) {
+                                summarySection
+                                chartSection
+                            }
+                            .frame(maxWidth: .infinity)
+                            sessionSection
+                                .frame(maxWidth: .infinity)
+                        }
+                    } else {
+                        summarySection
+                        chartSection
+                        sessionSection
+                    }
+                }
+                .padding(.horizontal, AppSpacing.section)
+                .padding(.top, AppSpacing.elementTight)
+                .padding(.bottom, AppSpacing.section)
+                .readableWidth(sideBySide ? AppLayout.wideContentWidth : AppLayout.readableWidth)
             }
-            .padding(.horizontal, AppSpacing.section)
-            .padding(.top, AppSpacing.elementTight)
-            .padding(.bottom, AppSpacing.section)
         }
     }
 

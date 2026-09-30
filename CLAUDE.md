@@ -166,3 +166,8 @@ xcrun xcresulttool get test-results summary --path /tmp/res.xcresult
   - 증상: 섬광이 화면 정중앙에서 퍼지는데 알은 화면 위쪽에 있어, 빛과 폭발 그림의 중심이 따로 놀았다.
   - 원인: `.overlay`의 좌표계는 화면 전체라 기본 중심이 화면 중앙이다. 알은 VStack 안 임의 위치.
   - 교훈: 발광 지점은 `PreferenceKey`로 대상 뷰의 `frame(in: .global)` 중심을 올려 받는다. 그리고 발광 지점이 중앙에서 벗어나면 화면을 덮는 반경도 커져야 한다 — **대각선 절반이 아니라 "가장 먼 모서리까지의 거리"**로 잡을 것.
+
+- **2026-09-30 · 테스트의 배열 리터럴 안 산술식 → "unable to type-check in reasonable time"**
+  - 증상: `for width: CGFloat in [375 - 48, 393 - 48, ...]`에서 테스트 타깃 컴파일 실패(EXIT 65, xcresult `result=unknown / 0 tests`). 앱 build는 통과.
+  - 원인: 리터럴 산술 여러 개 + CGFloat 추론 조합이 타입체커 조합 폭발을 일으킴.
+  - 교훈: 테스트 입력값은 **계산된 상수로 적고 주석에 유도식**을 남긴다(`let widths: [CGFloat] = [327, 345]  // 375-48, 393-48`).

@@ -235,38 +235,14 @@ struct HomeView: View {
         ZStack {
             ThemedBackground()
 
-            VStack(spacing: 0) {
-                header
-                Spacer(minLength: 0)
-                if session.isIdle && hatchling == nil {
-                    modeAndDurationSection
+            // 크기 판단은 기기 종류가 아니라 실제 받은 창 크기로(아이패드 Split View도 아이폰만큼 좁아진다).
+            GeometryReader { proxy in
+                if AppLayout.usesSideBySide(width: proxy.size.width, height: proxy.size.height) {
+                    sideBySideLayout(in: proxy.size)
+                } else {
+                    singleColumnLayout(in: proxy.size)
                 }
-                timerHeader
-                    .padding(.top, AppSpacing.element)
-                dialogueBubble
-                    .padding(.top, AppSpacing.elementTight)
-                centerStage
-                    .overlay(alignment: .topTrailing) {
-                        if battery.isCharging && !bornEffect { chargeBadge.padding(6) }   // 알 옆 충전 표시
-                    }
-                    .overlay { if zapFlash { ZapBurstView().allowsHitTesting(false) } }    // 찌릿 스파크
-                    .padding(.vertical, AppSpacing.elementTight)
-                    .reportsHatchRevealOrigin()   // 섬광이 알 자리에서 터지도록 좌표를 올린다
-                if hasCompanion && !session.isOnBreak {
-                    EvolutionBadge(stage: companionStage)
-                        .animation(.easeInOut(duration: 0.3), value: companionStage)
-                }
-                if justHatched, let hatchling {
-                    HatchRevealCard(creature: hatchling)
-                        .padding(.top, AppSpacing.elementTight)
-                        .transition(.opacity.combined(with: .move(edge: .bottom)))
-                }
-                Spacer(minLength: 0)
-                if !hasCompanion && !session.isOnBreak { progressSection }
-                controlButtons
-                    .padding(.top, AppSpacing.element)
             }
-            .padding(.horizontal, AppSpacing.section)
             .animation(.easeInOut(duration: 0.3), value: hasCompanion)
             .screenShake(progress: shakeProgress)   // 임팩트 순간 화면이 한 번 흔들린다(배경은 고정)
         }
@@ -392,6 +368,121 @@ struct HomeView: View {
                     try? await Task.sleep(for: .milliseconds(1300)); zapBonusPercent = nil
                 }
             }
+        }
+    }
+
+    // MARK: - 레이아웃 (아이폰·아이패드 세로 = 한 컬럼 / 아이패드 가로 = 좌우 2단)
+
+    /// 한 컬럼. 아이폰에선 예전 배치 그대로(무대 상한 HomeLayout.stageBaseHeight). 공간이 모자라면 무대(알)가 먼저 줄어들고,
+    /// 그래도 안 들어가면 스크롤된다 — 아래쪽 버튼이 잘리지 않게.
+    private func singleColumnLayout(in size: CGSize) -> some View {
+        // 좌우 여백: 아이폰·좁은 창은 예전 그대로(24), 아이패드 전체폭은 폭에 비례(가운데 몰림 방지).
+        let margin = HomeLayout.horizontalMargin(forWidth: size.width)
+        let isRegular = size.width >= HomeLayout.regularWidth
+        // 넓은 창에선 섹션 사이를 벌려 세로로 고르게 퍼지게 한다(아이폰은 예전 간격).
+        let gap = isRegular ? AppSpacing.sectionLoose : AppSpacing.element
+        let columnWidth = size.width - margin * 2
+        let stageMax = HomeLayout.stageMaxHeight(containerSize: CGSize(width: columnWidth, height: size.height))
+        return FitOrScroll {
+            VStack(spacing: 0) {
+                header
+                Spacer(minLength: 0)
+                if session.isIdle && hatchling == nil {
+                    modeAndDurationSection
+                }
+                timerHeader(fontSize: HomeLayout.timerFontSize(forWidth: size.width))
+                    .padding(.top, gap)
+                dialogueBubble
+                    .padding(.top, AppSpacing.elementTight)
+                stage(maxHeight: stageMax)
+                evolutionBadge
+                revealCard
+                Spacer(minLength: 0)
+                if !hasCompanion && !session.isOnBreak { progressSection }
+                controlButtons
+                    .padding(.top, gap)
+            }
+            .padding(.horizontal, margin)
+        }
+        .frame(width: size.width, height: size.height)
+    }
+
+    /// 좌우 2단(넓은 가로 창). 왼쪽 = 말풍선 + 알/캐릭터, 오른쪽 = 타이머·진행도·컨트롤.
+    private func sideBySideLayout(in size: CGSize) -> some View {
+        let contentWidth = min(size.width, AppLayout.wideContentWidth) - AppSpacing.section * 2
+        let columnWidth = (contentWidth - AppSpacing.sectionLoose) / 2
+        let stageMax = HomeLayout.sideBySideStageMaxHeight(columnSize: CGSize(width: columnWidth, height: size.height))
+        return VStack(spacing: 0) {
+            header
+            HStack(spacing: AppSpacing.sectionLoose) {
+                VStack(spacing: 0) {
+                    Spacer(minLength: 0)
+                    dialogueBubble
+                    stage(maxHeight: stageMax)
+                    evolutionBadge
+                    Spacer(minLength: 0)
+                }
+                .frame(maxWidth: .infinity)
+
+                FitOrScroll {
+                    VStack(spacing: 0) {
+                        Spacer(minLength: 0)
+                        if session.isIdle && hatchling == nil {
+                            modeAndDurationSection
+                        }
+                        timerHeader(fontSize: HomeLayout.timerFontSize(forWidth: size.width))
+                            .padding(.top, AppSpacing.element)
+                        revealCard
+                        if !hasCompanion && !session.isOnBreak {
+                            progressSection
+                                .padding(.top, AppSpacing.section)
+                        }
+                        controlButtons
+                            .padding(.top, AppSpacing.section)
+                        Spacer(minLength: 0)
+                    }
+                }
+                .frame(maxWidth: .infinity)
+            }
+        }
+        .padding(.horizontal, AppSpacing.section)
+        .readableWidth(AppLayout.wideContentWidth)
+        .frame(width: size.width, height: size.height)
+    }
+
+    /// 알/캐릭터 무대. 남는 공간을 먼저 가져가되(layoutPriority) `maxHeight`에서 멈추고,
+    /// 모자라면 stageMinHeight까지 줄어든다. 스크롤 폴백에선 최소 높이로 선다(ideal = min).
+    private func stage(maxHeight: CGFloat) -> some View {
+        GeometryReader { proxy in
+            centerStage(height: proxy.size.height)
+                .overlay(alignment: .topTrailing) {
+                    if battery.isCharging && !bornEffect { chargeBadge.padding(6) }   // 알 옆 충전 표시
+                }
+                .overlay { if zapFlash { ZapBurstView().allowsHitTesting(false) } }    // 찌릿 스파크
+                .frame(width: proxy.size.width, height: proxy.size.height)
+        }
+        .frame(minHeight: HomeLayout.stageMinHeight,
+               idealHeight: HomeLayout.stageMinHeight,
+               maxHeight: maxHeight)
+        .padding(.vertical, AppSpacing.elementTight)
+        .reportsHatchRevealOrigin()   // 섬광이 알 자리에서 터지도록 좌표를 올린다
+        .layoutPriority(1)
+    }
+
+    @ViewBuilder
+    private var evolutionBadge: some View {
+        if hasCompanion && !session.isOnBreak {
+            EvolutionBadge(stage: companionStage)
+                .animation(.easeInOut(duration: 0.3), value: companionStage)
+        }
+    }
+
+    @ViewBuilder
+    private var revealCard: some View {
+        if justHatched, let hatchling {
+            HatchRevealCard(creature: hatchling)
+                .padding(.top, AppSpacing.elementTight)
+                .transition(.opacity.combined(with: .move(edge: .bottom)))
         }
     }
 
@@ -555,19 +646,19 @@ struct HomeView: View {
     }
 
     @ViewBuilder
-    private var centerStage: some View {
+    private func centerStage(height: CGFloat) -> some View {
         if bornEffect {
-            HatchBurstView()          // 부화 버스트 재생 중(알도 몬스터도 아님) → 끝나면 몬스터 노출
+            HatchBurstView(height: height)          // 부화 버스트 재생 중(알도 몬스터도 아님) → 끝나면 몬스터 노출
         } else if session.isOnBreak {
-            BreakView(scene: breakScene)
+            BreakView(scene: breakScene, height: height)
                 .transition(.scale.combined(with: .opacity))
         } else if let hatchling {
             // 부화 후엔 idle/집중 무관하게 캐릭터가 알 자리를 유지(집중 세션 Done마다 단계 진화).
-            HatchedCenter(creature: hatchling, stage: companionStage)
+            HatchedCenter(creature: hatchling, stage: companionStage, height: height)
                 .id("\(hatchling.id.uuidString)-\(companionStage)")   // 캐릭터·단계 바뀔 때마다 등장(진화) 연출 재생
                 .transition(.scale(scale: 0.6).combined(with: .opacity))
         } else {
-            EggView(stageIndex: session.stageIndex)   // 알은 첫 부화 전까지만(진행도 → crack 6단계)
+            EggView(stageIndex: session.stageIndex, height: height)   // 알은 첫 부화 전까지만(진행도 → crack 6단계)
                 .transition(.opacity)
         }
     }
@@ -601,10 +692,11 @@ struct HomeView: View {
 
     // MARK: - 타이머 표시
 
-    private var timerHeader: some View {
+    /// - Parameter fontSize: 타이머 글자 크기(HomeLayout.timerFontSize). 아이폰은 AppFont.timer 그대로.
+    private func timerHeader(fontSize: CGFloat) -> some View {
         VStack(spacing: AppSpacing.elementTight) {
             Text(session.timerDisplay)
-                .font(AppFont.timer)
+                .font(AppFont.timer(size: fontSize))
                 .foregroundStyle(AppColor.textPrimary)
                 .monospacedDigit()
                 .opacity(justHatched || justEvolvedStage != nil ? 0.3 : 1)
@@ -612,6 +704,7 @@ struct HomeView: View {
                 .font(AppFont.body)
                 .foregroundStyle(headerSubtitle.highlight ? AppColor.eggAccent : AppColor.textSecondary)
                 .multilineTextAlignment(.center)
+                .fixedSize(horizontal: false, vertical: true)   // 무대(알)가 공간을 먼저 가져가도 문구가 잘리지 않게
         }
     }
 
@@ -659,23 +752,26 @@ struct HomeView: View {
             Color.black.opacity(0.55).ignoresSafeArea()
                 .onTapGesture { dismissPomodoroInfo() }
 
-            VStack(spacing: AppSpacing.element) {
-                Image(systemName: "timer")
-                    .font(.system(size: 40))
-                    .foregroundStyle(AppColor.eggAccent)
-                Text("How Pomodoro works")
-                    .font(AppFont.screenTitle)
-                    .foregroundStyle(AppColor.textPrimary)
-                    .multilineTextAlignment(.center)
-                Text(pomodoroCaption)
-                    .font(AppFont.body)
-                    .foregroundStyle(AppColor.textBody)
-                    .multilineTextAlignment(.center)
-                    .fixedSize(horizontal: false, vertical: true)
-                PrimaryButton("Got it") { dismissPomodoroInfo() }
-                    .padding(.top, AppSpacing.elementTight)
+            // 짧은 창(아이패드 Split View·가로)에서 카드가 잘리면 버튼이 사라진다 → 넘치면 스크롤.
+            FitOrScroll {
+                VStack(spacing: AppSpacing.element) {
+                    Image(systemName: "timer")
+                        .font(.system(size: 40))
+                        .foregroundStyle(AppColor.eggAccent)
+                    Text("How Pomodoro works")
+                        .font(AppFont.screenTitle)
+                        .foregroundStyle(AppColor.textPrimary)
+                        .multilineTextAlignment(.center)
+                    Text(pomodoroCaption)
+                        .font(AppFont.body)
+                        .foregroundStyle(AppColor.textBody)
+                        .multilineTextAlignment(.center)
+                        .fixedSize(horizontal: false, vertical: true)
+                    PrimaryButton("Got it") { dismissPomodoroInfo() }
+                        .padding(.top, AppSpacing.elementTight)
+                }
+                .padding(AppSpacing.section)
             }
-            .padding(AppSpacing.section)
             .frame(maxWidth: 320)
             .background(AppColor.cardBackground)
             .clipShape(RoundedRectangle(cornerRadius: AppSpacing.cardCornerRadius))
@@ -692,37 +788,40 @@ struct HomeView: View {
             Color.black.opacity(0.55).ignoresSafeArea()
                 .onTapGesture { dismissLuckCard() }
 
-            VStack(spacing: AppSpacing.element) {
-                ZStack {
-                    Circle()
-                        .fill(RadialGradient(colors: [AppColor.eggAccent.opacity(0.28), .clear],
-                                             center: .center, startRadius: 2, endRadius: 72))
-                        .frame(width: 132, height: 132)
-                    Image("ChickenSmartStage1Idle")   // 너드 닭(Bookworm Hen) 히어로
-                        .interpolation(.none)
-                        .resizable()
-                        .scaledToFit()
-                        .frame(height: 100)
+            // 짧은 창(아이패드 Split View·가로)에서 카드가 잘리면 버튼이 사라진다 → 넘치면 스크롤.
+            FitOrScroll {
+                VStack(spacing: AppSpacing.element) {
+                    ZStack {
+                        Circle()
+                            .fill(RadialGradient(colors: [AppColor.eggAccent.opacity(0.28), .clear],
+                                                 center: .center, startRadius: 2, endRadius: 72))
+                            .frame(width: 132, height: 132)
+                        Image("ChickenSmartStage1Idle")   // 너드 닭(Bookworm Hen) 히어로
+                            .interpolation(.none)
+                            .resizable()
+                            .scaledToFit()
+                            .frame(height: 100)
+                    }
+                    Text("Focus longer, luckier hatches")
+                        .font(AppFont.screenTitle)
+                        .foregroundStyle(AppColor.textPrimary)
+                        .multilineTextAlignment(.center)
+                    Text("The longer you focus in one session, the better your odds of hatching a rarer friend.")
+                        .font(AppFont.body)
+                        .foregroundStyle(AppColor.textBody)
+                        .multilineTextAlignment(.center)
+                        .fixedSize(horizontal: false, vertical: true)
+                    HStack(spacing: AppSpacing.elementTight) {
+                        luckOddsPill("25 min", "Base", filled: 1)
+                        luckOddsPill("50 min", "Higher", filled: 2)
+                        luckOddsPill("75 min+", "Best", filled: 3)
+                    }
+                    .padding(.top, 2)
+                    PrimaryButton("Let's focus") { dismissLuckCard() }
+                        .padding(.top, AppSpacing.elementTight)
                 }
-                Text("Focus longer, luckier hatches")
-                    .font(AppFont.screenTitle)
-                    .foregroundStyle(AppColor.textPrimary)
-                    .multilineTextAlignment(.center)
-                Text("The longer you focus in one session, the better your odds of hatching a rarer friend.")
-                    .font(AppFont.body)
-                    .foregroundStyle(AppColor.textBody)
-                    .multilineTextAlignment(.center)
-                    .fixedSize(horizontal: false, vertical: true)
-                HStack(spacing: AppSpacing.elementTight) {
-                    luckOddsPill("25 min", "Base", filled: 1)
-                    luckOddsPill("50 min", "Higher", filled: 2)
-                    luckOddsPill("75 min+", "Best", filled: 3)
-                }
-                .padding(.top, 2)
-                PrimaryButton("Let's focus") { dismissLuckCard() }
-                    .padding(.top, AppSpacing.elementTight)
+                .padding(AppSpacing.section)
             }
-            .padding(AppSpacing.section)
             .frame(maxWidth: 320)
             .background(AppColor.cardBackground)
             .clipShape(RoundedRectangle(cornerRadius: AppSpacing.cardCornerRadius))
@@ -786,6 +885,20 @@ struct HomeView: View {
             }
         }
         .padding(.bottom, AppSpacing.element)
+    }
+}
+
+/// 들어가면 그대로, 안 들어가면 세로 스크롤로 보여준다.
+/// 평소(아이폰 등)엔 스크롤 없이 예전 배치 그대로이고, 짧은 창에서만 스크롤이 생겨 아래쪽이 잘리지 않는다.
+private struct FitOrScroll<Content: View>: View {
+    @ViewBuilder let content: Content
+
+    var body: some View {
+        ViewThatFits(in: .vertical) {
+            content
+            ScrollView(.vertical) { content }
+                .scrollBounceBehavior(.basedOnSize)
+        }
     }
 }
 

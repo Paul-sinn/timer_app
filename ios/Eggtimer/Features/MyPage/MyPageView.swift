@@ -76,6 +76,8 @@ struct MyPageView: View {
                     debugSection
                     #endif
                 }
+                // 아이패드에서 카드·로그인 버튼이 화면 끝까지 늘어나지 않게 읽기 폭으로 제한(아이폰은 변화 없음).
+                .readableWidth()
                 .padding(.horizontal, AppSpacing.section)
                 .padding(.vertical, AppSpacing.section)
             }
