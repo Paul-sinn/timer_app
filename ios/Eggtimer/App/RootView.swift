@@ -38,6 +38,11 @@ struct RootView: View {
         // 릴리스 빌드엔 이 분기 코드 자체가 없다.
         let env = ProcessInfo.processInfo.environment["START_TAB"]
         _selection = State(initialValue: RootTab(envKey: env) ?? .home)
+        // 스토어 스크린샷용 데모 데이터 훅(도감 12/12 + 30일 세션). 마이페이지 Seed 버튼과 같은 데이터.
+        if ProcessInfo.processInfo.environment["DEMO_SEED"] == "1" {
+            store.insertFromRemote(DemoSeed.creatures())
+            history.debugReplaceAll(DemoSeed.sessions())
+        }
         #else
         _selection = State(initialValue: .home)
         #endif

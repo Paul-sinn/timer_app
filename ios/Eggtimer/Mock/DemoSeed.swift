@@ -57,5 +57,18 @@ enum DemoSeed {
         }
         return out
     }
+
+    /// 스크린샷용 도감(모든 종·변형 1마리씩 = 12/12). id 고정 → 반복 시드해도 중복 없음.
+    static func creatures(now: Date = Date()) -> [Creature] {
+        let variants = CreatureSpecies.allCases.flatMap { species in
+            species.imageVariants.map { (species, $0) }
+        }
+        return variants.enumerated().map { index, pair in
+            Creature(id: UUID(uuidString: String(format: "00000000-0000-0000-0000-%012d", index + 1))!,
+                     species: pair.0,
+                     imageName: pair.1,
+                     hatchedAt: now.addingTimeInterval(-Double(index + 1) * 86_400))
+        }
+    }
 }
 #endif

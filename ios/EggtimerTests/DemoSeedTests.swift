@@ -61,5 +61,21 @@ struct DemoSeedTests {
         let rest = daily.filter { $0 == 0 }.count
         #expect(rest >= 1)                                // rest day 존재(자연스러운 변화)
     }
+
+    // MARK: - 도감 시드 (스크린샷용 12/12)
+
+    /// 모든 종·변형이 한 번씩 → 도감 12칸이 다 찬다.
+    @Test func creatureSeedCoversEveryVariant() {
+        let creatures = DemoSeed.creatures()
+        let expected = CreatureSpecies.allCases.flatMap(\.imageVariants)
+        #expect(creatures.count == expected.count)
+        #expect(Set(creatures.map(\.imageName)) == Set(expected))
+    }
+
+    /// id가 고정이라 여러 번 시드해도 중복으로 쌓이지 않는다(insertFromRemote가 id로 거른다).
+    @Test func creatureSeedIdsAreStable() {
+        #expect(DemoSeed.creatures().map(\.id) == DemoSeed.creatures().map(\.id))
+        #expect(Set(DemoSeed.creatures().map(\.id)).count == DemoSeed.creatures().count)
+    }
 }
 #endif

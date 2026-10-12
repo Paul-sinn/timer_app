@@ -78,6 +78,9 @@ xcrun xcresulttool get test-results summary --path /tmp/res.xcresult
 - `START_TAB` — 시작 탭 지정
 - `CREATURE_GALLERY=1` — 캐릭터 아트 갤러리(5종 × 3단계 × idle/action)로 진입
   `SIMCTL_CHILD_CREATURE_GALLERY=1 xcrun simctl launch <device> com.paulsin.hatchly`
+- `DEMO_SEED=1` — 스토어 스크린샷용 데모 데이터(도감 12/12 + 30일 세션) 주입. 고정 id라 반복해도 중복 없음
+  스샷 예: `SIMCTL_CHILD_START_TAB=collection SIMCTL_CHILD_DEMO_SEED=1 xcrun simctl launch <device> com.paulsin.hatchly -AppleLanguages "(en)" -hasSeenOnboarding YES -home.seenFocusLuckTip YES`
+  (갓 부팅한 시뮬은 첫 렌더가 5초+ 걸린다 → 화면 픽셀이 흰색이 아닐 때까지 기다렸다 찍을 것)
 
 ## 실수/실패 기록 (Claude 자기교정 로그)
 > 규칙: 실수하거나 실패할 때마다 여기에 한 줄 추가한다. (증상 → 원인 → 교훈)
@@ -171,3 +174,8 @@ xcrun xcresulttool get test-results summary --path /tmp/res.xcresult
   - 증상: `for width: CGFloat in [375 - 48, 393 - 48, ...]`에서 테스트 타깃 컴파일 실패(EXIT 65, xcresult `result=unknown / 0 tests`). 앱 build는 통과.
   - 원인: 리터럴 산술 여러 개 + CGFloat 추론 조합이 타입체커 조합 폭발을 일으킴.
   - 교훈: 테스트 입력값은 **계산된 상수로 적고 주석에 유도식**을 남긴다(`let widths: [CGFloat] = [327, 345]  // 375-48, 393-48`).
+
+- **2026-10-12 · 코드의 `defaultValue`만 보고 UI 문구를 단정 → 틀린 정정**
+  - 증상: `String(localized: "mode.normal", defaultValue: "Timer")`를 보고 "영어 UI는 Timer"라고 체크리스트를 고쳤는데, 실제 영어 화면(기존 스크린샷)은 `Normal`.
+  - 원인: 키 기반 문자열은 **`Localizable.xcstrings`의 en 값("Normal")이 defaultValue를 덮는다.** defaultValue는 번역이 없을 때만 쓰인다.
+  - 교훈: 유저에게 보이는 문구를 단정할 땐 코드가 아니라 **문자열 카탈로그(또는 실제 화면)**에서 확인한다.
