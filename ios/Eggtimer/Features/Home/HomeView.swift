@@ -9,7 +9,6 @@
 //
 
 import SwiftUI
-import AudioToolbox
 import AVFoundation
 import OSLog
 
@@ -58,8 +57,6 @@ struct HomeView: View {
     @State private var showPomodoroInfo = false
     /// 보상 안내를 이미 봤는지(첫 실행에만 자동 노출). 이후엔 "?" 버튼으로만.
     @AppStorage("home.seenFocusLuckTip") private var seenFocusLuckTip = false
-    /// 효과음(부화·진화 시스템 사운드) 사용 여부. Settings 시트와 같은 키를 공유.
-    @AppStorage(AppSettings.soundKey) private var soundEnabled = AppSettings.defaultOn
     /// 진동(부화·진화·휴식 진입 햅틱) 사용 여부.
     @AppStorage(AppSettings.hapticsKey) private var hapticsEnabled = AppSettings.defaultOn
     /// 로컬 알림 사용 여부. 백그라운드 알림 예약·권한 요청을 게이트.
@@ -263,7 +260,6 @@ struct HomeView: View {
             // 동료가 한 단계 진화(Keep focusing 1세션 Done). 등장 연출은 centerStage의 .id 변화가 재생.
             guard new > old, hatchling != nil else { return }
             justEvolvedStage = new
-            if soundEnabled { AudioServicesPlaySystemSound(1025) }   // 진화 효과음(Settings 게이트)
             Task { @MainActor in
                 try? await Task.sleep(for: .seconds(3))
                 if justEvolvedStage == new { justEvolvedStage = nil }   // 연출 문구 자동 해제

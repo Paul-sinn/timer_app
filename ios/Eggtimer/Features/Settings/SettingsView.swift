@@ -14,7 +14,6 @@ struct SettingsView: View {
     @Environment(\.dismiss) private var dismiss
 
     @AppStorage(AppSettings.notificationsKey) private var notificationsOn = AppSettings.defaultOn
-    @AppStorage(AppSettings.soundKey) private var soundOn = AppSettings.defaultOn
     @AppStorage(AppSettings.hapticsKey) private var hapticsOn = AppSettings.defaultOn
     /// 화면 꺼짐 방지(Feature 7). 세션 중 ScreenAwake가 참조.
     @AppStorage(ScreenAwake.settingKey) private var keepScreenAwake = true
@@ -35,8 +34,6 @@ struct SettingsView: View {
                     AppCard {
                         VStack(spacing: AppSpacing.element) {
                             SettingToggleRow(title: "Notifications", systemImage: "bell", isOn: $notificationsOn)
-                            SettingDivider()
-                            SettingToggleRow(title: "Sound", systemImage: "speaker.wave.2", isOn: $soundOn)
                             SettingDivider()
                             SettingToggleRow(title: "Haptics", systemImage: "iphone.radiowaves.left.and.right", isOn: $hapticsOn)
                             SettingDivider()

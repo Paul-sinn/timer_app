@@ -12,8 +12,6 @@ import Foundation
 enum AppSettings {
     /// 로컬 알림(집중 종료/휴식 알림) 사용 여부. 기본 켜짐.
     static let notificationsKey = "notificationsEnabled"
-    /// 효과음(부화·진화 시스템 사운드) 사용 여부. 기본 켜짐.
-    static let soundKey = "soundEnabled"
     /// 진동(부화·진화·휴식 진입 햅틱) 사용 여부. 기본 켜짐.
     static let hapticsKey = "hapticsEnabled"
 
