@@ -118,7 +118,6 @@ struct HomeView: View {
         let born = store.hatch(draws: draws)          // 확률 부화 + 컬렉션 반영(영속)
         logHatchForDebug(focusSeconds: session.activeSecondsLive, draws: draws, born: born)
         sync?.pushNewCreature(born)                   // 로그인 시 원격 동기화
-        if soundEnabled { AudioServicesPlaySystemSound(1025) }   // 부화 효과음(Settings 게이트)
         bornEffect = true                             // 알 자리에 버스트 영상 재생(몬스터 아직 X)
         revealFlash = true                            // 화면 전체 섬광 시작(영상보다 오래 남는다)
         HatchHaptics.shared.play(enabled: hapticsEnabled)   // 충전 떨림 → 임팩트 → 등장(영상과 같은 시계)
