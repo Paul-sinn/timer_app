@@ -14,6 +14,7 @@ import OSLog
 
 struct HomeView: View {
     @Environment(\.scenePhase) private var scenePhase
+    @Environment(\.appTheme) private var theme
     @State private var session: SessionManager
     private let store: CollectionStore
     private let history: FocusHistoryStore
@@ -503,7 +504,7 @@ struct HomeView: View {
         HStack {
             Text("Home")
                 .font(.title.weight(.bold))
-                .foregroundStyle(AppColor.textPrimary)
+                .foregroundStyle(theme.onPagePrimary)
             Spacer()
             // 최종 진화 상태에선 집중이 끊김없이 이어지므로, 새 종을 받고 싶은 유저용
             // 작은 "New egg" 토글을 우상단에 배치(UI 방해 최소화). 그 외엔 Settings 아이콘.
@@ -513,7 +514,7 @@ struct HomeView: View {
                 Button { showSettings = true } label: {
                     Image(systemName: "gearshape")
                         .font(.title3)
-                        .foregroundStyle(AppColor.textSecondary)
+                        .foregroundStyle(theme.onPageSecondary)
                 }
                 .buttonStyle(.plain)
             }
@@ -561,7 +562,7 @@ struct HomeView: View {
                         Image(systemName: "questionmark.circle")
                             .font(.system(size: 18))
                     }
-                    .foregroundStyle(AppColor.textSecondary)
+                    .foregroundStyle(theme.onPageSecondary)
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel(Text("How Pomodoro works"))
@@ -692,12 +693,12 @@ struct HomeView: View {
         VStack(spacing: AppSpacing.elementTight) {
             Text(session.timerDisplay)
                 .font(AppFont.timer(size: fontSize))
-                .foregroundStyle(AppColor.textPrimary)
+                .foregroundStyle(theme.onPagePrimary)
                 .monospacedDigit()
                 .opacity(justHatched || justEvolvedStage != nil ? 0.3 : 1)
             Text(headerSubtitle.text)
                 .font(AppFont.body)
-                .foregroundStyle(headerSubtitle.highlight ? AppColor.eggAccent : AppColor.textSecondary)
+                .foregroundStyle(headerSubtitle.highlight ? theme.onPageAccent : theme.onPageSecondary)
                 .multilineTextAlignment(.center)
                 .fixedSize(horizontal: false, vertical: true)   // 무대(알)가 공간을 먼저 가져가도 문구가 잘리지 않게
         }
@@ -710,11 +711,11 @@ struct HomeView: View {
             HStack {
                 Text("Hatch progress")
                     .font(AppFont.cardTitle)
-                    .foregroundStyle(AppColor.textSecondary)
+                    .foregroundStyle(theme.onPageSecondary)
                 Spacer()
                 Text(session.stageCaption)
                     .font(AppFont.cardTitle)
-                    .foregroundStyle(AppColor.textSecondary)
+                    .foregroundStyle(theme.onPageSecondary)
             }
             StageStepper(current: session.stageIndex, total: EggState.visualStages)
         }
@@ -727,7 +728,7 @@ struct HomeView: View {
         } label: {
             Image(systemName: "questionmark.circle")
                 .font(.system(size: 18))
-                .foregroundStyle(AppColor.textSecondary)
+                .foregroundStyle(theme.onPageSecondary)
         }
         .buttonStyle(.plain)
         .accessibilityLabel(Text("About focus rewards"))
@@ -899,6 +900,7 @@ private struct FitOrScroll<Content: View>: View {
 
 /// 부화 직후 알 자리를 대체해 표시되는 생명체. 등장 시 글로우 버스트 + 스파클로 "부화 순간"을 연출한다.
 private struct HatchedCenter: View {
+    @Environment(\.appTheme) private var theme
     let creature: Creature
     /// 진화 단계(0…max). 단계가 높을수록 글로우가 강해져 "성장한 느낌"을 준다.
     var stage: Int = 0
@@ -923,6 +925,7 @@ private struct HatchedCenter: View {
                     )
                 )
                 .frame(width: height * 1.3, height: height * 1.3)
+                .blendMode(theme.glowBlendMode)
                 .animation(.easeOut(duration: 0.6), value: burst)
 
             // 스파클 버스트.
@@ -986,6 +989,7 @@ private struct HatchRevealCard: View {
 
 /// 포모도로 On a break앙 화면. 따뜻한 톤의 휴식 안내.
 private struct BreakView: View {
+    @Environment(\.appTheme) private var theme
     let scene: BreakScene
     var height: CGFloat = 240
 
@@ -995,13 +999,14 @@ private struct BreakView: View {
                 .fill(RadialGradient(colors: [AppColor.eggAccent.opacity(0.16), .clear],
                                      center: .center, startRadius: 4, endRadius: height * 0.6))
                 .frame(width: height * 1.3, height: height * 1.3)
+                .blendMode(theme.glowBlendMode)
 
             VStack(spacing: AppSpacing.elementTight) {
                 BreakSceneView(scene: scene)
                     .frame(height: height * 0.62)   // 비율 유지(scaledToFit), 아래 문구 자리 확보
                 Text(caption)
                     .font(AppFont.cardTitle)
-                    .foregroundStyle(AppColor.textSecondary)
+                    .foregroundStyle(theme.onPageSecondary)
             }
         }
         .frame(height: height)

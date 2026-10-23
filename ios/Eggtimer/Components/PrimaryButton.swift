@@ -26,6 +26,11 @@ struct PrimaryButton: View {
                 .padding(.vertical, AppSpacing.elementTight)
                 .background(AppColor.textPrimary)
                 .clipShape(RoundedRectangle(cornerRadius: AppSpacing.buttonCornerRadius))
+                // 밝은 파스텔 배경에서 크림 버튼 윤곽이 묻히지 않게(어두운 배경에선 거의 안 보임).
+                .overlay(
+                    RoundedRectangle(cornerRadius: AppSpacing.buttonCornerRadius)
+                        .stroke(AppColor.border, lineWidth: AppSpacing.borderWidth)
+                )
         }
     }
 }

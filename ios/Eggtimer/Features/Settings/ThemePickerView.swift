@@ -51,9 +51,10 @@ struct ThemePickerView: View {
         } label: {
             VStack(spacing: AppSpacing.elementTight) {
                 ZStack {
-                    RoundedRectangle(cornerRadius: AppSpacing.cardCornerRadius)
-                        .fill(theme.pageBackground)
+                    ThemedBackground()
+                        .environment(\.appTheme, theme)   // 이 카드만 해당 테마로 미리보기
                         .frame(height: 96)
+                        .clipShape(RoundedRectangle(cornerRadius: AppSpacing.cardCornerRadius))
                         .overlay(
                             RoundedRectangle(cornerRadius: AppSpacing.cardCornerRadius)
                                 .stroke(isSelected ? AppColor.eggAccent : AppColor.border,
@@ -69,7 +70,7 @@ struct ThemePickerView: View {
                 }
                 Text(theme.displayName)
                     .font(AppFont.cardTitle)
-                    .foregroundStyle(AppColor.textPrimary)
+                    .foregroundStyle(selected.onPagePrimary)   // 이름은 현재 적용된 배경 위에 놓인다
                 if !unlocked {
                     Text("Coming soon")
                         .font(AppFont.cardTitle)
@@ -91,7 +92,7 @@ struct ThemePickerView: View {
         ))
         .tint(AppColor.eggAccent)
         .font(AppFont.body)
-        .foregroundStyle(AppColor.textSecondary)
+        .foregroundStyle(selected.onPageSecondary)
         .readableWidth()
         .padding(.horizontal, AppSpacing.section)
         .padding(.bottom, AppSpacing.section)

@@ -9,6 +9,7 @@
 import SwiftUI
 
 struct RootView: View {
+    @Environment(\.appTheme) private var theme
     /// 현재 선택된 탭. DEBUG 빌드에 한해 환경변수 START_TAB로 초기 탭을 지정할 수 있다.
     @State private var selection: RootTab
     /// 탭 간 공유되는 도감 스토어(홈에서 부화 → 컬렉션에 반영). App에서 영속 store 주입.
@@ -83,7 +84,7 @@ struct RootView: View {
                 .tabItem { Label(RootTab.myPage.title, systemImage: RootTab.myPage.systemImage) }
                 .tag(RootTab.myPage)
         }
-        .tint(AppColor.eggAccent)
+        .tint(theme.onPageAccent)   // 선택 탭 글자가 밝은 탭바(파스텔 테마)에서도 읽히게
         .fullScreenCover(isPresented: .constant(!hasSeenOnboarding)) {
             OnboardingView { hasSeenOnboarding = true }
         }

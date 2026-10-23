@@ -15,6 +15,7 @@
 import SwiftUI
 
 struct CollectionView: View {
+    @Environment(\.appTheme) private var theme
     /// 발견한 생명체 목록. 외부 주입(기본값 = populated)으로 검수 가능.
     private let creatures: [Creature]
     /// 개체별 부화 후 Done한 집중 세션 수(진화 단계 파생). 기본은 0(갓 부화).
@@ -123,15 +124,15 @@ struct CollectionView: View {
         VStack(alignment: .leading, spacing: AppSpacing.elementTight) {
             Text("Collection")
                 .font(.title.weight(.bold))
-                .foregroundStyle(AppColor.textPrimary)
+                .foregroundStyle(theme.onPagePrimary)
             HStack {
                 Text("Friends discovered")
                     .font(AppFont.cardTitle)
-                    .foregroundStyle(AppColor.textSecondary)
+                    .foregroundStyle(theme.onPageSecondary)
                 Spacer()
                 Text("\(discovered.count)/\(allForms.count)")
                     .font(AppFont.cardTitle.weight(.bold))
-                    .foregroundStyle(AppColor.eggAccent)
+                    .foregroundStyle(theme.onPageAccent)
             }
             DiscoveryBar(fraction: allForms.isEmpty ? 0 : Double(discovered.count) / Double(allForms.count))
         }
@@ -234,7 +235,8 @@ private struct CollectionCard: View {
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, AppSpacing.elementTight * scale)
-        .background(AppColor.cardBackground.opacity(isDiscovered ? 1 : 0.5))
+        // 불투명 — 반투명이면 밝은 배경 테마에서 카드가 탁해진다.
+        .background(isDiscovered ? AppColor.cardBackground : AppColor.cardBackgroundMuted)
         .overlay(
             RoundedRectangle(cornerRadius: AppSpacing.cardCornerRadius)
                 .stroke(emphasized ? rarity.color : AppColor.border,
@@ -278,7 +280,8 @@ private struct FormDetailSheet: View {
 
     var body: some View {
         ZStack {
-            ThemedBackground()
+            // 상세 시트는 테마와 무관하게 다크 고정 — 등급색(레어 파랑 등)이 밝은 배경에선 안 읽힌다.
+            AppColor.pageBackground.ignoresSafeArea()
             // 작은 화면(.medium 높이)·가로 아이패드에서도 아래가 잘리지 않게 스크롤로 감싼다.
             // 내용이 짧으면 기존처럼 세로 가운데 정렬, 길면 위에서부터 스크롤.
             ScrollView {

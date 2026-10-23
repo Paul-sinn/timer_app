@@ -11,6 +11,7 @@
 import SwiftUI
 
 struct ProgressScreen: View {
+    @Environment(\.appTheme) private var theme
     /// 끝난 세션(실데이터는 FocusHistoryStore.sessions 주입, 프리뷰는 더미).
     private let sessions: [FocusSessionResult]
 
@@ -114,7 +115,7 @@ struct ProgressScreen: View {
                 VStack(alignment: .leading, spacing: AppSpacing.section) {
                     Text("Progress")
                         .font(.title.weight(.bold))
-                        .foregroundStyle(AppColor.textPrimary)
+                        .foregroundStyle(theme.onPagePrimary)
 
                     if sideBySide {
                         HStack(alignment: .top, spacing: AppSpacing.section) {
@@ -146,7 +147,7 @@ struct ProgressScreen: View {
         VStack(alignment: .leading, spacing: AppSpacing.elementTight) {
             Text("All-time")
                 .font(AppFont.cardTitle)
-                .foregroundStyle(AppColor.textSecondary)
+                .foregroundStyle(theme.onPageSecondary)
 
             HStack(spacing: AppSpacing.elementTight) {
                 StatCard(icon: "clock.fill", iconColor: AppColor.eggAccent,
@@ -212,7 +213,7 @@ struct ProgressScreen: View {
         VStack(alignment: .leading, spacing: AppSpacing.elementTight) {
             Text("Recent sessions")
                 .font(AppFont.cardTitle)
-                .foregroundStyle(AppColor.textSecondary)
+                .foregroundStyle(theme.onPageSecondary)
 
             VStack(spacing: AppSpacing.elementTight) {
                 ForEach(viewModel.recentSessions) { SessionRow(session: $0) }
@@ -226,13 +227,13 @@ struct ProgressScreen: View {
         VStack(spacing: AppSpacing.element) {
             Image(systemName: "chart.bar")
                 .font(.system(size: 48))
-                .foregroundStyle(AppColor.textDisabled)
+                .foregroundStyle(theme.onPageDisabled)
             Text("No records yet")
                 .font(AppFont.body)
-                .foregroundStyle(AppColor.textBody)
+                .foregroundStyle(theme.onPageBody)
             Text("Finish a focus session and it'll show up here")
                 .font(AppFont.cardTitle)
-                .foregroundStyle(AppColor.textSecondary)
+                .foregroundStyle(theme.onPageSecondary)
         }
         .padding(AppSpacing.section)
     }
