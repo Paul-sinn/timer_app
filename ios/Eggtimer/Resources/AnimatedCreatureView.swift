@@ -15,7 +15,8 @@
 //
 //  프레임 교체에는 어떤 암시적 애니메이션도 걸지 않는다(`.transaction { $0.animation = nil }`).
 //  부모(홈 진화 연출 등)의 애니메이션 트랜잭션이 흘러들어와 두 프레임이 크로스페이드로
-//  겹쳐 보이면 픽셀아트가 뭉개지기 때문. 움직임은 프레임 교체 + 1~3pt 정수 오프셋으로만 만든다.
+//  겹쳐 보이면 픽셀아트가 뭉개지기 때문. 움직임은 프레임 교체 + 정수 pt 오프셋으로만 만든다
+//  (평소 1~3pt, 탭·이벤트 반응 점프 `CreatureArt.hop`은 최대 10pt 계단).
 //
 
 import SwiftUI
@@ -27,10 +28,16 @@ struct AnimatedCreatureView: View {
     var stage: Int = 0
     /// false면 idle 프레임으로 고정(컬렉션 그리드처럼 조용해야 하는 자리).
     var animated: Bool = true
+    /// 값이 바뀔 때마다 한 번 폴짝 뛴다(탭·이벤트 반응). 처음 그려질 때의 값으론 뛰지 않는다.
+    var reactionTrigger: Int = 0
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.scenePhase) private var scenePhase
     @State private var frame: CreatureMotionFrame = .idle
+    /// 반응 점프 중의 높이. nil이면 평소 모션(`timing.lift`).
+    @State private var hopLift: CGFloat?
+    /// 마지막으로 처리한 `reactionTrigger`. nil = 아직 첫 등장 전.
+    @State private var seenReaction: Int?
 
     private var timing: CreatureMotionTiming { CreatureArt.timing(base: base, stage: stage) }
 
@@ -58,26 +65,39 @@ struct AnimatedCreatureView: View {
             .interpolation(.none)          // 픽셀아트 선명하게(업스케일 시 뭉개짐 방지)
             .resizable()
             .scaledToFit()                 // 가로·세로 강제 늘림 금지
-            .offset(y: frame == .action ? -timing.lift : 0)
+            .offset(y: -(hopLift ?? (frame == .action ? timing.lift : 0)))
             .transaction { $0.animation = nil }   // 프레임 전환은 항상 즉시(크로스페이드 금지)
-            // 키가 바뀌면(단계·재생여부·앱 상태) 이전 루프는 Cancel되고 새로 Start된다.
-            .task(id: "\(base)|\(stage)|\(shouldAnimate)|\(scenePhase)") {
+            // 키가 바뀌면(단계·재생여부·앱 상태·반응) 이전 루프는 Cancel되고 새로 Start된다.
+            .task(id: "\(base)|\(stage)|\(shouldAnimate)|\(scenePhase)|\(reactionTrigger)") {
                 await runMotionLoop()
             }
     }
 
     /// idle을 길게, action을 짧게 번갈아 토글. Cancel되면 루프 종료(뷰 소멸·단계 변경·백그라운드).
+    /// 반응으로 재시작됐으면 먼저 한 번 폴짝 뛰고 루프로 돌아간다(점프 중 연타 = 처음부터 다시 점프).
     private func runMotionLoop() async {
+        let reacting = seenReaction.map { $0 != reactionTrigger } ?? false
+        seenReaction = reactionTrigger
+        hopLift = nil
         guard shouldAnimate else { frame = .idle; return }
-        frame = .idle
 
-        // 같은 화면의 여러 캐릭터가 한 박자로 움직이지 않게 Start 위상을 살짝 어긋나게 한다.
-        let stagger = CreatureArt.phaseOffset(base: base, stage: stage) * timing.period
-        if await sleep(seconds: stagger) == false { return }
+        if reacting {
+            for step in CreatureArt.hop {
+                frame = step.frame
+                hopLift = step.lift
+                if await sleep(seconds: step.duration) == false { return }
+            }
+            hopLift = nil
+        } else {
+            frame = .idle
+            // 같은 화면의 여러 캐릭터가 한 박자로 움직이지 않게 Start 위상을 살짝 어긋나게 한다.
+            let stagger = CreatureArt.phaseOffset(base: base, stage: stage) * timing.period
+            if await sleep(seconds: stagger) == false { return }
+        }
 
         while !Task.isCancelled {
             frame = .idle
-            if await sleep(seconds: timing.idle) == false { return }
+            if await sleep(seconds: timing.idleDuration(roll: .random(in: 0..<1))) == false { return }
             frame = .action
             if await sleep(seconds: timing.action) == false { return }
         }

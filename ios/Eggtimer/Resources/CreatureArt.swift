@@ -37,6 +37,20 @@ nonisolated struct CreatureMotionTiming: Equatable, Sendable {
     let lift: CGFloat
 
     var period: Double { idle + action }
+
+    /// 이번 주기의 idle 시간. 메트로놈처럼 보이지 않게 가끔 길게 쉰다(최대 2.5배).
+    /// 짧아지진 않아 깜빡임 하한·데드리프트 리듬이 유지되고, roll³이라 대부분은 원래 박자 근처다.
+    /// - Parameter roll: 0..<1 난수(테스트는 고정값 주입).
+    func idleDuration(roll: Double) -> Double {
+        idle * (1 + 1.5 * roll * roll * roll)
+    }
+}
+
+/// 반응 점프의 한 칸: 이 프레임을 이 높이로 이 시간 동안 보여준다.
+nonisolated struct CreatureMotionStep: Equatable, Sendable {
+    let frame: CreatureMotionFrame
+    let lift: CGFloat
+    let duration: Double
 }
 
 nonisolated enum CreatureArt {
@@ -148,6 +162,18 @@ nonisolated enum CreatureArt {
             return CreatureMotionTiming(idle: 0.80, action: 0.35, lift: 2)
         }
     }
+
+    /// 탭·이벤트 반응: 동작 자세로 움츠렸다가 폴짝 뛰고 착지(약 0.4초).
+    /// 높이는 정수 pt 계단으로만 바꾼다 — 보간 애니메이션은 소수 pt를 거쳐 픽셀이 지글거린다.
+    static let hop: [CreatureMotionStep] = [
+        CreatureMotionStep(frame: .action, lift: 0,  duration: 0.08),   // 움츠림
+        CreatureMotionStep(frame: .action, lift: 5,  duration: 0.04),
+        CreatureMotionStep(frame: .action, lift: 9,  duration: 0.05),
+        CreatureMotionStep(frame: .action, lift: 10, duration: 0.06),   // 정점
+        CreatureMotionStep(frame: .action, lift: 9,  duration: 0.05),
+        CreatureMotionStep(frame: .action, lift: 5,  duration: 0.04),
+        CreatureMotionStep(frame: .idle,   lift: 0,  duration: 0.10),   // 착지
+    ]
 
     /// 여러 캐릭터가 한 화면에 있을 때 완전히 같은 박자로 움직이면 기계적으로 보인다.
     /// 이름에서 결정적으로 뽑은 0…1 위상으로 살짝 어긋나게 한다(런치마다 동일).

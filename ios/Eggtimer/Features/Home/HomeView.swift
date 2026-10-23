@@ -29,6 +29,8 @@ struct HomeView: View {
     @State private var lastMilestone = 0
     /// 방금 진화한 단계(연출/문구 노출용, 잠시 후 nil). nil = 진화 연출 없음.
     @State private var justEvolvedStage: Int?
+    /// 올릴 때마다 동료가 한 번 폴짝(탭·말풍선 반응).
+    @State private var creatureReaction = 0
     /// 현재 동료의 id(영속). 콜드런치(앱 재Start) 후 컬렉션에서 같은 개체를 복원해 홈에 다시 표시.
     /// 빈 문자열 = 동료 없음(첫 부화 전 또는 'Get new egg' 직후).
     @AppStorage("companionCreatureID") private var companionID = ""
@@ -649,9 +651,11 @@ struct HomeView: View {
                 .transition(.scale.combined(with: .opacity))
         } else if let hatchling {
             // 부화 후엔 idle/집중 무관하게 캐릭터가 알 자리를 유지(집중 세션 Done마다 단계 진화).
-            HatchedCenter(creature: hatchling, stage: companionStage, height: height)
+            HatchedCenter(creature: hatchling, stage: companionStage, height: height,
+                          reactionTrigger: creatureReaction)
                 .id("\(hatchling.id.uuidString)-\(companionStage)")   // 캐릭터·단계 바뀔 때마다 등장(진화) 연출 재생
                 .transition(.scale(scale: 0.6).combined(with: .opacity))
+                .onTapGesture { creatureReaction += 1 }               // 탭하면 폴짝
         } else {
             EggView(stageIndex: session.stageIndex, height: height)   // 알은 첫 부화 전까지만(진행도 → crack 6단계)
                 .transition(.opacity)
@@ -683,6 +687,11 @@ struct HomeView: View {
         }
         .frame(minHeight: 56)
         .animation(.easeInOut(duration: 0.25), value: dialogue.currentLine?.id)
+        .onChange(of: dialogue.currentLine?.id) { _, id in
+            // 이벤트 반응: 말풍선이 뜰 때(시작·마일스톤·복귀 등) 동료도 폴짝. 알 단계엔 동료 뷰가 없어 무시된다.
+            // body의 긴 수식어 사슬에 두면 타입 체크 시간 초과 → 말풍선 뷰에 붙인다.
+            if id != nil { creatureReaction += 1 }
+        }
     }
 
     // MARK: - 타이머 표시
@@ -903,6 +912,8 @@ private struct HatchedCenter: View {
     /// 진화 단계(0…max). 단계가 높을수록 글로우가 강해져 "성장한 느낌"을 준다.
     var stage: Int = 0
     var height: CGFloat = 240
+    /// 바뀔 때마다 한 번 폴짝(`AnimatedCreatureView.reactionTrigger`).
+    var reactionTrigger = 0
     @State private var appeared = false
     @State private var burst = false
 
@@ -938,7 +949,8 @@ private struct HatchedCenter: View {
             }
 
             // 진화 단계별 아트 + idle/action 2프레임 모션(에셋이 없는 종은 기존 이미지로 폴백).
-            AnimatedCreatureView(base: creature.displayImageName(stage: stage), stage: stage)
+            AnimatedCreatureView(base: creature.displayImageName(stage: stage), stage: stage,
+                                 reactionTrigger: reactionTrigger)
                 .frame(height: height * 0.82)
                 .scaleEffect(appeared ? 1 : 0.4)
                 .rotationEffect(.degrees(appeared ? 0 : -8))

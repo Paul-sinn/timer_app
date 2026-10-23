@@ -214,4 +214,50 @@ struct CreatureArtTests {
         #expect(CreatureArt.phaseOffset(base: "ChickenBro", stage: 2)
                 == CreatureArt.phaseOffset(base: "ChickenBro", stage: 2))
     }
+
+    // MARK: - 랜덤 쉼
+
+    @Test func restsGetLongerButNeverFaster() {
+        // 랜덤은 쉬는 시간만 늘린다 → 깜빡임 하한·데드리프트 리듬 최소치를 그대로 지킨다.
+        for base in CreatureArt.animatedBases {
+            for stage in 0...Creature.maxEvolutionStage {
+                let t = CreatureArt.timing(base: base, stage: stage)
+                #expect(t.idleDuration(roll: 0) == t.idle)
+                #expect(t.idleDuration(roll: 1) == t.idle * 2.5)
+            }
+        }
+    }
+
+    @Test func longRestsAreOccasional() {
+        // 대부분의 주기는 원래 박자 근처, 가끔만 길게 쉰다.
+        let t = CreatureArt.timing(base: "Dino", stage: 1)
+        #expect(t.idleDuration(roll: 0.5) < t.idle * 1.2)
+        #expect(t.idleDuration(roll: 0.25) < t.idleDuration(roll: 0.75))
+    }
+
+    // MARK: - 반응 점프(탭·이벤트)
+
+    @Test func hopCrouchesThenLandsBackOnTheGround() {
+        let hop = CreatureArt.hop
+        #expect(hop.first?.frame == .action)
+        #expect(hop.first?.lift == 0)
+        #expect(hop.last?.frame == .idle)
+        #expect(hop.last?.lift == 0)
+    }
+
+    @Test func hopMovesInWholePointsOnly() {
+        // 보간된 소수 pt 이동은 픽셀아트를 지글거리게 한다 → 정수 계단만.
+        for step in CreatureArt.hop {
+            #expect(step.lift == step.lift.rounded())
+            #expect((0...10).contains(step.lift))
+        }
+    }
+
+    @Test func hopIsQuickButEveryStepIsVisible() {
+        let total = CreatureArt.hop.reduce(0) { $0 + $1.duration }
+        #expect((0.25...0.5).contains(total))
+        for step in CreatureArt.hop {
+            #expect(step.duration >= 1.0 / 30)   // 60fps 기준 2프레임 이상
+        }
+    }
 }

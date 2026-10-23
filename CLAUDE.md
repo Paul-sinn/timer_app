@@ -179,3 +179,8 @@ xcrun xcresulttool get test-results summary --path /tmp/res.xcresult
   - 증상: `String(localized: "mode.normal", defaultValue: "Timer")`를 보고 "영어 UI는 Timer"라고 체크리스트를 고쳤는데, 실제 영어 화면(기존 스크린샷)은 `Normal`.
   - 원인: 키 기반 문자열은 **`Localizable.xcstrings`의 en 값("Normal")이 defaultValue를 덮는다.** defaultValue는 번역이 없을 때만 쓰인다.
   - 교훈: 유저에게 보이는 문구를 단정할 땐 코드가 아니라 **문자열 카탈로그(또는 실제 화면)**에서 확인한다.
+
+- **2026-10-23 · `HomeView.body` 수식어 사슬에 `.onChange` 하나 추가 → "unable to type-check in reasonable time"**
+  - 증상: 동료 반응 점프용 `.onChange(of: dialogue.currentLine?.id)`를 body 끝 `.onChange` 묶음에 붙였더니 `HomeView.swift:364`에서 타입 체크 시간 초과(TEST BUILD FAILED).
+  - 원인: `HomeView.body`는 `.onChange`·`.sensoryFeedback`·`.sheet`·`.overlay`가 이미 한계까지 이어진 단일 식이다. 하나만 더해도 타입체커가 포기한다.
+  - 교훈: `HomeView.body` 사슬에 수식어를 더하지 말 것. 그 상태를 실제로 그리는 **하위 뷰(예: `dialogueBubble`)에 붙이거나** 별도 `ViewModifier`/computed view로 쪼갠다.
