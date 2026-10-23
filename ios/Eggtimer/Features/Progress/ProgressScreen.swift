@@ -90,10 +90,10 @@ struct ProgressScreen: View {
             }
             .padding(AppSpacing.section)
             .frame(maxWidth: 320)
-            .background(AppColor.cardBackground)
+            .background(theme.cardBackground)
             .clipShape(RoundedRectangle(cornerRadius: AppSpacing.cardCornerRadius))
             .overlay(RoundedRectangle(cornerRadius: AppSpacing.cardCornerRadius)
-                .stroke(AppColor.border, lineWidth: AppSpacing.borderWidth))
+                .stroke(theme.cardBorder, lineWidth: AppSpacing.borderWidth))
             .padding(AppSpacing.section)
             .transition(.scale(scale: 0.9).combined(with: .opacity))
         }
@@ -305,6 +305,7 @@ private struct ChartYAxis: View {
 
 /// Weekly 막대그래프(플롯만 — 좌측 y축이 시간 스케일 제공). 최고 막대는 골드.
 private struct WeeklyBarChart: View {
+    @Environment(\.appTheme) private var theme
     let values: [Double]
     let labels: [String]
     let maxValue: Double
@@ -316,7 +317,7 @@ private struct WeeklyBarChart: View {
             HStack(alignment: .bottom, spacing: 8) {
                 ForEach(values.indices, id: \.self) { i in
                     RoundedRectangle(cornerRadius: 4)
-                        .fill(i == maxIdx ? AppColor.eggAccent : AppColor.border)
+                        .fill(i == maxIdx ? AppColor.eggAccent : theme.cardBorder)
                         .frame(height: max(plotHeight * (values[i] / maxValue), 2))
                         .frame(maxWidth: .infinity)
                 }

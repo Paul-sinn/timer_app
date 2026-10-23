@@ -87,6 +87,7 @@ struct RootView: View {
         .tint(theme.onPageAccent)   // 선택 탭 글자가 밝은 탭바(파스텔 테마)에서도 읽히게
         .fullScreenCover(isPresented: .constant(!hasSeenOnboarding)) {
             OnboardingView { hasSeenOnboarding = true }
+                .environment(\.appTheme, .nest)   // 온보딩은 테마와 무관하게 기본 다크
         }
     }
 

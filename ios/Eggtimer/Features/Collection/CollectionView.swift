@@ -182,12 +182,13 @@ struct CollectionView: View {
 
 /// 발견 진행 바. 채워진 비율만큼 골드 그라데이션.
 private struct DiscoveryBar: View {
+    @Environment(\.appTheme) private var theme
     let fraction: Double
 
     var body: some View {
         GeometryReader { geo in
             ZStack(alignment: .leading) {
-                Capsule().fill(AppColor.border)
+                Capsule().fill(theme.cardBorder)
                 Capsule()
                     .fill(LinearGradient(colors: [AppColor.eggAccent.opacity(0.7), AppColor.eggAccent],
                                          startPoint: .leading, endPoint: .trailing))
@@ -201,6 +202,7 @@ private struct DiscoveryBar: View {
 /// 도감 카드. 발견 폼이면 도달 최고 단계 아트, 미발견이면 실루엣. 하단에 등급 태그.
 /// 내용 크기는 `scale`로 카드 폭을 따라간다(아이폰 = 1, 기존과 동일).
 private struct CollectionCard: View {
+    @Environment(\.appTheme) private var theme
     let form: CreatureForm
     /// 발견 개체(이름 표시용). nil이면 미발견.
     let creature: Creature?
@@ -236,10 +238,10 @@ private struct CollectionCard: View {
         .frame(maxWidth: .infinity)
         .padding(.vertical, AppSpacing.elementTight * scale)
         // 불투명 — 반투명이면 밝은 배경 테마에서 카드가 탁해진다.
-        .background(isDiscovered ? AppColor.cardBackground : AppColor.cardBackgroundMuted)
+        .background(isDiscovered ? theme.cardBackground : theme.cardBackgroundMuted)
         .overlay(
             RoundedRectangle(cornerRadius: AppSpacing.cardCornerRadius)
-                .stroke(emphasized ? rarity.color : AppColor.border,
+                .stroke(emphasized ? rarity.color : theme.cardBorder,
                         lineWidth: emphasized ? 1.5 : AppSpacing.borderWidth)
         )
         .clipShape(RoundedRectangle(cornerRadius: AppSpacing.cardCornerRadius))
@@ -341,6 +343,7 @@ private struct FormDetailSheet: View {
         // 아이패드(넓은 창)에선 폼 시트 크기로. 아이폰(좁은 폭)은 기존 바텀시트 그대로.
         .presentationSizing(.form)
         .preferredColorScheme(.dark)
+        .environment(\.appTheme, .nest)   // 상세 시트는 테마와 무관하게 기본(다크) 카드·테두리
         .onAppear {
             if let creature {
                 quote = DialogueCatalog.greetingLines(for: creature.personality).randomElement()?.text

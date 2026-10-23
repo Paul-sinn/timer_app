@@ -491,7 +491,7 @@ struct HomeView: View {
         .foregroundStyle(AppColor.eggAccent)
         .padding(.horizontal, 8)
         .padding(.vertical, 4)
-        .background(AppColor.cardBackground)
+        .background(theme.cardBackground)
         .clipShape(Capsule())
         .overlay(Capsule().stroke(AppColor.eggAccent.opacity(0.5), lineWidth: AppSpacing.borderWidth))
         .scaleEffect(zapBonusPercent != nil ? 1.12 : 1.0)
@@ -534,9 +534,9 @@ struct HomeView: View {
             .foregroundStyle(AppColor.textSecondary)
             .padding(.horizontal, 10)
             .padding(.vertical, 6)
-            .background(AppColor.cardBackground)
+            .background(theme.cardBackground)
             .clipShape(Capsule())
-            .overlay(Capsule().stroke(AppColor.border, lineWidth: AppSpacing.borderWidth))
+            .overlay(Capsule().stroke(theme.cardBorder, lineWidth: AppSpacing.borderWidth))
         }
         .buttonStyle(.plain)
     }
@@ -588,9 +588,9 @@ struct HomeView: View {
             }
         }
         .padding(3)
-        .background(AppColor.cardBackground)
+        .background(theme.cardBackground)
         .clipShape(Capsule())
-        .overlay(Capsule().stroke(AppColor.border, lineWidth: AppSpacing.borderWidth))
+        .overlay(Capsule().stroke(theme.cardBorder, lineWidth: AppSpacing.borderWidth))
         .frame(maxWidth: 220)
         .animation(.easeInOut(duration: 0.2), value: session.mode)
     }
@@ -610,9 +610,9 @@ struct HomeView: View {
             .foregroundStyle(AppColor.textBody)
             .padding(.horizontal, AppSpacing.elementTight)
             .padding(.vertical, 7)
-            .background(AppColor.cardBackground)
+            .background(theme.cardBackground)
             .clipShape(Capsule())
-            .overlay(Capsule().stroke(AppColor.border, lineWidth: AppSpacing.borderWidth))
+            .overlay(Capsule().stroke(theme.cardBorder, lineWidth: AppSpacing.borderWidth))
         }
     }
 
@@ -676,8 +676,8 @@ struct HomeView: View {
                     .padding(.horizontal, 14)
                     .padding(.top, 9)
                     .padding(.bottom, 15)          // 꼬리 공간 확보
-                    .background(BubbleShape().fill(AppColor.cardBackground))
-                    .overlay(BubbleShape().stroke(AppColor.border, lineWidth: AppSpacing.borderWidth))
+                    .background(BubbleShape().fill(theme.cardBackground))
+                    .overlay(BubbleShape().stroke(theme.cardBorder, lineWidth: AppSpacing.borderWidth))
                     .transition(.opacity.combined(with: .scale(scale: 0.92)))
                     .id(line.id)
             }
@@ -769,10 +769,10 @@ struct HomeView: View {
                 .padding(AppSpacing.section)
             }
             .frame(maxWidth: 320)
-            .background(AppColor.cardBackground)
+            .background(theme.cardBackground)
             .clipShape(RoundedRectangle(cornerRadius: AppSpacing.cardCornerRadius))
             .overlay(RoundedRectangle(cornerRadius: AppSpacing.cardCornerRadius)
-                .stroke(AppColor.border, lineWidth: AppSpacing.borderWidth))
+                .stroke(theme.cardBorder, lineWidth: AppSpacing.borderWidth))
             .padding(AppSpacing.section)
             .transition(.scale(scale: 0.9).combined(with: .opacity))
         }
@@ -819,10 +819,10 @@ struct HomeView: View {
                 .padding(AppSpacing.section)
             }
             .frame(maxWidth: 320)
-            .background(AppColor.cardBackground)
+            .background(theme.cardBackground)
             .clipShape(RoundedRectangle(cornerRadius: AppSpacing.cardCornerRadius))
             .overlay(RoundedRectangle(cornerRadius: AppSpacing.cardCornerRadius)
-                .stroke(AppColor.border, lineWidth: AppSpacing.borderWidth))
+                .stroke(theme.cardBorder, lineWidth: AppSpacing.borderWidth))
             .padding(AppSpacing.section)
             .transition(.scale(scale: 0.9).combined(with: .opacity))
         }
@@ -837,7 +837,7 @@ struct HomeView: View {
             HStack(spacing: 3) {
                 ForEach(0..<3, id: \.self) { i in
                     Circle()
-                        .fill(i < filled ? AppColor.eggAccent : AppColor.border)
+                        .fill(i < filled ? AppColor.eggAccent : theme.cardBorder)
                         .frame(width: 5, height: 5)
                 }
             }
@@ -958,6 +958,7 @@ private struct HatchedCenter: View {
 
 /// 부화한 생명체의 이름·등급 카드(중앙 무대 아래 인라인). 모달 대신 화면에 머문다.
 private struct HatchRevealCard: View {
+    @Environment(\.appTheme) private var theme
     let creature: Creature
 
     var body: some View {
@@ -979,9 +980,9 @@ private struct HatchRevealCard: View {
         .padding(.horizontal, AppSpacing.element)
         .padding(.vertical, AppSpacing.elementTight)
         .frame(maxWidth: .infinity)
-        .background(AppColor.cardBackground)
+        .background(theme.cardBackground)
         .overlay(RoundedRectangle(cornerRadius: AppSpacing.cardCornerRadius)
-            .stroke(creature.rarity == .legendary ? AppColor.eggAccent : AppColor.border,
+            .stroke(creature.rarity == .legendary ? AppColor.eggAccent : theme.cardBorder,
                     lineWidth: creature.rarity == .legendary ? 1.5 : AppSpacing.borderWidth))
         .clipShape(RoundedRectangle(cornerRadius: AppSpacing.cardCornerRadius))
     }
@@ -1024,6 +1025,7 @@ private struct BreakView: View {
 
 /// 6단계 부화 진행 스텝퍼. 채워진 단계는 골드 점, 사이는 연결선.
 private struct StageStepper: View {
+    @Environment(\.appTheme) private var theme
     let current: Int
     let total: Int
 
@@ -1031,11 +1033,11 @@ private struct StageStepper: View {
         HStack(spacing: 6) {
             ForEach(0..<total, id: \.self) { i in
                 Circle()
-                    .fill(i <= current ? AppColor.eggAccent : AppColor.border)
+                    .fill(i <= current ? AppColor.eggAccent : theme.cardBorder)
                     .frame(width: i == current ? 12 : 9, height: i == current ? 12 : 9)
                 if i < total - 1 {
                     Rectangle()
-                        .fill(i < current ? AppColor.eggAccent : AppColor.border)
+                        .fill(i < current ? AppColor.eggAccent : theme.cardBorder)
                         .frame(height: 2)
                 }
             }

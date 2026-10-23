@@ -12,6 +12,7 @@
   - [x] 대비 4.5:1 테스트(`AppThemeTests`) — Cocoa 보조·강조색 별도 조정
   - [x] 도감 상세 시트·온보딩은 다크 고정 유지, 미발견 카드 불투명화
   - [x] 파스텔 보정: Primary 버튼 윤곽선, 글로우 screen 합성, 탭 tint = `onPageAccent`
+  - [x] 카드를 테마색으로 물든 진한 타일로(`theme.cardBackground/cardBackgroundMuted/cardBorder`). 반투명 유리 카드는 사용자 기각(파스텔+검정 = 회색 탁함). 상세 시트·온보딩은 `.nest` 고정
   - [x] CLAUDE.md "다크모드 고정" 규칙 갱신
   - [ ] 탭바: iOS 26 Liquid Glass라 파스텔에선 밝은 유리로 보임(계획은 다크 고정) → 사용자 확인
   - [ ] 테마 피커 화면 시각 확인(설정 시트 안이라 자동 캡처 못 함) · 아이패드 확인

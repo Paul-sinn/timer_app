@@ -98,6 +98,35 @@ struct AppThemeTests {
         }
     }
 
+    // MARK: - 카드(테마색으로 물든 진한 타일)
+
+    @Test func nestCardsMatchLegacyTokens() {
+        // 회귀: 기본 테마 카드 = 기존 카드색 그대로.
+        #expect(AppTheme.nest.cardBackground == AppColor.cardBackground)
+        #expect(AppTheme.nest.cardBackgroundMuted == AppColor.cardBackgroundMuted)
+        #expect(AppTheme.nest.cardBorder == AppColor.border)
+    }
+
+    @Test func cardTextIsReadableOnEveryTheme() {
+        // 카드 안 글자는 테마와 무관하게 AppColor 그대로 → 물든 카드 위에서도 읽혀야 한다.
+        let inCard: [(String, Color)] = [
+            ("textPrimary", AppColor.textPrimary),
+            ("textBody", AppColor.textBody),
+            ("textSecondary", AppColor.textSecondary),
+            ("eggAccent", AppColor.eggAccent),
+            ("rare", AppColor.rare),
+            ("legendary", AppColor.legendary),
+            ("success", AppColor.success),
+            ("danger", AppColor.danger),
+        ]
+        for theme in AppTheme.allCases {
+            for (role, color) in inCard {
+                let ratio = contrast(color, theme.cardBackground)
+                #expect(ratio >= 4.5, "\(theme) 카드 위 \(role) 대비 \(ratio)")
+            }
+        }
+    }
+
     // MARK: - helpers
 
     /// WCAG 2.x 상대 휘도 대비.

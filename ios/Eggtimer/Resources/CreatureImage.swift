@@ -10,6 +10,7 @@
 import SwiftUI
 
 struct CreatureImage: View {
+    @Environment(\.appTheme) private var theme
     /// 렌더할 에셋명.
     let imageName: String
     /// 배경/테두리 색을 결정하는 레어도.
@@ -35,7 +36,7 @@ struct CreatureImage: View {
                 .fill(silhouette ? Color.white.opacity(0.03) : rarity.color.opacity(0.14))
                 .overlay(
                     RoundedRectangle(cornerRadius: AppSpacing.cardCornerRadius)
-                        .stroke(silhouette ? AppColor.border : rarity.color.opacity(0.45),
+                        .stroke(silhouette ? theme.cardBorder : rarity.color.opacity(0.45),
                                 lineWidth: AppSpacing.borderWidth)
                 )
 

@@ -10,6 +10,7 @@
 import SwiftUI
 
 struct DangerButton: View {
+    @Environment(\.appTheme) private var theme
     private let title: LocalizedStringKey
     private let action: () -> Void
 
@@ -25,7 +26,7 @@ struct DangerButton: View {
                 .foregroundStyle(AppColor.danger)
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, AppSpacing.elementTight)
-                .background(AppColor.cardBackground,
+                .background(theme.cardBackground,
                             in: RoundedRectangle(cornerRadius: AppSpacing.buttonCornerRadius))
                 .overlay(
                     RoundedRectangle(cornerRadius: AppSpacing.buttonCornerRadius)

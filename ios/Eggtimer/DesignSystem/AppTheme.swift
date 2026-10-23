@@ -83,6 +83,44 @@ enum AppTheme: String, CaseIterable, Identifiable {
         }
     }
 
+    // MARK: 카드(배경 위 어두운 타일). 테마 색 계열로 물든 진한 색이라 배경과 어울린다.
+    // 카드 안 글자는 AppColor 크림 그대로 — 대비 4.5:1은 AppThemeTests가 강제.
+
+    var cardBackground: Color {
+        switch self {
+        case .nest:     return AppColor.cardBackground
+        case .midnight: return Color(hex: 0x161C30)   // 페이지(네이비)보다 한 톤 깊게
+        case .cocoa:    return Color(hex: 0x2E211B)
+        case .butter:   return Color(hex: 0x2E2312)   // 진한 꿀갈색
+        case .mint:     return Color(hex: 0x1A271F)   // 진한 숲색
+        case .lavender: return Color(hex: 0x271F33)   // 진한 자두색
+        }
+    }
+
+    /// 미발견 도감 카드(카드보다 한 톤 어둡게).
+    var cardBackgroundMuted: Color {
+        switch self {
+        case .nest:     return AppColor.cardBackgroundMuted
+        case .midnight: return Color(hex: 0x121729)
+        case .cocoa:    return Color(hex: 0x261B16)
+        case .butter:   return Color(hex: 0x261D0F)
+        case .mint:     return Color(hex: 0x15201A)
+        case .lavender: return Color(hex: 0x201A2B)
+        }
+    }
+
+    /// 카드 테두리·구분선·비활성 막대.
+    var cardBorder: Color {
+        switch self {
+        case .nest:     return AppColor.border
+        case .midnight: return Color(hex: 0x2C3555)
+        case .cocoa:    return Color(hex: 0x4A3830)
+        case .butter:   return Color(hex: 0x4A3A22)
+        case .mint:     return Color(hex: 0x2F4637)
+        case .lavender: return Color(hex: 0x3F3352)
+        }
+    }
+
     /// 캐릭터·알 뒤 글로우 합성. 밝은 배경에서 일반 합성이면 회색 얼룩처럼 보여서 screen(밝히기)으로.
     var glowBlendMode: BlendMode { colorScheme == .light ? .screen : .normal }
 
