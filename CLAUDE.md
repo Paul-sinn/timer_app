@@ -176,6 +176,11 @@ xcrun xcresulttool get test-results summary --path /tmp/res.xcresult
   - 원인: 리터럴 산술 여러 개 + CGFloat 추론 조합이 타입체커 조합 폭발을 일으킴.
   - 교훈: 테스트 입력값은 **계산된 상수로 적고 주석에 유도식**을 남긴다(`let widths: [CGFloat] = [327, 345]  // 375-48, 393-48`).
 
+- **2026-10-23 · `git switch main` 실패를 못 보고 다른 브랜치 테스트 결과를 main 것으로 읽을 뻔함**
+  - 증상: `git switch -q main && ...; xcodebuild test`로 main을 검증했는데 260개 통과 — 실제로는 feat 브랜치 결과였다. main은 270개.
+  - 원인: main이 다른 세션의 worktree(`timer_app-reactions`)에 체크아웃돼 있어 `fatal: 'main' is already used by worktree`로 switch 실패. 그 뒤를 `;`로 이어서 테스트가 그냥 돌았다.
+  - 교훈: 특정 브랜치를 검증할 땐 **결과 보고 전에 HEAD 커밋을 확인**하고, 실패하면 멈추도록 `&&`로만 잇는다. 다른 worktree가 잡고 있는 브랜치는 `git worktree add --detach <임시경로> <브랜치>`로 따로 꺼내 검증하고 끝나면 `git worktree remove`.
+
 - **2026-10-12 · 코드의 `defaultValue`만 보고 UI 문구를 단정 → 틀린 정정**
   - 증상: `String(localized: "mode.normal", defaultValue: "Timer")`를 보고 "영어 UI는 Timer"라고 체크리스트를 고쳤는데, 실제 영어 화면(기존 스크린샷)은 `Normal`.
   - 원인: 키 기반 문자열은 **`Localizable.xcstrings`의 en 값("Normal")이 defaultValue를 덮는다.** defaultValue는 번역이 없을 때만 쓰인다.
