@@ -55,9 +55,10 @@ struct SettingInfoRow: View {
 
 /// Settings 행 사이 구분선.
 struct SettingDivider: View {
+    @Environment(\.appTheme) private var theme
     var body: some View {
         Rectangle()
-            .fill(AppColor.border)
+            .fill(theme.cardBorder)
             .frame(height: AppSpacing.borderWidth)
     }
 }

@@ -22,6 +22,8 @@ struct EggtimerApp: App {
     @State private var sync: SyncCoordinator
     /// "Hatcho Pro" 접근 게이트(테마 등 유료 콘텐츠 gate). 명시적 @MainActor라 init에서 생성.
     @State private var pro: ProAccess
+    /// 선택된 배경 테마(설정 → Theme). 하위 화면에 환경값으로 주입하고 colorScheme을 정한다.
+    @AppStorage(AppTheme.storageKey) private var themeRaw = AppTheme.nest.rawValue
 
     init() {
         // 영속 스토어 로드가 실패해도(향후 마이그레이션 실패·손상 등) 전 유저 런치 크래시를 막는다.
@@ -50,11 +52,14 @@ struct EggtimerApp: App {
         #endif
     }
 
+    private var theme: AppTheme { AppTheme(rawValue: themeRaw) ?? .nest }
+
     var body: some Scene {
         WindowGroup {
             RootView(store: store, history: history, auth: auth, sync: sync)
                 .environment(pro)            // Pro 게이트 주입(테마 피커 등 하위·시트가 상속)
-                .preferredColorScheme(.dark) // 다크모드 고정 (ADR/UI_GUIDE)
+                .environment(\.appTheme, theme)
+                .preferredColorScheme(theme.colorScheme) // 파스텔 테마만 라이트(상태바가 어두워짐), 나머지 다크
                 .modelContainer(container)
                 #if canImport(GoogleSignIn)
                 .onOpenURL { GoogleAuth.handle($0) }

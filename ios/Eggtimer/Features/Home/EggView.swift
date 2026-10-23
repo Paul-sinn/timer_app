@@ -11,6 +11,7 @@
 import SwiftUI
 
 struct EggView: View {
+    @Environment(\.appTheme) private var theme
     /// 알 이미지 단계 0 ~ 5(부화 직전). 진행도 6분할(EggState.visualStages).
     let stageIndex: Int
     /// 알 높이 기준 크기(pt).
@@ -54,6 +55,7 @@ struct EggView: View {
                     )
                 )
                 .frame(width: height * 1.25, height: height * 1.25)
+                .blendMode(theme.glowBlendMode)
 
             Image(assetName)
                 .interpolation(.none)        // 픽셀아트 선명하게

@@ -13,6 +13,7 @@ import SwiftUI
 import AuthenticationServices
 
 struct MyPageView: View {
+    @Environment(\.appTheme) private var theme
     /// 프로필/통계에 쓰는 더미 유저 상태. 외부 주입(기본값 = populated)으로 검수 가능.
     private let user: AppSnapshot
 
@@ -65,7 +66,7 @@ struct MyPageView: View {
                 VStack(alignment: .leading, spacing: AppSpacing.section) {
                     Text("MyPage")
                         .font(.title.weight(.bold))
-                        .foregroundStyle(AppColor.textPrimary)
+                        .foregroundStyle(theme.onPagePrimary)
                         .frame(maxWidth: .infinity, alignment: .leading)
 
                     profileHeader
@@ -152,7 +153,7 @@ struct MyPageView: View {
         VStack(alignment: .leading, spacing: AppSpacing.elementTight) {
             Text("Account")
                 .font(AppFont.cardTitle)
-                .foregroundStyle(AppColor.textSecondary)
+                .foregroundStyle(theme.onPageSecondary)
 
             if auth.isAuthenticated {
                 signedInView
@@ -167,7 +168,7 @@ struct MyPageView: View {
     private var signedOutView: some View {
         Text("Sign in to back up your focus history and creatures to the cloud and continue on your other devices.")
             .font(AppFont.cardTitle)
-            .foregroundStyle(AppColor.textSecondary)
+            .foregroundStyle(theme.onPageSecondary)
             .fixedSize(horizontal: false, vertical: true)
 
         SignInWithAppleButton(.continue) { request in
@@ -430,7 +431,7 @@ struct MyPageView: View {
         VStack(alignment: .leading, spacing: AppSpacing.elementTight) {
             Text("Developer (DEBUG)")
                 .font(AppFont.cardTitle)
-                .foregroundStyle(AppColor.textSecondary)
+                .foregroundStyle(theme.onPageSecondary)
 
             AppCard {
                 VStack(alignment: .leading, spacing: AppSpacing.element) {

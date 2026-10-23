@@ -15,6 +15,7 @@ enum AppColor {
     // 배경 (웜 브라운 그라운드)
     static let pageBackground = Color(hex: 0x171310)   // 페이지 (잉크 브라운)
     static let cardBackground = Color(hex: 0x221B16)   // 카드/시트 (레이즈드)
+    static let cardBackgroundMuted = Color(hex: 0x1C1713) // 미발견 카드 (카드색 50%를 기본 페이지에 얹은 색, 불투명)
     static let tabBarBackground = Color(hex: 0x1B1510) // 탭바
 
     // 텍스트 (웜 크림 계열)

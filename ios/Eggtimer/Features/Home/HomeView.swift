@@ -14,6 +14,7 @@ import OSLog
 
 struct HomeView: View {
     @Environment(\.scenePhase) private var scenePhase
+    @Environment(\.appTheme) private var theme
     @State private var session: SessionManager
     private let store: CollectionStore
     private let history: FocusHistoryStore
@@ -494,7 +495,7 @@ struct HomeView: View {
         .foregroundStyle(AppColor.eggAccent)
         .padding(.horizontal, 8)
         .padding(.vertical, 4)
-        .background(AppColor.cardBackground)
+        .background(theme.cardBackground)
         .clipShape(Capsule())
         .overlay(Capsule().stroke(AppColor.eggAccent.opacity(0.5), lineWidth: AppSpacing.borderWidth))
         .scaleEffect(zapBonusPercent != nil ? 1.12 : 1.0)
@@ -507,7 +508,7 @@ struct HomeView: View {
         HStack {
             Text("Home")
                 .font(.title.weight(.bold))
-                .foregroundStyle(AppColor.textPrimary)
+                .foregroundStyle(theme.onPagePrimary)
             Spacer()
             // 최종 진화 상태에선 집중이 끊김없이 이어지므로, 새 종을 받고 싶은 유저용
             // 작은 "New egg" 토글을 우상단에 배치(UI 방해 최소화). 그 외엔 Settings 아이콘.
@@ -517,7 +518,7 @@ struct HomeView: View {
                 Button { showSettings = true } label: {
                     Image(systemName: "gearshape")
                         .font(.title3)
-                        .foregroundStyle(AppColor.textSecondary)
+                        .foregroundStyle(theme.onPageSecondary)
                 }
                 .buttonStyle(.plain)
             }
@@ -537,9 +538,9 @@ struct HomeView: View {
             .foregroundStyle(AppColor.textSecondary)
             .padding(.horizontal, 10)
             .padding(.vertical, 6)
-            .background(AppColor.cardBackground)
+            .background(theme.cardBackground)
             .clipShape(Capsule())
-            .overlay(Capsule().stroke(AppColor.border, lineWidth: AppSpacing.borderWidth))
+            .overlay(Capsule().stroke(theme.cardBorder, lineWidth: AppSpacing.borderWidth))
         }
         .buttonStyle(.plain)
     }
@@ -565,7 +566,7 @@ struct HomeView: View {
                         Image(systemName: "questionmark.circle")
                             .font(.system(size: 18))
                     }
-                    .foregroundStyle(AppColor.textSecondary)
+                    .foregroundStyle(theme.onPageSecondary)
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel(Text("How Pomodoro works"))
@@ -591,9 +592,9 @@ struct HomeView: View {
             }
         }
         .padding(3)
-        .background(AppColor.cardBackground)
+        .background(theme.cardBackground)
         .clipShape(Capsule())
-        .overlay(Capsule().stroke(AppColor.border, lineWidth: AppSpacing.borderWidth))
+        .overlay(Capsule().stroke(theme.cardBorder, lineWidth: AppSpacing.borderWidth))
         .frame(maxWidth: 220)
         .animation(.easeInOut(duration: 0.2), value: session.mode)
     }
@@ -613,9 +614,9 @@ struct HomeView: View {
             .foregroundStyle(AppColor.textBody)
             .padding(.horizontal, AppSpacing.elementTight)
             .padding(.vertical, 7)
-            .background(AppColor.cardBackground)
+            .background(theme.cardBackground)
             .clipShape(Capsule())
-            .overlay(Capsule().stroke(AppColor.border, lineWidth: AppSpacing.borderWidth))
+            .overlay(Capsule().stroke(theme.cardBorder, lineWidth: AppSpacing.borderWidth))
         }
     }
 
@@ -678,21 +679,21 @@ struct HomeView: View {
         ZStack {
             if let line = dialogue.currentLine {
                 Text(line.text)
-                    .font(AppFont.cardTitle)
+                    .font(AppFont.dialogue)
                     .foregroundStyle(AppColor.textBody)
                     .multilineTextAlignment(.center)
                     .lineLimit(2)
                     .fixedSize(horizontal: false, vertical: true)
-                    .padding(.horizontal, 14)
-                    .padding(.top, 9)
-                    .padding(.bottom, 15)          // 꼬리 공간 확보
-                    .background(BubbleShape().fill(AppColor.cardBackground))
-                    .overlay(BubbleShape().stroke(AppColor.border, lineWidth: AppSpacing.borderWidth))
+                    .padding(.horizontal, 16)
+                    .padding(.top, 10)
+                    .padding(.bottom, 16)          // 꼬리 공간 확보
+                    .background(BubbleShape().fill(theme.cardBackground))
+                    .overlay(BubbleShape().stroke(theme.cardBorder, lineWidth: AppSpacing.borderWidth))
                     .transition(.opacity.combined(with: .scale(scale: 0.92)))
                     .id(line.id)
             }
         }
-        .frame(minHeight: 56)
+        .frame(minHeight: 60)   // 한 줄 대사 높이(글자 15pt + 위아래 여백) — 대사가 사라져도 레이아웃이 안 튄다
         .animation(.easeInOut(duration: 0.25), value: dialogue.currentLine?.id)
         .onChange(of: dialogue.currentLine?.id) { _, id in
             // 이벤트 반응: 말풍선이 뜰 때(시작·마일스톤·복귀 등) 동료도 폴짝. 알 단계엔 동료 뷰가 없어 무시된다.
@@ -708,12 +709,12 @@ struct HomeView: View {
         VStack(spacing: AppSpacing.elementTight) {
             Text(session.timerDisplay)
                 .font(AppFont.timer(size: fontSize))
-                .foregroundStyle(AppColor.textPrimary)
+                .foregroundStyle(theme.onPagePrimary)
                 .monospacedDigit()
                 .opacity(justHatched || justEvolvedStage != nil ? 0.3 : 1)
             Text(headerSubtitle.text)
                 .font(AppFont.body)
-                .foregroundStyle(headerSubtitle.highlight ? AppColor.eggAccent : AppColor.textSecondary)
+                .foregroundStyle(headerSubtitle.highlight ? theme.onPageAccent : theme.onPageSecondary)
                 .multilineTextAlignment(.center)
                 .fixedSize(horizontal: false, vertical: true)   // 무대(알)가 공간을 먼저 가져가도 문구가 잘리지 않게
         }
@@ -726,11 +727,11 @@ struct HomeView: View {
             HStack {
                 Text("Hatch progress")
                     .font(AppFont.cardTitle)
-                    .foregroundStyle(AppColor.textSecondary)
+                    .foregroundStyle(theme.onPageSecondary)
                 Spacer()
                 Text(session.stageCaption)
                     .font(AppFont.cardTitle)
-                    .foregroundStyle(AppColor.textSecondary)
+                    .foregroundStyle(theme.onPageSecondary)
             }
             StageStepper(current: session.stageIndex, total: EggState.visualStages)
         }
@@ -743,7 +744,7 @@ struct HomeView: View {
         } label: {
             Image(systemName: "questionmark.circle")
                 .font(.system(size: 18))
-                .foregroundStyle(AppColor.textSecondary)
+                .foregroundStyle(theme.onPageSecondary)
         }
         .buttonStyle(.plain)
         .accessibilityLabel(Text("About focus rewards"))
@@ -784,10 +785,10 @@ struct HomeView: View {
                 .padding(AppSpacing.section)
             }
             .frame(maxWidth: 320)
-            .background(AppColor.cardBackground)
+            .background(theme.cardBackground)
             .clipShape(RoundedRectangle(cornerRadius: AppSpacing.cardCornerRadius))
             .overlay(RoundedRectangle(cornerRadius: AppSpacing.cardCornerRadius)
-                .stroke(AppColor.border, lineWidth: AppSpacing.borderWidth))
+                .stroke(theme.cardBorder, lineWidth: AppSpacing.borderWidth))
             .padding(AppSpacing.section)
             .transition(.scale(scale: 0.9).combined(with: .opacity))
         }
@@ -834,10 +835,10 @@ struct HomeView: View {
                 .padding(AppSpacing.section)
             }
             .frame(maxWidth: 320)
-            .background(AppColor.cardBackground)
+            .background(theme.cardBackground)
             .clipShape(RoundedRectangle(cornerRadius: AppSpacing.cardCornerRadius))
             .overlay(RoundedRectangle(cornerRadius: AppSpacing.cardCornerRadius)
-                .stroke(AppColor.border, lineWidth: AppSpacing.borderWidth))
+                .stroke(theme.cardBorder, lineWidth: AppSpacing.borderWidth))
             .padding(AppSpacing.section)
             .transition(.scale(scale: 0.9).combined(with: .opacity))
         }
@@ -852,7 +853,7 @@ struct HomeView: View {
             HStack(spacing: 3) {
                 ForEach(0..<3, id: \.self) { i in
                     Circle()
-                        .fill(i < filled ? AppColor.eggAccent : AppColor.border)
+                        .fill(i < filled ? AppColor.eggAccent : theme.cardBorder)
                         .frame(width: 5, height: 5)
                 }
             }
@@ -915,6 +916,7 @@ private struct FitOrScroll<Content: View>: View {
 
 /// 부화 직후 알 자리를 대체해 표시되는 생명체. 등장 시 글로우 버스트 + 스파클로 "부화 순간"을 연출한다.
 private struct HatchedCenter: View {
+    @Environment(\.appTheme) private var theme
     let creature: Creature
     /// 진화 단계(0…max). 단계가 높을수록 글로우가 강해져 "성장한 느낌"을 준다.
     var stage: Int = 0
@@ -941,6 +943,7 @@ private struct HatchedCenter: View {
                     )
                 )
                 .frame(width: height * 1.3, height: height * 1.3)
+                .blendMode(theme.glowBlendMode)
                 .animation(.easeOut(duration: 0.6), value: burst)
 
             // 스파클 버스트.
@@ -974,6 +977,7 @@ private struct HatchedCenter: View {
 
 /// 부화한 생명체의 이름·등급 카드(중앙 무대 아래 인라인). 모달 대신 화면에 머문다.
 private struct HatchRevealCard: View {
+    @Environment(\.appTheme) private var theme
     let creature: Creature
 
     var body: some View {
@@ -995,9 +999,9 @@ private struct HatchRevealCard: View {
         .padding(.horizontal, AppSpacing.element)
         .padding(.vertical, AppSpacing.elementTight)
         .frame(maxWidth: .infinity)
-        .background(AppColor.cardBackground)
+        .background(theme.cardBackground)
         .overlay(RoundedRectangle(cornerRadius: AppSpacing.cardCornerRadius)
-            .stroke(creature.rarity == .legendary ? AppColor.eggAccent : AppColor.border,
+            .stroke(creature.rarity == .legendary ? AppColor.eggAccent : theme.cardBorder,
                     lineWidth: creature.rarity == .legendary ? 1.5 : AppSpacing.borderWidth))
         .clipShape(RoundedRectangle(cornerRadius: AppSpacing.cardCornerRadius))
     }
@@ -1005,6 +1009,7 @@ private struct HatchRevealCard: View {
 
 /// 포모도로 On a break앙 화면. 따뜻한 톤의 휴식 안내.
 private struct BreakView: View {
+    @Environment(\.appTheme) private var theme
     let scene: BreakScene
     var height: CGFloat = 240
 
@@ -1014,13 +1019,14 @@ private struct BreakView: View {
                 .fill(RadialGradient(colors: [AppColor.eggAccent.opacity(0.16), .clear],
                                      center: .center, startRadius: 4, endRadius: height * 0.6))
                 .frame(width: height * 1.3, height: height * 1.3)
+                .blendMode(theme.glowBlendMode)
 
             VStack(spacing: AppSpacing.elementTight) {
                 BreakSceneView(scene: scene)
                     .frame(height: height * 0.62)   // 비율 유지(scaledToFit), 아래 문구 자리 확보
                 Text(caption)
                     .font(AppFont.cardTitle)
-                    .foregroundStyle(AppColor.textSecondary)
+                    .foregroundStyle(theme.onPageSecondary)
             }
         }
         .frame(height: height)
@@ -1038,6 +1044,7 @@ private struct BreakView: View {
 
 /// 6단계 부화 진행 스텝퍼. 채워진 단계는 골드 점, 사이는 연결선.
 private struct StageStepper: View {
+    @Environment(\.appTheme) private var theme
     let current: Int
     let total: Int
 
@@ -1045,11 +1052,11 @@ private struct StageStepper: View {
         HStack(spacing: 6) {
             ForEach(0..<total, id: \.self) { i in
                 Circle()
-                    .fill(i <= current ? AppColor.eggAccent : AppColor.border)
+                    .fill(i <= current ? AppColor.eggAccent : theme.cardBorder)
                     .frame(width: i == current ? 12 : 9, height: i == current ? 12 : 9)
                 if i < total - 1 {
                     Rectangle()
-                        .fill(i < current ? AppColor.eggAccent : AppColor.border)
+                        .fill(i < current ? AppColor.eggAccent : theme.cardBorder)
                         .frame(height: 2)
                 }
             }

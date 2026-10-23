@@ -10,6 +10,7 @@
 import SwiftUI
 
 struct EvolutionBadge: View {
+    @Environment(\.appTheme) private var theme
     /// 현재 진화 단계(0…Creature.maxEvolutionStage).
     let stage: Int
     /// 컴팩트(컬렉션 셀)면 라벨 없이 점만.
@@ -30,9 +31,9 @@ struct EvolutionBadge: View {
             }
             .padding(.horizontal, 10)
             .padding(.vertical, 5)
-            .background(AppColor.cardBackground)
+            .background(theme.cardBackground)
             .clipShape(Capsule())
-            .overlay(Capsule().stroke(isFinal ? AppColor.eggAccent : AppColor.border,
+            .overlay(Capsule().stroke(isFinal ? AppColor.eggAccent : theme.cardBorder,
                                       lineWidth: AppSpacing.borderWidth))
         }
     }
@@ -42,7 +43,7 @@ struct EvolutionBadge: View {
         HStack(spacing: 3) {
             ForEach(0..<maxStage, id: \.self) { i in
                 Circle()
-                    .fill(i < stage ? AppColor.eggAccent : AppColor.border)
+                    .fill(i < stage ? AppColor.eggAccent : theme.cardBorder)
                     .frame(width: compact ? 5 : 6, height: compact ? 5 : 6)
             }
         }

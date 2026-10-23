@@ -9,6 +9,7 @@
 import SwiftUI
 
 struct AppCard<Content: View>: View {
+    @Environment(\.appTheme) private var theme
     private let content: Content
 
     init(@ViewBuilder content: () -> Content) {
@@ -19,10 +20,10 @@ struct AppCard<Content: View>: View {
         content
             .padding(AppSpacing.cardPadding)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(AppColor.cardBackground)
+            .background(theme.cardBackground)
             .overlay(
                 RoundedRectangle(cornerRadius: AppSpacing.cardCornerRadius)
-                    .stroke(AppColor.border, lineWidth: AppSpacing.borderWidth)
+                    .stroke(theme.cardBorder, lineWidth: AppSpacing.borderWidth)
             )
             .clipShape(RoundedRectangle(cornerRadius: AppSpacing.cardCornerRadius))
     }

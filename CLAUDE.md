@@ -35,7 +35,8 @@ images/            # 원본 아트(앱 번들 아님). 런타임 에셋은 Asset
 
 ## 아키텍처 규칙
 - CRITICAL: **Xcode 프로젝트는 `PBXFileSystemSynchronizedRootGroup`(objectVersion 77)이다.** `Eggtimer/` 아래에 파일을 만들면 타깃에 자동 포함된다 — `project.pbxproj`를 손으로 고치지 말 것(충돌·손상 위험).
-- CRITICAL: 색·폰트·간격은 `AppColor`/`AppFont`/`AppSpacing`만 사용. 뷰에 하드코딩 금지. 앱은 **다크모드 고정**(`preferredColorScheme(.dark)`).
+- CRITICAL: 색·폰트·간격은 `AppColor`/`AppFont`/`AppSpacing`만 사용. 뷰에 하드코딩 금지.
+- CRITICAL: **배경 테마(`AppTheme`)가 colorScheme을 정한다** — 파스텔 테마만 `.light`(상태바가 어두워짐), 나머지 `.dark`. 카드·탭바·카드 안 글자는 테마와 무관하게 **다크 고정**(`AppColor`). **페이지 배경 위에 바로 놓이는 글자**만 `@Environment(\.appTheme)`의 `theme.onPage*`를 쓴다(대비 4.5:1은 `AppThemeTests`가 강제). 새 화면 루트 배경은 `ThemedBackground()`.
 - CRITICAL: 확률·등급·진화 규칙의 단일 출처는 `CreatureSpecies`/`Creature`. 화면에서 재구현하지 말 것.
 - 네트워크·데이터 레이어 타입은 `nonisolated`로 선언해 MainActor 격리 전파를 끊는다(`SyncMerge`, `SupabaseService` 참고).
 - 순수 로직(통계·머지·추첨·에셋 해석)은 뷰에서 분리해 유닛 테스트 가능하게 유지.
