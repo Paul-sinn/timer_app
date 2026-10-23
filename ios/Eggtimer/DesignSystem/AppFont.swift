@@ -22,6 +22,9 @@ enum AppFont {
     /// 카드 제목. footnote 라운드 semibold.
     static let cardTitle = Font.system(.footnote, design: .rounded).weight(.semibold)
 
+    /// 캐릭터 말풍선 대사. subheadline 라운드 semibold (카드 제목보다 한 단계 크게 — 성격 대사가 잘 읽히게).
+    static let dialogue = Font.system(.subheadline, design: .rounded).weight(.semibold)
+
     /// 본문. body (SF Pro Text).
     static let body = Font.body
 }

@@ -668,21 +668,21 @@ struct HomeView: View {
         ZStack {
             if let line = dialogue.currentLine {
                 Text(line.text)
-                    .font(AppFont.cardTitle)
+                    .font(AppFont.dialogue)
                     .foregroundStyle(AppColor.textBody)
                     .multilineTextAlignment(.center)
                     .lineLimit(2)
                     .fixedSize(horizontal: false, vertical: true)
-                    .padding(.horizontal, 14)
-                    .padding(.top, 9)
-                    .padding(.bottom, 15)          // 꼬리 공간 확보
+                    .padding(.horizontal, 16)
+                    .padding(.top, 10)
+                    .padding(.bottom, 16)          // 꼬리 공간 확보
                     .background(BubbleShape().fill(theme.cardBackground))
                     .overlay(BubbleShape().stroke(theme.cardBorder, lineWidth: AppSpacing.borderWidth))
                     .transition(.opacity.combined(with: .scale(scale: 0.92)))
                     .id(line.id)
             }
         }
-        .frame(minHeight: 56)
+        .frame(minHeight: 60)   // 한 줄 대사 높이(글자 15pt + 위아래 여백) — 대사가 사라져도 레이아웃이 안 튄다
         .animation(.easeInOut(duration: 0.25), value: dialogue.currentLine?.id)
     }
 
