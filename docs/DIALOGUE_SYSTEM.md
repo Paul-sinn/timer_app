@@ -5,7 +5,7 @@
 ## 모델 (`Features/Dialogue/DialogueLine.swift`)
 - `DialogueSpeaker`: `.egg` | `.creature(CreaturePersonality)`
 - `CreaturePersonality`: redChicken/sleepyChicken/nerdChicken/gymChicken/angryChicken/whiteTiger/phoenix/generic
-- `DialogueTrigger`: `.idle`, `.sessionStart`, `.focusMilestone(minutes:)`, `.appReturn(ReturnBucket)`, `.streak(days:)`, `.greeting`
+- `DialogueTrigger`: `.idle`, `.sessionStart`, `.focusMilestone(minutes:)`, `.appReturn(ReturnBucket)`, `.streak(days:)`, `.greeting`, `.focusTick`, `.breakStart`, `.pestered`
 - `ReturnBucket`: within30s / upTo3min / upTo10min / over10min (Interruption 임계값 0–30·180·600초와 동일)
 - `DialogueLine`: id·text·speaker·trigger·weight·cooldown
 
@@ -27,6 +27,8 @@
 - 복귀: `scenePhase .active` → `SessionManager.lastAwaySeconds`로 `.appReturn(버킷)`.
 - 부화: 태어난 생명체가 `.greeting, speaker: .creature(personality)`로 인사.
 - idle: 홈 대기 시 `.idle`.
+- 연타: 홈 동료를 3초 안에 5번 탭(`PokeCounter`) → `.pestered, speaker: .creature(personality)`. 유저 탓 없이 귀엽게 삐지는 톤.
+- 반응 점프: 말풍선이 새로 뜰 때마다·동료를 탭할 때마다 동료가 폴짝(`CreatureArt.hop`).
 
 ## 테스트
 - `DialogueTests`: 트리거/화자 필터·비반복·쿨다운·맥락 쿨다운 우회·후보없음 안전.

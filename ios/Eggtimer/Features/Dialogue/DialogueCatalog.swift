@@ -31,9 +31,14 @@ enum DialogueCatalog {
         pool("tick_\(p.rawValue)", .creature(p), .focusTick, texts, cooldown: 200)
     }
 
+    /// 연타 투덜 풀. 연달아 터질 수 있어 쿨다운을 짧게(최근 표시 제외가 반복을 막는다).
+    private static func pesteredPool(_ p: CreaturePersonality, _ texts: [String]) -> [DialogueLine] {
+        pool("pestered_\(p.rawValue)", .creature(p), .pestered, texts, cooldown: 20)
+    }
+
     // MARK: - 전체
 
-    static let all: [DialogueLine] = egg + creatures + focusTicks
+    static let all: [DialogueLine] = egg + creatures + focusTicks + pestered
 
     /// 특정 성격의 등장 대사 풀(컬렉션 상세 등에서 한 줄 뽑아 쓰기).
     static func greetingLines(for personality: CreaturePersonality) -> [DialogueLine] {
@@ -352,5 +357,81 @@ enum DialogueCatalog {
             "Worth is earned in minutes like this one.",
             "Stay golden. Stay focused.",
             "Even treasure needs time buried before it shines.",
+        ])
+
+    // MARK: - 연타 투덜 (동료를 연달아 탭) · 유저 탓 X, 귀엽게 삐짐
+
+    static let pestered: [DialogueLine] =
+        pesteredPool(.redChicken, [
+            "Okay. That's enough poking.",
+            "Do I look like a stress ball to you?",
+            "Hands off the merchandise.",
+            "Poke me again and I start charging.",
+        ])
+        + pesteredPool(.sleepyChicken, [
+            "Mmm... five more minutes. Stop poking.",
+            "I was this close to a nap.",
+            "Shh. Sleeping. Mostly.",
+            "Can you poke more quietly?",
+        ])
+        + pesteredPool(.nerdChicken, [
+            "Pokes per second: concerning.",
+            "Logging this as a distraction event.",
+            "Research shows poking me doesn't boost focus.",
+            "That's statistically too many pokes.",
+        ])
+        + pesteredPool(.gymChicken, [
+            "Save those reps for your work.",
+            "Poking isn't cardio, bro.",
+            "I'm mid-set. Hands off.",
+            "Channel that energy into the next set.",
+        ])
+        + pesteredPool(.angryChicken, [
+            "Stop touching me. -_-",
+            "Do that again. I dare you.",
+            "I'm not cute. Stop it.",
+            "...Okay, one more. No. That's it.",
+        ])
+        + pesteredPool(.whiteTiger, [
+            "Restless hands, restless mind.",
+            "Even a tiger's patience has limits.",
+            "Enough. Return to your work.",
+            "Still your hands. Then your mind.",
+        ])
+        + pesteredPool(.phoenix, [
+            "You dare poke the eternal flame?",
+            "Careful. I burn.",
+            "A thousand rebirths, and still... poked.",
+            "The flame is not a toy, mortal.",
+        ])
+        + pesteredPool(.slime, [
+            "Squish. Squish. Okay, that's enough squish.",
+            "I'm soft, not a toy.",
+            "You're leaving fingerprints in me.",
+            "Jiggle limit reached.",
+        ])
+        + pesteredPool(.dino, [
+            "RAWR! That tickles!",
+            "Hey! My tiny arms can't poke back!",
+            "Stomp warning. One more poke.",
+            "Use that energy on your work!",
+        ])
+        + pesteredPool(.blackCat, [
+            "I allow three pets. You're well past that.",
+            "Hiss. Politely.",
+            "Cats decide when to be touched. Not now.",
+            "Poking a black cat? Bold.",
+        ])
+        + pesteredPool(.goldChick, [
+            "Careful. You'll smudge the gold.",
+            "Rare things are handled gently.",
+            "Fingerprints lower my value.",
+            "Please. I'm polished.",
+        ])
+        + pesteredPool(.generic, [
+            "Okay, that's enough.",
+            "I'm not a button.",
+            "Poke count: too many.",
+            "Hey. Personal space.",
         ])
 }

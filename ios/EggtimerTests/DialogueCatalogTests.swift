@@ -100,6 +100,15 @@ struct DialogueCatalogTests {
         #expect(!eggTicks.isEmpty)
     }
 
+    @Test func everyPersonalityComplainsWhenPestered() {
+        // 연타 대사는 탭할 수 있는 모든 동료(폴백 generic 포함)에게 있어야 하고,
+        // 연달아 터져도 같은 말만 반복되지 않게 3줄 이상.
+        for p in CreaturePersonality.allCases {
+            let lines = DialogueCatalog.all.filter { $0.speaker == .creature(p) && $0.trigger == .pestered }
+            #expect(lines.count >= 3, "\(p.rawValue) pestered 풀 \(lines.count)줄")
+        }
+    }
+
     @Test func returnBucketBoundaries() {
         #expect(ReturnBucket.from(awaySeconds: 0) == .within30s)
         #expect(ReturnBucket.from(awaySeconds: 29) == .within30s)

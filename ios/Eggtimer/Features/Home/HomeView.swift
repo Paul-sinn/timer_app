@@ -31,6 +31,8 @@ struct HomeView: View {
     @State private var justEvolvedStage: Int?
     /// 올릴 때마다 동료가 한 번 폴짝(탭·말풍선 반응).
     @State private var creatureReaction = 0
+    /// 동료 연타 감지 → "그만 만져" 대사.
+    @State private var pokes = PokeCounter()
     /// 현재 동료의 id(영속). 콜드런치(앱 재Start) 후 컬렉션에서 같은 개체를 복원해 홈에 다시 표시.
     /// 빈 문자열 = 동료 없음(첫 부화 전 또는 'Get new egg' 직후).
     @AppStorage("companionCreatureID") private var companionID = ""
@@ -655,7 +657,12 @@ struct HomeView: View {
                           reactionTrigger: creatureReaction)
                 .id("\(hatchling.id.uuidString)-\(companionStage)")   // 캐릭터·단계 바뀔 때마다 등장(진화) 연출 재생
                 .transition(.scale(scale: 0.6).combined(with: .opacity))
-                .onTapGesture { creatureReaction += 1 }               // 탭하면 폴짝
+                .onTapGesture {
+                    creatureReaction += 1                                   // 탭하면 폴짝
+                    if pokes.register(at: .now) {                           // 연타하면 성격대로 투덜
+                        dialogue.fire(.pestered, speaker: .creature(hatchling.personality))
+                    }
+                }
         } else {
             EggView(stageIndex: session.stageIndex, height: height)   // 알은 첫 부화 전까지만(진행도 → crack 6단계)
                 .transition(.opacity)

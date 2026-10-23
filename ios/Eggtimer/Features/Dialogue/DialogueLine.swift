@@ -61,6 +61,7 @@ enum DialogueTrigger: Equatable, Hashable, Sendable {
     case streak(days: Int)             // 연속일 도달(3·7·30·100)
     case greeting                      // 생명체 등장 인사(부화/컬렉션)
     case breakStart                    // 포모도로 휴식 진입
+    case pestered                      // 동료를 연달아 탭("그만 만져", PokeCounter)
 }
 
 struct DialogueLine: Identifiable, Equatable, Sendable {
