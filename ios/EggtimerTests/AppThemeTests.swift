@@ -64,10 +64,28 @@ struct AppThemeTests {
         }
     }
 
+    @Test func everyImageThemeHasAWideVersion() {
+        // 아이패드 가로(창이 세로보다 넓을 때)용 4:3 그림. 단색 테마는 둘 다 없음.
+        #expect(AppTheme.nest.wideBackgroundImage == nil)
+        for theme in AppTheme.allCases where theme != .nest {
+            #expect(theme.wideBackgroundImage != nil, "\(theme) 가로 그림 없음")
+            #expect(theme.wideBackgroundImage != theme.backgroundImage)
+        }
+    }
+
+    @Test func picksWideImageOnlyWhenWiderThanTall() {
+        let theme = AppTheme.butter
+        #expect(theme.backgroundImage(for: CGSize(width: 402, height: 874)) == theme.backgroundImage)      // 아이폰
+        #expect(theme.backgroundImage(for: CGSize(width: 1032, height: 1376)) == theme.backgroundImage)    // 아이패드 세로
+        #expect(theme.backgroundImage(for: CGSize(width: 1376, height: 1032)) == theme.wideBackgroundImage) // 아이패드 가로
+        #expect(AppTheme.nest.backgroundImage(for: CGSize(width: 1376, height: 1032)) == nil)
+    }
+
     @MainActor
     @Test func backgroundImagesAreInTheAppBundle() {
         let missing = AppTheme.allCases
-            .compactMap(\.backgroundImage)
+            .flatMap { [$0.backgroundImage, $0.wideBackgroundImage] }
+            .compactMap { $0 }
             .filter { UIImage(named: $0) == nil }
         #expect(missing.isEmpty, "번들에 없는 배경: \(missing)")
     }

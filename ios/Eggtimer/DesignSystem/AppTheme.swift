@@ -40,6 +40,14 @@ enum AppTheme: String, CaseIterable, Identifiable {
         }
     }
 
+    /// 가로 4:3 그림(아이패드 가로·넓은 창). 세로 그림을 그대로 쓰면 위아래가 58% 잘려 바닥·빈 상단이 사라진다.
+    var wideBackgroundImage: String? { backgroundImage.map { $0 + "Wide" } }
+
+    /// 창 모양에 맞는 그림 — 세로보다 넓으면 가로 그림. 아이패드 Split View 좁은 창은 세로 그림.
+    func backgroundImage(for size: CGSize) -> String? {
+        size.width > size.height ? wideBackgroundImage : backgroundImage
+    }
+
     /// 화면 루트 배경색. 그림 테마는 그림 상단(타이머 자리) 색 — 그림 뒤 바탕이자 글자 대비 기준.
     var pageBackground: Color {
         switch self {
@@ -169,11 +177,14 @@ struct ThemedBackground: View {
     var body: some View {
         theme.pageBackground
             .overlay {
-                if let name = theme.backgroundImage {
-                    Image(name)
-                        .resizable()
-                        .interpolation(.none)   // 픽셀 경계 유지
-                        .scaledToFill()
+                GeometryReader { geo in
+                    if let name = theme.backgroundImage(for: geo.size) {
+                        Image(name)
+                            .resizable()
+                            .interpolation(.none)   // 픽셀 경계 유지
+                            .scaledToFill()
+                            .frame(width: geo.size.width, height: geo.size.height)
+                    }
                 }
             }
             .clipped()
