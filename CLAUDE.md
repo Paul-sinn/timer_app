@@ -186,6 +186,11 @@ xcrun xcresulttool get test-results summary --path /tmp/res.xcresult
   - 원인: 새 브랜치에서 생긴 파일(`PokeCounter.swift`)을 이미 열린 Xcode 창이 파일 목록에 반영하지 못함(동기화 그룹 캐시). 코드 문제 아님.
   - 교훈: Xcode가 열려 있을 때 터미널로 브랜치를 바꾸면 사용자에게 **프로젝트 닫고 다시 열기**(안 되면 Shift+Cmd+K 클린)를 같이 안내한다. 판정은 `xcodebuild build`로.
 
+- **2026-10-23 · 문서에 적힌 "ASC 최신 빌드 = 5"를 믿고 build 6으로 업로드 → 거부**
+  - 증상: `exportArchive`가 "The bundle version must be higher than the previously uploaded version: '7'"로 실패(서명·검증은 통과).
+  - 원인: 문서 작성 후에도 사용자가 Xcode에서 업로드를 더 했다(Xcode가 업로드 때 번호를 자동 증가). 업로드 번호는 심사 제출 여부와 무관하게 **올린 적 있는 모든 빌드**보다 커야 한다.
+  - 교훈: 빌드 번호는 문서로 단정하지 말 것. 거부 메시지가 최신 번호를 알려주니 그 +1로 다시 아카이브한다(번호가 Info.plist에 서명돼 들어가므로 재아카이브 필수).
+
 - **2026-10-12 · 코드의 `defaultValue`만 보고 UI 문구를 단정 → 틀린 정정**
   - 증상: `String(localized: "mode.normal", defaultValue: "Timer")`를 보고 "영어 UI는 Timer"라고 체크리스트를 고쳤는데, 실제 영어 화면(기존 스크린샷)은 `Normal`.
   - 원인: 키 기반 문자열은 **`Localizable.xcstrings`의 en 값("Normal")이 defaultValue를 덮는다.** defaultValue는 번역이 없을 때만 쓰인다.
