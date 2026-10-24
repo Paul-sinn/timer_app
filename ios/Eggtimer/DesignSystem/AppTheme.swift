@@ -5,7 +5,8 @@
 //  배경 테마. 화면 루트 배경(단색 또는 픽셀 그림)과 그 위에 바로 놓이는 글자색, 앱 colorScheme을 정한다.
 //  카드·탭바·카드 안 글자는 테마와 무관하게 다크 고정. 색 재정의는 여기(단일 출처)에서만; 화면에서 하드코딩 금지.
 //
-//  - 기본(.nest)은 기존 배경색·글자색을 그대로 재사용 → 테마 미변경 시 픽셀 회귀 0.
+//  - 첫 실행 기본 테마는 `defaultTheme`(.butter) 한 곳에서 정한다.
+//  - .nest는 예전 기본 다크 — 기존 배경색·글자색을 그대로 재사용(온보딩·도감 상세 시트가 고정으로 쓴다).
 //  - 파스텔(.butter/.mint/.lavender)은 colorScheme = .light → 상태바·시스템 UI가 어둡게 바뀌고,
 //    배경 위 글자는 onPage* 진갈색을 쓴다. 대비 4.5:1 이상은 AppThemeTests가 강제한다.
 //  - 그림 원본: images/backgrounds/ (270×480 픽셀 원본을 Assets에 넣고 .interpolation(.none)로 키운다)
@@ -25,6 +26,8 @@ enum AppTheme: String, CaseIterable, Identifiable {
 
     /// 선택 저장 키(@AppStorage / UserDefaults 공용).
     static let storageKey = "selectedTheme"
+    /// 아직 고른 적 없는 유저의 배경(앱 아이콘과 같은 버터크림 톤).
+    nonisolated static let defaultTheme: AppTheme = .butter   // @Entry 기본값(nonisolated)에서도 읽는다
 
     var id: String { rawValue }
 
@@ -158,15 +161,15 @@ enum AppTheme: String, CaseIterable, Identifiable {
     /// 잠금(Pro) 테마.
     static var locked: [AppTheme] { allCases.filter(\.isPro) }
 
-    /// 저장된 선택 테마(없거나 무효면 기본 .nest). 테스트 위해 defaults 주입 가능.
+    /// 저장된 선택 테마(없거나 무효면 defaultTheme). 테스트 위해 defaults 주입 가능.
     static func current(_ defaults: UserDefaults = .standard) -> AppTheme {
-        AppTheme(rawValue: defaults.string(forKey: storageKey) ?? "") ?? .nest
+        AppTheme(rawValue: defaults.string(forKey: storageKey) ?? "") ?? defaultTheme
     }
 }
 
 extension EnvironmentValues {
     /// 현재 테마. 앱 루트(EggtimerApp)가 @AppStorage 값으로 주입 → 하위 화면·시트가 상속.
-    @Entry var appTheme: AppTheme = .nest
+    @Entry var appTheme: AppTheme = AppTheme.defaultTheme
 }
 
 /// 화면 루트 배경. 선택된 테마의 단색 위에 픽셀 그림을 깐다.

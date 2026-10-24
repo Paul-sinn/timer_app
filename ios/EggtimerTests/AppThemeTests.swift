@@ -14,12 +14,17 @@ import Foundation
 
 struct AppThemeTests {
 
-    @Test func currentFallsBackToNest() {
+    @Test func defaultThemeIsButter() {
+        // 2026-10-24 결정: 첫 실행 기본 배경 = Butter(앱 아이콘과 같은 버터크림 톤).
+        #expect(AppTheme.defaultTheme == .butter)
+    }
+
+    @Test func currentFallsBackToDefaultTheme() {
         let defaults = UserDefaults(suiteName: "test.theme.\(UUID().uuidString)")!
-        #expect(AppTheme.current(defaults) == .nest)          // 저장값 없음 → 기본
+        #expect(AppTheme.current(defaults) == AppTheme.defaultTheme)   // 저장값 없음 → 기본
 
         defaults.set("bogus-not-a-theme", forKey: AppTheme.storageKey)
-        #expect(AppTheme.current(defaults) == .nest)          // 무효값 → 기본
+        #expect(AppTheme.current(defaults) == AppTheme.defaultTheme)   // 무효값 → 기본
 
         defaults.set(AppTheme.midnight.rawValue, forKey: AppTheme.storageKey)
         #expect(AppTheme.current(defaults) == .midnight)      // 유효값 라운드트립
@@ -33,7 +38,7 @@ struct AppThemeTests {
     @Test func freeAndLockedPartitionCoversAllCases() {
         #expect(AppTheme.free.allSatisfy { !$0.isPro })
         #expect(AppTheme.locked.allSatisfy { $0.isPro })
-        #expect(AppTheme.free.contains(.nest))                // 기본은 무료
+        #expect(AppTheme.free.contains(AppTheme.defaultTheme))   // 기본은 무료
         #expect(!AppTheme.free.isEmpty)
         // 배경은 전부 무료 → locked 비어있음(placeholder 미끼 안 만듦).
         #expect(AppTheme.locked.isEmpty)

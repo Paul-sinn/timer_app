@@ -11,7 +11,7 @@ import SwiftUI
 
 struct ThemePickerView: View {
     @Environment(ProAccess.self) private var pro
-    @AppStorage(AppTheme.storageKey) private var selectedRaw = AppTheme.nest.rawValue
+    @AppStorage(AppTheme.storageKey) private var selectedRaw = AppTheme.defaultTheme.rawValue
 
     private let columns = [GridItem(.flexible(), spacing: AppSpacing.element),
                            GridItem(.flexible(), spacing: AppSpacing.element)]
@@ -35,7 +35,7 @@ struct ThemePickerView: View {
         .navigationBarTitleDisplayMode(.inline)
     }
 
-    private var selected: AppTheme { AppTheme(rawValue: selectedRaw) ?? .nest }
+    private var selected: AppTheme { AppTheme(rawValue: selectedRaw) ?? AppTheme.defaultTheme }
 
     /// 선택 가능 여부: 무료거나 Pro 해제 시.
     private func isUnlocked(_ theme: AppTheme) -> Bool { !theme.isPro || pro.isPro }
@@ -117,7 +117,7 @@ struct ThemeSwatch: View {
 /// 아이패드는 버튼에 붙은 팝오버, 아이폰(좁은 창)은 내용 높이에 맞춘 낮은 시트로 뜬다.
 struct ThemeQuickPicker: View {
     @Environment(\.appTheme) private var theme
-    @AppStorage(AppTheme.storageKey) private var selectedRaw = AppTheme.nest.rawValue
+    @AppStorage(AppTheme.storageKey) private var selectedRaw = AppTheme.defaultTheme.rawValue
     /// 시트 높이 = 내용 높이(글자 크기 설정이 커져도 안 잘리게 실측).
     @State private var contentHeight: CGFloat = 360
 

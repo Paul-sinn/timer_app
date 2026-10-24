@@ -6,7 +6,7 @@
 **지금 = 1.0 심사 통과 대기. 새 기능은 1.0에 안 넣는다.** 1.1은 별도 브랜치에서 진행.
 
 ## 1.1 — 무료 개선 (1.0 승인 후 약 5~6주)
-- [x] **배경 5종** (브랜치 `feat/1.1-backgrounds`, 2026-10-23) — 결정 변경: **기본 = 기존 검정(Nest) 유지**, 새 5종은 선택. 옛 단색 Midnight는 Midnight Navy 그림이 저장값 이어받음
+- [x] **배경 5종** (브랜치 `feat/1.1-backgrounds`, 2026-10-23) — 결정 변경: 기본 = Nest → **2026-10-24 기본 = Butter**(새 앱 아이콘과 같은 톤), 나머지는 선택. 옛 단색 Midnight는 Midnight Navy 그림이 저장값 이어받음
   - [x] 사용자: 배경 그림 5장 제작 → 원본 `images/backgrounds/`, 런타임 270×480 lossless
   - [x] 파스텔 테마: 배경 위 글자 + 상태바 진갈색(`theme.onPage*`, colorScheme .light). 카드는 다크 유지
   - [x] 대비 4.5:1 테스트(`AppThemeTests`) — Cocoa 보조·강조색 별도 조정
