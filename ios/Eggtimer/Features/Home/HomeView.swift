@@ -55,6 +55,8 @@ struct HomeView: View {
     @State private var zapBonusPercent: Int?
     /// Settings 시트 표시(우상단 기어).
     @State private var showSettings = false
+    /// 빠른 배경 선택(우상단 붓 버튼).
+    @State private var showThemes = false
     /// "New egg" OK 다이얼로그 표시(실수 탭 방지).
     @State private var showNewEggConfirm = false
     /// 집중 시간 보상 안내 시트 표시("?" 버튼·첫 실행 1회).
@@ -505,23 +507,31 @@ struct HomeView: View {
     // MARK: - 상단 헤더
 
     private var header: some View {
-        HStack {
+        HStack(spacing: AppSpacing.element) {
             Text("Home")
                 .font(.title.weight(.bold))
                 .foregroundStyle(theme.onPagePrimary)
             Spacer()
             // 최종 진화 상태에선 집중이 끊김없이 이어지므로, 새 종을 받고 싶은 유저용
-            // 작은 "New egg" 토글을 우상단에 배치(UI 방해 최소화). 그 외엔 Settings 아이콘.
+            // 작은 "New egg" 토글을 기어 옆에 둔다. 기어를 대체하면 세션 중 설정에 못 들어간다.
             if hasCompanion && companionStage >= Creature.maxEvolutionStage {
                 newEggButton
-            } else {
-                Button { showSettings = true } label: {
-                    Image(systemName: "gearshape")
-                        .font(.title3)
-                        .foregroundStyle(theme.onPageSecondary)
-                }
-                .buttonStyle(.plain)
             }
+            // 배경은 설정까지 안 들어가고 그 자리에서 바꾼다(세션 중에도).
+            Button { showThemes = true } label: {
+                Image(systemName: "paintbrush.pointed")
+                    .font(.title3)
+                    .foregroundStyle(theme.onPageSecondary)
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(Text("Theme"))
+            .popover(isPresented: $showThemes) { ThemeQuickPicker() }
+            Button { showSettings = true } label: {
+                Image(systemName: "gearshape")
+                    .font(.title3)
+                    .foregroundStyle(theme.onPageSecondary)
+            }
+            .buttonStyle(.plain)
         }
         .padding(.top, AppSpacing.elementTight)
     }
