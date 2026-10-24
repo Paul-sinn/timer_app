@@ -181,6 +181,11 @@ xcrun xcresulttool get test-results summary --path /tmp/res.xcresult
   - 원인: main이 다른 세션의 worktree(`timer_app-reactions`)에 체크아웃돼 있어 `fatal: 'main' is already used by worktree`로 switch 실패. 그 뒤를 `;`로 이어서 테스트가 그냥 돌았다.
   - 교훈: 특정 브랜치를 검증할 땐 **결과 보고 전에 HEAD 커밋을 확인**하고, 실패하면 멈추도록 `&&`로만 잇는다. 다른 worktree가 잡고 있는 브랜치는 `git worktree add --detach <임시경로> <브랜치>`로 따로 꺼내 검증하고 끝나면 `git worktree remove`.
 
+- **2026-10-23 · Xcode 열린 채로 터미널에서 브랜치 전환 → Xcode 빌드만 "cannot find 'PokeCounter'"**
+  - 증상: 터미널에서 `git switch main` 후 Xcode Run이 반복 실패. 같은 폴더 `xcodebuild build`는 성공.
+  - 원인: 새 브랜치에서 생긴 파일(`PokeCounter.swift`)을 이미 열린 Xcode 창이 파일 목록에 반영하지 못함(동기화 그룹 캐시). 코드 문제 아님.
+  - 교훈: Xcode가 열려 있을 때 터미널로 브랜치를 바꾸면 사용자에게 **프로젝트 닫고 다시 열기**(안 되면 Shift+Cmd+K 클린)를 같이 안내한다. 판정은 `xcodebuild build`로.
+
 - **2026-10-12 · 코드의 `defaultValue`만 보고 UI 문구를 단정 → 틀린 정정**
   - 증상: `String(localized: "mode.normal", defaultValue: "Timer")`를 보고 "영어 UI는 Timer"라고 체크리스트를 고쳤는데, 실제 영어 화면(기존 스크린샷)은 `Normal`.
   - 원인: 키 기반 문자열은 **`Localizable.xcstrings`의 en 값("Normal")이 defaultValue를 덮는다.** defaultValue는 번역이 없을 때만 쓰인다.
