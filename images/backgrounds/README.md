@@ -8,7 +8,7 @@
 | Mode | File | Palette |
 | --- | --- | --- |
 | Dark | 01_Midnight_Navy.png | Smoky navy, dusty blue-violet, muted gold |
-| Dark | 02_Cocoa_Night.png | Warm dark cocoa, mushroom taupe |
+| Dark | 02_Cocoa_Night.png | Warm dark cocoa wall, mint pixel pattern (2026-10-23 교체 — 원본 업로드는 source/) |
 | Light | 03_Butter_Yellow.png | Butter yellow, warm cream, pale honey |
 | Light | 04_Mint_Cream.png | Pastel mint, warm ivory, muted sage |
 | Light | 05_Lavender_Milk.png | Pale lavender, lilac, warm ivory |
