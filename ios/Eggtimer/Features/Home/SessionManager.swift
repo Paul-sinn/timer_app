@@ -121,10 +121,12 @@ final class SessionManager {
         return max(s.plannedSeconds - activeSecondsLive, 0)
     }
 
-    /// 휴식 남은 시간(초).
-    var breakRemainingSeconds: Int {
-        guard let end = session?.breakEndsAt else { return 0 }
-        return max(0, Int(end.timeIntervalSince(clock())))
+    /// 휴식 남은 시간(초). 시계만 읽는 계산값이면 화면이 안 따라와 첫 값에 멈춘다 → 틱마다 저장(`recompute`).
+    private(set) var breakRemainingSeconds: Int = 0
+
+    /// 남은 초를 올림 — 집중 카운트다운처럼 5초 휴식은 5부터 센다(내림이면 시작하자마자 4).
+    private static func secondsLeft(until end: Date, now: Date) -> Int {
+        max(0, Int(end.timeIntervalSince(now).rounded(.up)))
     }
 
     /// 현재 진행 중인 집중 블록 번호(1부터). 포모도로 캡션용. Done 블록 수 + 1.
@@ -234,7 +236,10 @@ final class SessionManager {
 
         // On a break: 카운트다운만, 종료 시 이번 블록 보상 지급 + Next 블록.
         if s.isOnBreak {
-            if let end = s.breakEndsAt, now >= end { endBreakAndReward(at: now) }
+            if let end = s.breakEndsAt {
+                breakRemainingSeconds = Self.secondsLeft(until: end, now: now)
+                if now >= end { endBreakAndReward(at: now) }
+            }
             return
         }
 
@@ -262,6 +267,7 @@ final class SessionManager {
         let length = isLong ? PomodoroConfig.longBreakLength : PomodoroConfig.breakLength
         s.breakEndsAt = now.addingTimeInterval(Double(length))
         session = s
+        breakRemainingSeconds = length
         activeSecondsLive = s.accumulatedActiveSeconds
         ScreenAwake.set(false)              // 틱은 유지(휴식 종료 자동 감지)
         persist()

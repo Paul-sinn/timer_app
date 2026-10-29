@@ -15,6 +15,11 @@ private final class ClockBox {
     func advance(_ seconds: Int) { now = now.addingTimeInterval(TimeInterval(seconds)) }
 }
 
+/// withObservationTracking의 onChange(@Sendable)에서 켜는 플래그. 테스트는 한 스레드라 잠금 불필요.
+private nonisolated final class ChangeFlag: @unchecked Sendable {
+    var hit = false
+}
+
 @MainActor
 struct SessionManagerTests {
 
@@ -166,6 +171,30 @@ struct SessionManagerTests {
         #expect(!m.isRunning)          // 휴식 중엔 집중 아님
         #expect(!m.isLongBreak)        // 1블록째 → 짧은 휴식
         #expect(!m.isCompleted)        // 보상은 휴식 끝에 → 아직 미지급
+    }
+
+    /// 휴식 카운트다운은 틱마다 화면에 "바뀌었다"를 알려야 한다. 시계만 읽는 계산값이면
+    /// 관찰되는 값이 안 바뀌어 화면이 첫 값(4)에 멈춘다(2026-10-29 실기기, 휴식 끝은 정상).
+    @Test func breakCountdownNotifiesTheScreenEveryTick() {
+        let clock = ClockBox()
+        let m = makePomodoro(clock)
+        m.start()
+        clock.advance(PomodoroConfig.focusBlock); m.recompute()          // → 휴식
+        let flag = ChangeFlag()
+        withObservationTracking { _ = m.countdownSeconds } onChange: { flag.hit = true }
+        clock.advance(1); m.recompute()                                  // 0.5초 틱 한 번
+        #expect(flag.hit, "휴식 중 틱이 화면 갱신을 안 일으킨다")
+        #expect(m.countdownSeconds == PomodoroConfig.breakLength - 1)
+    }
+
+    /// 집중 카운트다운처럼 휴식도 전체 길이부터 센다(5초 휴식이 4부터 시작하지 않게 — 내림 대신 올림).
+    @Test func breakCountdownStartsAtFullLength() {
+        let clock = ClockBox()
+        let m = makePomodoro(clock)
+        m.start()
+        clock.advance(PomodoroConfig.focusBlock); m.recompute()          // → 휴식
+        clock.now = clock.now.addingTimeInterval(0.3); m.recompute()     // 틱이 휴식 시작 직후에 옴
+        #expect(m.countdownSeconds == PomodoroConfig.breakLength)
     }
 
     @Test func pomodoroGrantsRewardExactlyOnceWhenBreakEnds() {
