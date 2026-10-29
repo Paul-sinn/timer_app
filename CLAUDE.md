@@ -196,6 +196,11 @@ xcrun xcresulttool get test-results summary --path /tmp/res.xcresult
   - 원인: 키 기반 문자열은 **`Localizable.xcstrings`의 en 값("Normal")이 defaultValue를 덮는다.** defaultValue는 번역이 없을 때만 쓰인다.
   - 교훈: 유저에게 보이는 문구를 단정할 땐 코드가 아니라 **문자열 카탈로그(또는 실제 화면)**에서 확인한다.
 
+- **2026-10-29 · 휘도로 배경을 지우면 검은 외곽선도 지워진다 → 파스텔 테마에서 휴식 캐릭터가 배경에 녹음**
+  - 증상: 포모도로 휴식 장면(`Break*`)이 Butter/Mint/Lavender 배경에서 선이 없고 흐릿함. 커피 속·손잡이 안쪽도 이상. 다크 테마에선 멀쩡해 보여서 늦게 발견.
+  - 원인: `make_break_assets.py`가 "어두우면 배경"으로 지워서 bg와 같이 어두운 **외곽선까지 투명**이 됨. 다크 배경이 그동안 지워진 선을 대신 그려주고 있었다. 추가로 2프레임 크로스페이드가 그냥 겹쳐서 중간에 알파가 75%로 떨어져 밝은 배경이 비침.
+  - 교훈: 투명 에셋은 **밝은 배경과 어두운 배경 둘 다 위에 합성해서** 확인한다. 배경을 지운 뒤엔 피사체를 몇 px 팽창해 원본 외곽선을 되살리고(스크립트가 가장자리 휘도로 자가검사), 크로스페이드는 `.compositingGroup()` + 위 레이어 `.plusLighter`로 알파 합을 1로 유지한다.
+
 - **2026-10-23 · `HomeView.body` 수식어 사슬에 `.onChange` 하나 추가 → "unable to type-check in reasonable time"**
   - 증상: 동료 반응 점프용 `.onChange(of: dialogue.currentLine?.id)`를 body 끝 `.onChange` 묶음에 붙였더니 `HomeView.swift:364`에서 타입 체크 시간 초과(TEST BUILD FAILED).
   - 원인: `HomeView.body`는 `.onChange`·`.sensoryFeedback`·`.sheet`·`.overlay`가 이미 한계까지 이어진 단일 식이다. 하나만 더해도 타입체커가 포기한다.

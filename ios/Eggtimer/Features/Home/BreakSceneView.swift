@@ -36,10 +36,12 @@ struct BreakSceneView: View {
         let f = scene.frames
         // 진짜 크로스페이드(dissolve): 기본은 fade-out, 변형은 fade-in.
         // 기본이 계속 불투명하면 변형이 그 위에 겹쳐 두 겹으로 보임 → 반드시 base도 (1-blend).
+        // 그냥 겹치면 알파가 1-b+b²(중간 75%)로 떨어져 밝은 배경이 비침 → 그룹 안에서 더해 합을 1로.
         ZStack {
             Image(f.base).resizable().scaledToFit().opacity(1 - blend)
-            Image(f.variant).resizable().scaledToFit().opacity(blend)
+            Image(f.variant).resizable().scaledToFit().opacity(blend).blendMode(.plusLighter)
         }
+        .compositingGroup()
         .task(id: scene) { await animate() }
     }
 
