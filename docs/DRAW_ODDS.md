@@ -3,7 +3,7 @@
 집중 길이 → **draw 횟수** 보상. 등급을 draw번 굴려 **가장 높은 등급을 채택**(best-of-N)하고,
 그 등급 안에서 종을 뽑는다. 등급/종 가중치 자체는 불변 — 길이 보상은 오직 draw 횟수로만 준다.
 
-- 단일 출처: `FocusReward`(draw 매핑) · `CreatureSpecies.roll(draws:)` · `Rarity.tierWeight`
+- 단일 출처: `FocusReward`(draw 매핑) · `CreatureSpecies.rollForHatch(draws:)`(= `roll(draws:)` + 등급업) · `Rarity.tierWeight`
 - 이 문서는 그 규칙에서 계산한 값(파생). 규칙이 바뀌면 이 표도 다시 계산해야 한다.
 
 ## 1. 집중 시간 → draw
@@ -32,6 +32,25 @@ best-of-N 공식: `P(최고등급 = X) = P(단일 ≤ X)^N − P(단일 < X)^N`.
 **핵심: 오래 집중할수록 Legendary·Rare가 뚜렷이 오르고 Common은 내려간다.**
 - Legendary: 2% → 3.96% → 5.88% → **7.76%** (25분 대비 약 3.9배)
 - Common+Uncommon 합("흔한 편"): 90% → 81% → 72.9% → 65.6%
+
+## 2-1. 등급업 반영 **최종** 등급 확률 (2026-10-29~)
+
+best-of-N이 끝난 등급을 **5% 확률로 한 단계 올린다**(`CreatureSpecies.upgradePercent`).
+전설은 위가 없어 제외 → 레어→전설 승급은 **있다**. 올라간 등급 안에서 종을 다시 뽑는다.
+최종% = 원래% × 0.95 + 한 단계 아래% × 0.05 (전설은 원래% 그대로 + 레어% × 0.05).
+
+| 등급 | 1 draw (25분) | 2 draws (50분) | 3 draws (75분) | 4 draws (100분+) |
+|---|---:|---:|---:|---:|
+| Common    | 76.00% | 60.80% | 48.64% | 38.91% |
+| Uncommon  | 13.50% | 19.35% | 23.17% | 25.47% |
+| Rare      |  8.10% | 15.14% | 21.24% | 26.53% |
+| **Legendary** | **2.40%** | **4.71%** | **6.94%** | **9.09%** |
+| (등급업 연출 빈도) | 4.90% | 4.80% | 4.71% | 4.61% |
+
+등급업이 터지면 알이 바로 안 깨지고 **1.5초 더 드르르 떨다가**(`HatchReveal.upgradeRumbleDuration`) 부화한다.
+`upgraded`는 연출용이라 저장하지 않는다.
+
+> 아래 3·3-1 표는 **등급업 적용 전** 값이다(best-of-N만).
 
 ## 3. 종별 실제 출현 확률 (draw별)
 
@@ -84,6 +103,7 @@ best-of-N 공식: `P(최고등급 = X) = P(단일 ≤ X)^N − P(단일 < X)^N`.
 | 06-30 | `1d6f529` | 닭 6표정을 도감 별칸으로 분리 — **체감 변화의 실제 원인** |
 | 08-09 | `d69db58` | **best-of-N 최초 도입** (`secondsPerDraw = 1500`, `maxDraws = 4`) |
 | 08-09 | `bfdfd67` | 주석만 수정. 수치 변경 없음 |
+| 10-29 | — | **등급업 5%** 도입(전설 제외). 최종확률은 2-1 표 |
 
 **가중치는 한 번도 바뀐 적이 없다.** 종 weight(55/25/10/5/3/1/1)는 `f880275`에서 최초 설정 후 그대로,
 등급 weight(80/10/8/2)는 `d7b5463`에서 도입 후 그대로.
@@ -93,7 +113,7 @@ best-of-N 공식: `P(최고등급 = X) = P(단일 ≤ X)^N − P(단일 < X)^N`.
 - 각 draw 열 합 = 100.00% (반올림 오차 내)
 - `draws = 1`은 기존 단일 추첨과 완전히 동일 (하위호환)
 - 상한 4 draw = 전설 폭주 방지 (100분+ 세션이 있어도 7.76% 고정)
-- DEBUG: 마이페이지 `debugDraws` 카드로 draw 강제(1~4×), Force hatch로 종 강제 — 릴리스엔 없음
+- DEBUG: 마이페이지 `debugDraws` 카드로 draw 강제(1~4×), Force hatch로 종 강제, **Force rarity upgrade**로 매번 등급업(연출 확인용) — 릴리스엔 없음
 
 ### 자동 검증 (`EggtimerTests/CreatureSpeciesTests.swift`)
 
@@ -104,6 +124,8 @@ best-of-N 공식: `P(최고등급 = X) = P(단일 ≤ X)^N − P(단일 < X)^N`.
 | `speciesDistributionHoldsAcrossDraws` | **draws 2·3·4 종 분포**를 best-of-N 공식과 대조 |
 | `perFormRatesExplainThePerception` | 위 3-1 표의 폼 단위 수치 (닭 합계 55 / 표정 9.17 / 슬라임 25) |
 | `moreDrawsRaiseLegendaryOdds` | 전설 확률이 draw에 따라 단조 증가 |
+| `hatchRollAppliesFivePercentUpgrade` | 2-1 표 draws=1 최종확률(C 76 · U 13.5 · R 8.1 · L 2.4) + 등급업 빈도 4.9% |
+| `upgradePercentBoundsAreRespected` | 0%면 절대 안 오름 / 100%면 전설만 빼고 전부 오름 |
 
 이 표들을 바꾸면 테스트가 깨지므로 **밸런스를 건드렸다는 사실이 자동으로 드러난다.**
 
@@ -113,7 +135,7 @@ best-of-N 공식: `P(최고등급 = X) = P(단일 ≤ X)^N − P(단일 < X)^N`.
 (`HomeView.logHatchForDebug`, 릴리스엔 코드 자체가 없음).
 
 ```
-hatch | focusSec=10 draws=1 forcedDraws=nil effective=1 forcedSpecies=nil | rarity=common species=chicken form=ChickenSleepy
+hatch | focusSec=10 draws=1 forcedDraws=nil effective=1 forcedSpecies=nil forceUpgrade=false upgraded=false | rarity=common species=chicken form=ChickenSleepy
 ```
 
 - Xcode 콘솔에서 `hatch`로 필터. 폰만 있을 땐 Console.app에서

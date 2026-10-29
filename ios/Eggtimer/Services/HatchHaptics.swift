@@ -25,6 +25,8 @@ final class HatchHaptics {
     private var engine: CHHapticEngine?
     /// 패턴은 매번 만들 필요가 없어 캐시한다.
     private var player: CHHapticPatternPlayer?
+    /// 등급업 "한 번 더 떨림" 패턴(부화 패턴 앞에 따로 재생).
+    private var rumblePlayer: CHHapticPatternPlayer?
 
     private var isSupported: Bool {
         CHHapticEngine.capabilitiesForHardware().supportsHaptics
@@ -42,20 +44,31 @@ final class HatchHaptics {
             engine.resetHandler = { [weak engine] in try? engine?.start() }
             try engine.start()
             self.engine = engine
-            self.player = try engine.makePlayer(with: Self.pattern())
+            self.player = try engine.makePlayer(with: Self.pattern(HatchHapticPattern.events))
+            self.rumblePlayer = try engine.makePlayer(with: Self.pattern(HatchHapticPattern.upgradeRumble))
         } catch {
             // 햅틱은 있으면 좋은 것이지 필수가 아니다. 실패해도 연출을 막지 않는다.
             engine = nil
             player = nil
+            rumblePlayer = nil
         }
     }
 
     /// 부화 패턴을 처음부터 재생. 영상 재생과 같은 순간에 부르면 박자가 맞는다.
     /// - Parameter enabled: Settings의 진동 스위치. 꺼져 있으면 아무것도 안 한다.
     func play(enabled: Bool) {
+        start(\.player, enabled: enabled)
+    }
+
+    /// 등급업 떨림 패턴 재생. 부화 패턴(`play`)보다 `HatchReveal.upgradeRumbleDuration` 먼저 부른다.
+    func playUpgradeRumble(enabled: Bool) {
+        start(\.rumblePlayer, enabled: enabled)
+    }
+
+    private func start(_ which: KeyPath<HatchHaptics, CHHapticPatternPlayer?>, enabled: Bool) {
         guard enabled, isSupported else { return }
         prepare()   // 아직 안 세워졌으면 지금 세운다
-        guard let engine, let player else { return }
+        guard let engine, let player = self[keyPath: which] else { return }
         do {
             try engine.start()          // 유휴 상태로 내려가 있었을 수 있다
             try player.start(atTime: CHHapticTimeImmediate)
@@ -65,8 +78,8 @@ final class HatchHaptics {
     }
 
     /// HatchHapticPattern(순수 데이터)을 CoreHaptics 패턴으로 옮긴다.
-    private static func pattern() throws -> CHHapticPattern {
-        let events = HatchHapticPattern.events.map { event in
+    private static func pattern(_ events: [HatchHapticPattern.Event]) throws -> CHHapticPattern {
+        let events = events.map { event in
             CHHapticEvent(
                 eventType: event.isContinuous ? .hapticContinuous : .hapticTransient,
                 parameters: [

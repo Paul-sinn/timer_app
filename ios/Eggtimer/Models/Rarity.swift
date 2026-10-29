@@ -40,6 +40,16 @@ enum Rarity: String, CaseIterable, Identifiable, Comparable {
         }
     }
 
+    /// 등급업 시 올라갈 한 단계 위 등급. 전설은 더 위가 없어 nil.
+    var next: Rarity? {
+        switch self {
+        case .common:    return .uncommon
+        case .uncommon:  return .rare
+        case .rare:      return .legendary
+        case .legendary: return nil
+        }
+    }
+
     /// 한글 표시 라벨.
     var label: String {
         switch self {

@@ -36,14 +36,14 @@ final class CollectionStore {
     /// 확률표에 따라 새 생명체를 부화시켜 컬렉션 맨 앞에 추가하고 반환한다(영속 저장).
     /// `draws`(집중 길이 보상)만큼 best-of-N으로 등급을 굴린다. 기본 1.
     @discardableResult
-    func hatch(draws: Int = 1) -> Creature {
-        let creature = Creature.hatch(draws: draws)
-        creatures.insert(creature, at: 0)
+    func hatch(draws: Int = 1) -> (creature: Creature, upgraded: Bool) {
+        let result = Creature.hatch(draws: draws)
+        creatures.insert(result.creature, at: 0)
         if let context {
-            context.insert(HatchedCreatureRecord(from: creature))
+            context.insert(HatchedCreatureRecord(from: result.creature))
             try? context.save()
         }
-        return creature
+        return result
     }
 
     /// 원격(Supabase)에서 풀한 생명체를 로컬에 병합한다(동기화). 이미 가진 id는 건너뛴다(idempotent).

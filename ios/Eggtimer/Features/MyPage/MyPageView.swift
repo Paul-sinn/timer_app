@@ -380,6 +380,8 @@ struct MyPageView: View {
     @State private var debugForced: CreatureSpecies?
     /// 강제 draw 횟수(nil = Actual focus length). UI 갱신용 로컬 미러.
     @State private var debugDraws: Int?
+    /// 강제 등급업 여부. UI 갱신용 로컬 미러.
+    @State private var debugUpgrade = false
     /// 데모 시드 완료 피드백.
     @State private var seedDone = false
 
@@ -499,6 +501,23 @@ struct MyPageView: View {
                 }
             }
 
+            AppCard {
+                Toggle(isOn: Binding(
+                    get: { debugUpgrade },
+                    set: { DebugHatch.forceUpgrade = $0; debugUpgrade = $0 }
+                )) {
+                    VStack(alignment: .leading, spacing: AppSpacing.elementTight) {
+                        Text("Force rarity upgrade")
+                            .font(AppFont.body.weight(.semibold))
+                            .foregroundStyle(AppColor.textPrimary)
+                        Text("Every hatch goes one tier up (not legendary) with the extra rumble.")
+                            .font(AppFont.cardTitle)
+                            .foregroundStyle(AppColor.textSecondary)
+                    }
+                }
+                .tint(AppColor.eggAccent)
+            }
+
             if let history {
                 AppCard {
                     VStack(alignment: .leading, spacing: AppSpacing.element) {
@@ -528,6 +547,7 @@ struct MyPageView: View {
         .onAppear {
             debugForced = DebugHatch.forcedSpecies
             debugDraws = DebugHatch.forcedDraws
+            debugUpgrade = DebugHatch.forceUpgrade
         }
     }
 

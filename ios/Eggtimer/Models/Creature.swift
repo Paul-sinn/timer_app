@@ -67,25 +67,32 @@ struct Creature: Identifiable, Hashable {
 
     /// 확률표에 따라 한 종을 뽑아 새 생명체를 부화시킨다.
     /// `draws`(집중 길이 보상, FocusReward)만큼 등급을 굴려 최고 등급을 채택한다(best-of-N). 기본 1.
-    static func hatch(draws: Int = 1, at date: Date = Date()) -> Creature {
+    /// 그 뒤 등급업(`CreatureSpecies.upgradePercent`)을 굴린다. `upgraded`는 연출용(저장 안 함).
+    static func hatch(draws: Int = 1, at date: Date = Date()) -> (creature: Creature, upgraded: Bool) {
         var generator = SystemRandomNumberGenerator()
         #if DEBUG
         // 개발자 강제 부화(마이페이지). 확률·draw를 무시하고 지정 종으로 부화한다. 릴리스엔 없음.
         if let forced = DebugHatch.forcedSpecies {
-            return Creature(species: forced, imageName: forced.randomVariant(using: &generator), hatchedAt: date)
+            let creature = Creature(species: forced, imageName: forced.randomVariant(using: &generator), hatchedAt: date)
+            return (creature, DebugHatch.forceUpgrade)   // 종 고정 + 등급업 연출만 확인
         }
-        // 강제 draw(best-of-N 검수용). Settings 시 Actual focus length 대신 이 값으로 굴린다. 릴리스엔 없음.
-        return hatch(draws: DebugHatch.effectiveDraws(for: draws), at: date, using: &generator)
+        // 강제 draw(best-of-N 검수용)·강제 등급업. Settings 시 실제 값 대신 이 값으로 굴린다. 릴리스엔 없음.
+        return hatch(draws: DebugHatch.effectiveDraws(for: draws),
+                     upgradePercent: DebugHatch.forceUpgrade ? 100 : CreatureSpecies.upgradePercent,
+                     at: date, using: &generator)
         #else
         return hatch(draws: draws, at: date, using: &generator)
         #endif
     }
 
     /// 테스트 가능한 주입형 RNG 부화.
-    static func hatch<G: RandomNumberGenerator>(draws: Int = 1, at date: Date = Date(), using generator: inout G) -> Creature {
-        let species = CreatureSpecies.roll(draws: draws, using: &generator)
-        let image = species.randomVariant(using: &generator)
-        return Creature(species: species, imageName: image, hatchedAt: date)
+    static func hatch<G: RandomNumberGenerator>(
+        draws: Int = 1, upgradePercent: Int = CreatureSpecies.upgradePercent,
+        at date: Date = Date(), using generator: inout G
+    ) -> (creature: Creature, upgraded: Bool) {
+        let roll = CreatureSpecies.rollForHatch(draws: draws, upgradePercent: upgradePercent, using: &generator)
+        let image = roll.species.randomVariant(using: &generator)
+        return (Creature(species: roll.species, imageName: image, hatchedAt: date), roll.upgraded)
     }
 }
 
@@ -105,6 +112,13 @@ enum DebugHatch {
     /// 실제로 굴릴 draw 수. `Creature.hatch`와 부화 로그가 **같은 값**을 보도록 단일 출처로 둔다
     /// (따로 계산하면 로그가 거짓말을 하게 된다).
     static func effectiveDraws(for draws: Int) -> Int { forcedDraws ?? draws }
+
+    /// 강제 등급업(연출 검수용). true면 전설만 빼고 매번 한 단계 오르고 "한 번 더 떨림"이 나온다.
+    static var forceUpgrade: Bool {
+        get { UserDefaults.standard.bool(forKey: upgradeKey) }
+        set { UserDefaults.standard.set(newValue, forKey: upgradeKey) }
+    }
+    private static let upgradeKey = "debug.forceUpgrade"
 
     /// 강제 draw 횟수(best-of-N 검수용). nil이면 Actual focus length(FocusReward)로 계산한 draw 사용.
     static var forcedDraws: Int? {

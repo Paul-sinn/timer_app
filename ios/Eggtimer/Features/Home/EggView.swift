@@ -16,6 +16,8 @@ struct EggView: View {
     let stageIndex: Int
     /// 알 높이 기준 크기(pt).
     var height: CGFloat = 240
+    /// 등급업 "한 번 더 떨림". true가 되는 순간 `HatchReveal.upgradeRumbleDuration` 동안 드르르 떤다.
+    var rumbling = false
 
     /// 흔들림 루프 토글.
     @State private var wobbling = false
@@ -23,6 +25,9 @@ struct EggView: View {
     @State private var crackPop = false
     /// 마지막 단계 두근두근(심장박동) 펄스.
     @State private var beat = false
+    /// 등급업 떨림 진행도 0 → 1.
+    @State private var rumbleProgress: Double = 0
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     /// crack 6단계 에셋(무결 → 금 확장 → 벌어지기 직전). README 순서 그대로.
     private static let crackNames = [
@@ -68,6 +73,7 @@ struct EggView: View {
                 .animation(.easeInOut(duration: wobblePeriod).repeatForever(autoreverses: true), value: wobbling)
                 .animation(.spring(response: 0.25, dampingFraction: 0.4), value: crackPop)
                 .animation(.easeInOut(duration: 0.42).repeatForever(autoreverses: true), value: beat)
+                .modifier(EggRumbleModifier(progress: rumbleProgress, amplitude: height / 30))
         }
         .onAppear { wobbling = true; beat = true }
         .onChange(of: stageIndex) { _, _ in
@@ -78,7 +84,27 @@ struct EggView: View {
                 crackPop = false
             }
         }
+        .onChange(of: rumbling) { _, on in
+            guard on, !reduceMotion else { return }   // 동작 줄이기: 떨림 없이 기다림·진동만
+            rumbleProgress = 0
+            withAnimation(.linear(duration: HatchReveal.upgradeRumbleDuration)) { rumbleProgress = 1 }
+        }
         .accessibilityLabel(Text("Hatching egg · stage \(clampedStage + 1)"))
+    }
+}
+
+/// 등급업 떨림 오프셋. progress를 애니메이션하면 매 프레임 `HatchReveal.upgradeRumbleOffset`을 다시 잰다.
+private struct EggRumbleModifier: ViewModifier, Animatable {
+    var progress: Double
+    let amplitude: CGFloat
+
+    var animatableData: Double {
+        get { progress }
+        set { progress = newValue }
+    }
+
+    func body(content: Content) -> some View {
+        content.offset(x: HatchReveal.upgradeRumbleOffset(progress, amplitude: amplitude))
     }
 }
 

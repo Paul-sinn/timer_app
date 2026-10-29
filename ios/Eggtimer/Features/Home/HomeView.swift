@@ -39,6 +39,8 @@ struct HomeView: View {
     @AppStorage("companionCreatureID") private var companionID = ""
     /// 부화 버스트 영상 재생 중(캐릭터 등장 시점에 false).
     @State private var bornEffect = false
+    /// 등급업 "한 번 더 떨림" 중(부화 영상 직전). 이 동안 재부화를 막는다.
+    @State private var upgradeRumbling = false
     /// 화면 전체 섬광 오버레이 활성. 영상보다 조금 더 오래 남아 캐릭터를 빛 속에서 드러낸다.
     @State private var revealFlash = false
     /// 임팩트 화면 흔들림 진행도(0 → 1). 애니메이션되며 HatchReveal.shakeOffset을 그린다.
@@ -117,11 +119,27 @@ struct HomeView: View {
 
     /// 부화 처리(자동·수동 공통 단일 진입점). 캐릭터를 알 자리에 유지하고 성격대로 인사시킨다.
     private func triggerHatch() {
-        guard hatchling == nil, !bornEffect else { return }   // 중복 방지(버스트 중 재진입 차단)
+        guard hatchling == nil, !bornEffect, !upgradeRumbling else { return }   // 중복 방지(연출 중 재진입 차단)
         let draws = FocusReward.draws(focusSeconds: session.activeSecondsLive)  // 집중 길이 보상(best-of-N)
-        let born = store.hatch(draws: draws)          // 확률 부화 + 컬렉션 반영(영속)
-        logHatchForDebug(focusSeconds: session.activeSecondsLive, draws: draws, born: born)
+        let (born, upgraded) = store.hatch(draws: draws)   // 확률 부화(+등급업) + 컬렉션 반영(영속)
+        logHatchForDebug(focusSeconds: session.activeSecondsLive, draws: draws, born: born, upgraded: upgraded)
         sync?.pushNewCreature(born)                   // 로그인 시 원격 동기화
+        guard upgraded else {
+            playHatchReveal(born)
+            return
+        }
+        // 등급업: 바로 안 터지고 한 번 더 드르르 떨다가 터진다(기대감). 결과는 이미 저장됨.
+        upgradeRumbling = true                        // EggView가 이 값을 보고 떤다
+        HatchHaptics.shared.playUpgradeRumble(enabled: hapticsEnabled)
+        Task { @MainActor in
+            try? await Task.sleep(for: .seconds(HatchReveal.upgradeRumbleDuration))
+            upgradeRumbling = false                   // 같은 틱에 bornEffect가 켜져 재진입 틈이 없다
+            playHatchReveal(born)
+        }
+    }
+
+    /// 부화 버스트 → 임팩트 → 캐릭터 등장. 영상 재생 시작 = 0초(HatchReveal 타임라인).
+    private func playHatchReveal(_ born: Creature) {
         bornEffect = true                             // 알 자리에 버스트 영상 재생(몬스터 아직 X)
         revealFlash = true                            // 화면 전체 섬광 시작(영상보다 오래 남는다)
         HatchHaptics.shared.play(enabled: hapticsEnabled)   // 충전 떨림 → 임팩트 → 등장(영상과 같은 시계)
@@ -156,7 +174,7 @@ struct HomeView: View {
     ///
     /// 가장 먼저 볼 것은 `forcedSpecies`·`forcedDraws`다. 마이페이지 개발자 섹션에서
     /// 한 번이라도 만졌으면 UserDefaults에 남아 확률을 통째로 무시한다.
-    private func logHatchForDebug(focusSeconds: Int, draws: Int, born: Creature) {
+    private func logHatchForDebug(focusSeconds: Int, draws: Int, born: Creature, upgraded: Bool) {
         #if DEBUG
         // privacy: .public 없이는 OSLog가 값을 <private>로 가려서 기기에서 숫자가 안 보인다.
         Self.hatchLog.debug("""
@@ -165,6 +183,8 @@ struct HomeView: View {
             forcedDraws=\(DebugHatch.forcedDraws.map(String.init) ?? "nil", privacy: .public) \
             effective=\(DebugHatch.effectiveDraws(for: draws), privacy: .public) \
             forcedSpecies=\(DebugHatch.forcedSpecies?.rawValue ?? "nil", privacy: .public) \
+            forceUpgrade=\(DebugHatch.forceUpgrade, privacy: .public) \
+            upgraded=\(upgraded, privacy: .public) \
             | rarity=\(born.species.rarity.rawValue, privacy: .public) \
             species=\(born.species.rawValue, privacy: .public) \
             form=\(born.imageName, privacy: .public)
@@ -675,7 +695,7 @@ struct HomeView: View {
                     }
                 }
         } else {
-            EggView(stageIndex: session.stageIndex, height: height)   // 알은 첫 부화 전까지만(진행도 → crack 6단계)
+            EggView(stageIndex: session.stageIndex, height: height, rumbling: upgradeRumbling)   // 알은 첫 부화 전까지만(진행도 → crack 6단계)
                 .transition(.opacity)
         }
     }

@@ -164,6 +164,39 @@ struct HatchRevealTests {
         }
     }
 
+    // MARK: - 등급업 떨림
+
+    @Test func upgradeRumbleStartsAndEndsAtRest() {
+        // 끝이 0이 아니면 바로 이어지는 부화 영상과 알 위치가 어긋나 튄다.
+        #expect(HatchReveal.upgradeRumbleOffset(0, amplitude: 8) == 0)
+        #expect(HatchReveal.upgradeRumbleOffset(1, amplitude: 8) == 0)
+    }
+
+    @Test func upgradeRumbleBuildsUpWithinAmplitude() {
+        func peak(_ range: ClosedRange<Double>) -> CGFloat {
+            stride(from: range.lowerBound, through: range.upperBound, by: 0.002)
+                .map { abs(HatchReveal.upgradeRumbleOffset($0, amplitude: 8)) }.max() ?? 0
+        }
+        let all = peak(0...1)
+        #expect(all <= 8)
+        #expect(all > 3, "너무 약해 떨림으로 안 보인다")
+        // 점점 세져야 "곧 터진다"로 읽힌다.
+        #expect(peak(0...0.3) < peak(0.6...0.9))
+    }
+
+    @Test func upgradeRumbleHapticIsValidAndSavesThePeakForTheHatch() {
+        let events = HatchHapticPattern.upgradeRumble
+        #expect(!events.isEmpty)
+        #expect(events == events.sorted { $0.time < $1.time })
+        for event in events {
+            #expect(event.time >= 0 && event.time < HatchReveal.upgradeRumbleDuration)
+            #expect(event.sharpness >= 0 && event.sharpness <= 1)
+            // 진짜 "쾅"은 이어지는 부화 임팩트(1.0)에 남겨둔다.
+            #expect(event.intensity > 0 && event.intensity < 1)
+        }
+        #expect((events.first?.intensity ?? 1) < (events.last?.intensity ?? 0), "떨림이 점점 세지지 않는다")
+    }
+
     @Test func hapticBuildupPrecedesTheImpact() {
         // 임팩트 전에 약한 떨림이 깔려야 "쌓였다 터진다"로 느껴진다.
         let buildup = HatchHapticPattern.events.filter { $0.time < HatchReveal.impact }

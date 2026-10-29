@@ -111,6 +111,20 @@ enum HatchReveal {
         return CGSize(width: amplitude * CGFloat(x), height: amplitude * CGFloat(y) * 0.7)
     }
 
+    // MARK: - 등급업 떨림 (부화 영상 전)
+
+    /// 등급업일 때 부화 영상 앞에 끼워 넣는 "한 번 더 떨림" 길이. 이만큼 부화가 늦어진다(기대감).
+    static let upgradeRumbleDuration: Double = 1.5
+
+    /// 등급업 떨림의 알 좌우 오프셋(pt). 약하게 시작해 점점 세지다가(크레셴도) 끝에서 0으로 돌아온다
+    /// — 바로 이어지는 부화 영상과 알 위치가 맞아야 안 튄다. 1.5초에 14번 왕복 ≈ "드르르".
+    static func upgradeRumbleOffset(_ progress: Double, amplitude: CGFloat) -> CGFloat {
+        let p = clamp(progress)
+        guard p > 0, p < 1 else { return 0 }
+        let envelope = pow(p, 1.5) * (1 - pow(p, 8))
+        return amplitude * CGFloat(sin(p * .pi * 2 * 14) * envelope)
+    }
+
     // MARK: - 곡선 유틸
 
     private static func clamp(_ value: Double) -> Double { min(max(value, 0), 1) }
@@ -159,4 +173,11 @@ enum HatchHapticPattern {
         .init(time: HatchReveal.creatureEntry, isContinuous: false,
               intensity: 0.6, sharpness: 0.35, duration: 0),
     ]
+
+    /// 등급업 떨림(영상 전 1.5초). 0.1초 간격 "드르르" 타격이 0.3 → 0.8로 세진다.
+    /// 1.0은 이어지는 부화 임팩트 몫으로 남겨둔다.
+    static let upgradeRumble: [Event] = (0..<15).map { i in
+        .init(time: Double(i) * 0.1, isContinuous: false,
+              intensity: 0.3 + Float(i) / 14 * 0.5, sharpness: 0.7, duration: 0)
+    }
 }

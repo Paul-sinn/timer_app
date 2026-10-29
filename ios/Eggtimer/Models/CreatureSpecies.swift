@@ -7,6 +7,7 @@
 //
 //  부화는 2단계 추첨: ① 등급(Rarity.tierWeight, 합 100·불변) → ② 그 등급 안의 종(weight 상대가중).
 //  → 새 종을 추가해도 다른 등급 확률이 안 바뀐다(해당 등급 내부만 재분배). 100% 안에서 자동 정규화.
+//  그 뒤 ③ 5% 등급업(`rollForHatch`). 아래 표는 등급업 전 값 — 최종확률은 docs/DRAW_ODDS.md 2-1.
 //
 //  확률표 (등급% × 등급 내 비중 = 실제 출현%)
 //  ┌───────────┬──────┬──────────────┬──────────┬────────┐
@@ -158,6 +159,23 @@ enum CreatureSpecies: String, CaseIterable, Identifiable {
         }
         let pool = allCases.filter { $0.rarity == best }
         return weightedPick(pool, using: &generator) ?? allCases[0]
+    }
+
+    /// 등급업 확률(%). 추첨이 끝난 등급을 한 단계 올린다(전설은 위가 없어 제외).
+    /// 최종 등급 확률(draws=1): C 76 · U 13.5 · R 8.1 · L 2.4.
+    static let upgradePercent = 5
+
+    /// **부화 추첨의 단일 진입점**: best-of-N(`roll(draws:)`) 뒤 `upgradePercent`% 확률로 한 등급 위 종을 다시 뽑는다.
+    /// `upgraded`는 연출(한 번 더 떨림)용이라 저장하지 않는다. `upgradePercent`는 테스트·DEBUG 강제용.
+    static func rollForHatch<G: RandomNumberGenerator>(
+        draws: Int, upgradePercent: Int = CreatureSpecies.upgradePercent, using generator: inout G
+    ) -> (species: CreatureSpecies, upgraded: Bool) {
+        let base = roll(draws: draws, using: &generator)
+        guard let next = base.rarity.next,
+              Int.random(in: 0..<100, using: &generator) < upgradePercent,
+              let upgraded = weightedPick(allCases.filter { $0.rarity == next }, using: &generator)
+        else { return (base, false) }
+        return (upgraded, true)
     }
 
     /// 1단계: 등급 추첨(tierWeight 가중, 전 등급 합 100).

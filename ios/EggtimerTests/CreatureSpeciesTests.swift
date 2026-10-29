@@ -116,8 +116,51 @@ struct CreatureSpeciesTests {
 
     @Test func hatchProducesValidCreature() {
         var gen = SeededGenerator(seed: 42)
-        let creature = Creature.hatch(using: &gen)
+        let creature = Creature.hatch(using: &gen).creature
         #expect(creature.species.imageVariants.contains(creature.imageName))
+    }
+
+    // MARK: - 등급업 (부화 결과를 한 단계 위로)
+
+    @Test func upgradeGoesExactlyOneTierUpAndLegendaryHasNoneAbove() {
+        #expect(Rarity.common.next == .uncommon)
+        #expect(Rarity.uncommon.next == .rare)
+        #expect(Rarity.rare.next == .legendary)
+        #expect(Rarity.legendary.next == nil)
+    }
+
+    /// 최종 등급 확률(draws=1) = 원래% × 0.95 + 한 단계 아래% × 0.05 → C 76 · U 13.5 · R 8.1 · L 2.4.
+    @Test func hatchRollAppliesFivePercentUpgrade() {
+        var gen = SeededGenerator(seed: 0x5EED)
+        let n = 200_000
+        var tiers: [Rarity: Int] = [:]
+        var upgrades = 0
+        for _ in 0..<n {
+            let roll = CreatureSpecies.rollForHatch(draws: 1, using: &gen)
+            tiers[roll.species.rarity, default: 0] += 1
+            if roll.upgraded {
+                upgrades += 1
+                #expect(roll.species.rarity != .common, "커먼은 아래 등급이 없어 등급업 결과일 수 없다")
+            }
+        }
+        let expected: [Rarity: Double] = [.common: 76, .uncommon: 13.5, .rare: 8.1, .legendary: 2.4]
+        for (rarity, pct) in expected {
+            let observed = Double(tiers[rarity] ?? 0) / Double(n) * 100
+            #expect(abs(observed - pct) <= (pct >= 5 ? 1.0 : 0.3), "\(rarity): 기대 \(pct)% / 관측 \(observed)%")
+        }
+        // 전설(2%)은 위가 없어 제외 → 5% × 98% = 4.9%.
+        #expect(abs(Double(upgrades) / Double(n) * 100 - 4.9) <= 0.3)
+    }
+
+    /// 확률 0이면 절대 안 오르고, 100이면 전설로 뽑힌 경우만 빼고 전부 오른다(DEBUG 강제 등급업이 쓰는 경로).
+    @Test func upgradePercentBoundsAreRespected() {
+        var gen = SeededGenerator(seed: 0x0B0B)
+        for _ in 0..<5_000 {
+            #expect(CreatureSpecies.rollForHatch(draws: 1, upgradePercent: 0, using: &gen).upgraded == false)
+            let roll = CreatureSpecies.rollForHatch(draws: 1, upgradePercent: 100, using: &gen)
+            #expect(roll.species.rarity != .common)
+            if !roll.upgraded { #expect(roll.species.rarity == .legendary) }
+        }
     }
 
     // MARK: - best-of-N (집중 길이 보상)
