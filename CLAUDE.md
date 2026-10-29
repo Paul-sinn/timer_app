@@ -201,6 +201,11 @@ xcrun xcresulttool get test-results summary --path /tmp/res.xcresult
   - 원인: `make_break_assets.py`가 "어두우면 배경"으로 지워서 bg와 같이 어두운 **외곽선까지 투명**이 됨. 다크 배경이 그동안 지워진 선을 대신 그려주고 있었다. 추가로 2프레임 크로스페이드가 그냥 겹쳐서 중간에 알파가 75%로 떨어져 밝은 배경이 비침.
   - 교훈: 투명 에셋은 **밝은 배경과 어두운 배경 둘 다 위에 합성해서** 확인한다. 배경을 지운 뒤엔 피사체를 몇 px 팽창해 원본 외곽선을 되살리고(스크립트가 가장자리 휘도로 자가검사), 크로스페이드는 `.compositingGroup()` + 위 레이어 `.plusLighter`로 알파 합을 1로 유지한다.
 
+- **2026-10-29 · 연출 요청을 내 해석("드르르 떨림")으로 만들어 통째로 롤백**
+  - 증상: 등급업 연출로 "부화 영상 전 1.5초 알 좌우 떨림"을 만들었는데 사용자가 원한 건 **기존 알 깨지는 연출에 "딸각딸각" 금이 한두 번 더 가다 딱 터지는 것**. 게다가 Force rarity upgrade + 포모도로 10초에서 4초쯤 진행이 멈춤(원인 미확인 — 기능째 롤백, 브랜치 `feat/rarity-upgrade`에 보존).
+  - 원인: 음성 입력 "R R R 모션"을 "드르르"로 추측하고, 추측한 선택지만 내밀어 사용자가 그중 하나를 골랐다. 선택지 안에 진짜 의도가 없었다.
+  - 교훈: 연출 요청은 **기존 에셋·연출 단계(금 가는 6단계, 버스트 영상)를 이름으로 짚어** 어느 지점에 무엇을 더하는지 확인받는다. 부화 타이밍을 늘리면 포모도로 다음 블록 진행(`advanceAfterReward`)이 같이 밀리므로 그 흐름까지 실제로 돌려볼 것.
+
 - **2026-10-23 · `HomeView.body` 수식어 사슬에 `.onChange` 하나 추가 → "unable to type-check in reasonable time"**
   - 증상: 동료 반응 점프용 `.onChange(of: dialogue.currentLine?.id)`를 body 끝 `.onChange` 묶음에 붙였더니 `HomeView.swift:364`에서 타입 체크 시간 초과(TEST BUILD FAILED).
   - 원인: `HomeView.body`는 `.onChange`·`.sensoryFeedback`·`.sheet`·`.overlay`가 이미 한계까지 이어진 단일 식이다. 하나만 더해도 타입체커가 포기한다.
