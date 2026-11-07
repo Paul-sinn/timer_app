@@ -51,8 +51,14 @@ struct CreatureArtTests {
 
     @Test func animatedSetCoversEveryCollectibleForm() {
         // 도감의 12폼 전부 3단계 아트를 가져야 한다 — 한 종만 안 자라면 고장난 것처럼 보인다.
-        #expect(Set(CreatureArt.animatedBases) == Set(CreatureForm.all.map(\.imageName)))
-        #expect(CreatureArt.animatedBases.count == 12)
+        #expect(Set(World.classic.forms.map(\.imageName)).isSubset(of: Set(CreatureArt.animatedBases)))
+        #expect(World.classic.forms.count == 12)
+    }
+
+    /// 크리스마스 10종 그림(60장)이 들어오면 켠다. 출시 전에 반드시 통과해야 한다.
+    @Test(.disabled("크리스마스 그림 60장 대기 중 — 에셋 반영 후 활성화"))
+    func christmasFormsHaveAnimatedArt() {
+        #expect(Set(World.christmas.forms.map(\.imageName)).isSubset(of: Set(CreatureArt.animatedBases)))
     }
 
     @Test func evolvedNamesReuseTheirSpeciesSet() {

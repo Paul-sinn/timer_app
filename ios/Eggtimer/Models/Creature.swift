@@ -65,9 +65,10 @@ struct Creature: Identifiable, Hashable {
 
     // MARK: - 부화
 
-    /// 확률표에 따라 한 종을 뽑아 새 생명체를 부화시킨다.
-    /// `draws`(집중 길이 보상, FocusReward)만큼 등급을 굴려 최고 등급을 채택한다(best-of-N). 기본 1.
-    static func hatch(draws: Int = 1, at date: Date = Date()) -> Creature {
+    /// 월드 규칙에 따라 도감 한 칸을 뽑아 새 생명체를 부화시킨다.
+    /// `draws`(집중 길이 보상, FocusReward)만큼 굴린다. `counts` = 이미 가진 칸별 개수(천장·새 캐릭터 우선 판정).
+    static func hatch(in world: World = .classic, draws: Int = 1,
+                      counts: [String: Int] = [:], at date: Date = Date()) -> Creature {
         var generator = SystemRandomNumberGenerator()
         #if DEBUG
         // 개발자 강제 부화(마이페이지). 확률·draw를 무시하고 지정 종으로 부화한다. 릴리스엔 없음.
@@ -75,13 +76,20 @@ struct Creature: Identifiable, Hashable {
             return Creature(species: forced, imageName: forced.randomVariant(using: &generator), hatchedAt: date)
         }
         // 강제 draw(best-of-N 검수용). Settings 시 Actual focus length 대신 이 값으로 굴린다. 릴리스엔 없음.
-        return hatch(draws: DebugHatch.effectiveDraws(for: draws), at: date, using: &generator)
+        return hatch(in: world, draws: DebugHatch.effectiveDraws(for: draws), counts: counts, at: date, using: &generator)
         #else
-        return hatch(draws: draws, at: date, using: &generator)
+        return hatch(in: world, draws: draws, counts: counts, at: date, using: &generator)
         #endif
     }
 
-    /// 테스트 가능한 주입형 RNG 부화.
+    /// 테스트 가능한 주입형 RNG 부화(월드 규칙).
+    static func hatch<G: RandomNumberGenerator>(in world: World, draws: Int = 1, counts: [String: Int] = [:],
+                                                at date: Date = Date(), using generator: inout G) -> Creature {
+        let form = CreatureSpecies.rollForm(in: world, draws: draws, counts: counts, using: &generator)
+        return Creature(species: form.species, imageName: form.imageName, hatchedAt: date)
+    }
+
+    /// 테스트 가능한 주입형 RNG 부화(기본 월드, 기존 경로 — 새 경로와 결과가 같은지 WorldTests가 대조한다).
     static func hatch<G: RandomNumberGenerator>(draws: Int = 1, at date: Date = Date(), using generator: inout G) -> Creature {
         let species = CreatureSpecies.roll(draws: draws, using: &generator)
         let image = species.randomVariant(using: &generator)

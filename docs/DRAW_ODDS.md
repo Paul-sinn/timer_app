@@ -120,3 +120,50 @@ hatch | focusSec=10 draws=1 forcedDraws=nil effective=1 forcedSpecies=nil | rari
   subsystem `com.paulsin.hatchly`, category `hatch`
 - **가장 먼저 볼 것은 `forcedSpecies`·`forcedDraws`**. 마이페이지 개발자 섹션에서 한 번이라도
   만졌으면 UserDefaults에 남아 확률을 통째로 무시한다(앱을 껐다 켜도 유지)
+
+---
+
+# 크리스마스 월드 (유료 팩) — 2026-11-07
+
+- 단일 출처: `World.christmas`(등급 확률·천장·새 캐릭터 우선) · `CreatureSpecies.rollForm(in:draws:counts:using:)`
+- 기획: `docs/CREATURES.md` §2·§3. 기본 월드 규칙(위 1~4장)은 **바뀌지 않았다** —
+  `WorldTests.classicFormRollMatchesLegacyHatchExactly`가 같은 시드에서 기존 부화와 결과가 같은지 대조한다.
+
+## 규칙
+
+1. **등급 확률 48 · 30 · 16 · 6**, 등급 안에서는 균등
+2. **새 캐릭터 우선**: 집중 길이만큼(25분=1 … 100분+=4) 칸 단위로 굴려, 아직 없는 칸이 있으면 그중 등급 높은 것.
+   전부 이미 가진 칸이면 등급 높은 것(기본 월드와 같은 best-of-N).
+3. **천장 3**: 도감 미완성 동안 3번 나온 칸은 후보에서 빠지고, 남은 칸끼리 같은 비중으로 다시 나눈다. 완성하면 해제.
+
+## 1번 굴림 기준 칸별 확률 (구매 화면 확률표와 같은 값)
+
+| 등급 | 칸 | 등급 확률 | 1칸당 |
+|---|---|---:|---:|
+| 흔함 | 빨간코·산타·엘프·선물상자 펭귄 | 48% | 12% |
+| 보통 | 눈사람 슬라임·꼬마 불씨·북극여우 | 30% | 10% |
+| 레어 | 진저브레드 병아리·눈올빼미 | 16% | 8% |
+| 전설 | 북극곰 | 6% | 6% |
+
+## 10칸 완성까지 부화 횟수 (2만 회 시뮬레이션, 앱 코드와 같은 규칙)
+
+| 한 번에 집중 | 평균 | 절반의 유저 | 90% 유저 | 최악 |
+|---|---:|---:|---:|---:|
+| 25분 | 23.0번 | 24번 | 28번 | 28번 |
+| 50분 | 17.4번 | 17번 | 23번 | 28번 |
+| 75분 | 14.3번 | 14번 | 19번 | 28번 |
+| 100분+ | 12.7번 | 12번 | 16번 | 28번 |
+
+- 최악 = 천장 3 × (10 − 1) + 1 = **28번** (`World.guaranteedCompletionHatches`)
+- `CREATURES.md` §3-3의 25분 평균 22.4는 다른 시뮬레이션 값이었다. 앱과 같은 규칙으로 다시 돌린 값은 23.0.
+
+## 자동 검증 (`EggtimerTests/WorldTests.swift`)
+
+| 테스트 | 무엇을 고정하나 |
+|---|---|
+| `classicFormRollMatchesLegacyHatchExactly` | 기본 월드는 업데이트 전후 결과가 같다(같은 시드 3000회 × draws 1~4) |
+| `worldsNeverLeakIntoEachOther` | 월드 밖 캐릭터가 절대 안 나온다 |
+| `christmasSingleDrawMatchesTierWeights` | 위 1칸당 확률(12·10·8·6%, ±1%) |
+| `undiscoveredFirstRemovesTheInversion` | 흔함 1칸만 남았을 때 75분이면 31.9% — 기본 규칙이면 2.8%로 역전됐을 값 |
+| `capBlocksFourthCopyWhileIncomplete` / `capLiftsOnceComplete` | 천장 3이 미완성일 때만 걸린다 |
+| `everyoneCompletesWithinGuarantee` | 2000명 × draws 1~4 전원 28번 안에 완성 + 평균이 위 표와 ±1 |

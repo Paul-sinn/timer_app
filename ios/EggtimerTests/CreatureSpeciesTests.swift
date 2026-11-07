@@ -32,7 +32,7 @@ struct CreatureSpeciesTests {
 
     /// 종의 실제 출현 확률(%) = 등급% × (종 weight / 같은 등급 weight 합).
     private func effectiveProbability(_ species: CreatureSpecies) -> Double {
-        let tierSum = CreatureSpecies.allCases
+        let tierSum = World.classic.species
             .filter { $0.rarity == species.rarity }
             .reduce(0) { $0 + $1.weight }
         return Double(species.rarity.tierWeight) * Double(species.weight) / Double(tierSum)
@@ -53,7 +53,7 @@ struct CreatureSpeciesTests {
     }
 
     @Test func dexEnumeratesEachImageVariantAsForm() {
-        let forms = CreatureForm.all
+        let forms = World.classic.forms
         // 닭 6표정 + 나머지 6종 1개씩 = 12폼.
         #expect(forms.count == 12)
         // 닭 변형은 서로 다른 이름으로 따로 수집된다.
@@ -64,7 +64,8 @@ struct CreatureSpeciesTests {
     }
 
     @Test func onlyLegendariesEvolve() {
-        for species in CreatureSpecies.allCases {
+        // 기본 월드의 옛 단일 진화 이미지 규칙. 크리스마스는 전 종이 3단계 아트로 진화한다.
+        for species in World.classic.species {
             let evolves = species.evolvedImageName != nil
             #expect(evolves == (species.rarity == .legendary))
         }
@@ -78,9 +79,9 @@ struct CreatureSpeciesTests {
         for _ in 0..<n {
             counts[CreatureSpecies.roll(using: &gen), default: 0] += 1
         }
-        // 모든 종이 최소 한 번은 등장.
-        #expect(counts.count == CreatureSpecies.allCases.count)
-        for species in CreatureSpecies.allCases {
+        // 기본 월드 모든 종이 최소 한 번은 등장.
+        #expect(counts.count == World.classic.species.count)
+        for species in World.classic.species {
             let observed = Double(counts[species] ?? 0) / Double(n) * 100
             let expected = effectiveProbability(species)
             // 흔한 종은 ±2%, 희귀종은 절대 오차 ±0.5% 이내.
@@ -205,7 +206,7 @@ struct CreatureSpeciesTests {
         }
         /// 등급 확률 × 등급 내 상대가중.
         func expectedRate(_ species: CreatureSpecies, draws: Int) -> Double {
-            let tierSum = CreatureSpecies.allCases
+            let tierSum = World.classic.species
                 .filter { $0.rarity == species.rarity }
                 .reduce(0) { $0 + $1.weight }
             return tierProbability(species.rarity, draws: draws)
@@ -219,7 +220,7 @@ struct CreatureSpeciesTests {
             for _ in 0..<n {
                 counts[CreatureSpecies.roll(draws: draws, using: &gen), default: 0] += 1
             }
-            for species in CreatureSpecies.allCases {
+            for species in World.classic.species {
                 let observed = Double(counts[species] ?? 0) / Double(n) * 100
                 let expected = expectedRate(species, draws: draws)
                 let tolerance = expected >= 5 ? 2.0 : 0.5
@@ -233,6 +234,6 @@ struct CreatureSpeciesTests {
     @Test func drawsClampedToAtLeastOne() {
         var gen = SeededGenerator(seed: 99)
         let s = CreatureSpecies.roll(draws: 0, using: &gen)
-        #expect(CreatureSpecies.allCases.contains(s))
+        #expect(World.classic.species.contains(s))
     }
 }

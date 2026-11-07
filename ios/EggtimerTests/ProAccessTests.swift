@@ -26,7 +26,26 @@ struct ProAccessTests {
         #expect(pro.isPro == false)   // 결제 없음 → 잠금
     }
 
+    @Test func freeWorldIsAlwaysOwned() {
+        #expect(ProAccess(defaults: freshDefaults()).owns(.classic))
+    }
+
+    @Test func paidWorldFollowsEntitlements() {
+        let pro = ProAccess(defaults: freshDefaults())
+        #expect(pro.owns(.christmas) == false)
+        pro.applyEntitlements([World.christmas.productID!])
+        #expect(pro.owns(.christmas))
+        pro.applyEntitlements([])          // 환불되면 빠진다
+        #expect(pro.owns(.christmas) == false)
+    }
+
     #if DEBUG
+    @Test func debugToggleUnlocksEveryWorld() {
+        let pro = ProAccess(defaults: freshDefaults())
+        pro.setDebugPro(true)
+        for world in World.allCases { #expect(pro.owns(world)) }
+    }
+
     @Test func debugToggleUnlocksAndPersists() {
         let defaults = freshDefaults()
         let pro = ProAccess(defaults: defaults)

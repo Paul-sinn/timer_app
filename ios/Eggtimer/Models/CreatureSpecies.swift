@@ -2,8 +2,9 @@
 //  CreatureSpecies.swift
 //  Eggtimer
 //
-//  도감에 등장하는 7종 생명체의 단일 진실 소스(Single Source of Truth).
-//  각 종의 등급·출현 가중치·이미지 에셋·진화 여부를 한곳에 정의한다.
+//  도감에 등장하는 생명체의 단일 진실 소스(Single Source of Truth).
+//  각 종의 소속 월드·등급·출현 가중치·이미지 에셋·진화 여부를 한곳에 정의한다.
+//  월드별 등급 확률·추첨 규칙은 `World`(docs/CREATURES.md). 아래 표는 기본 월드.
 //
 //  부화는 2단계 추첨: ① 등급(Rarity.tierWeight, 합 100·불변) → ② 그 등급 안의 종(weight 상대가중).
 //  → 새 종을 추가해도 다른 등급 확률이 안 바뀐다(해당 등급 내부만 재분배). 100% 안에서 자동 정규화.
@@ -32,8 +33,30 @@ enum CreatureSpecies: String, CaseIterable, Identifiable {
     case goldChick    // 황금 병아리
     case whiteTiger   // 백호
     case phoenix      // 피닉스
+    // 크리스마스 월드. rawValue는 DB에 저장되므로 출시 후 바꾸지 말 것(WorldTests가 고정).
+    case redNosePenguin   // 빨간코 펭귄
+    case santaPenguin     // 산타 펭귄
+    case elfPenguin       // 엘프 펭귄
+    case giftBoxPenguin   // 선물상자 펭귄
+    case snowmanSlime     // 눈사람 슬라임
+    case littleEmber      // 꼬마 불씨
+    case arcticFox        // 북극여우
+    case gingerbreadChick // 진저브레드 병아리
+    case snowyOwl         // 눈올빼미
+    case polarBear        // 북극곰(간판)
 
     var id: String { rawValue }
+
+    /// 소속 월드(어느 알에서 나오는지).
+    var world: World {
+        switch self {
+        case .chicken, .slime, .dino, .blackCat, .goldChick, .whiteTiger, .phoenix:
+            return .classic
+        case .redNosePenguin, .santaPenguin, .elfPenguin, .giftBoxPenguin,
+             .snowmanSlime, .littleEmber, .arcticFox, .gingerbreadChick, .snowyOwl, .polarBear:
+            return .christmas
+        }
+    }
 
     /// 표시 이름.
     var name: String {
@@ -45,6 +68,16 @@ enum CreatureSpecies: String, CaseIterable, Identifiable {
         case .goldChick:  return String(localized: "Golden Chick")
         case .whiteTiger: return String(localized: "White Tiger")
         case .phoenix:    return String(localized: "Phoenix")
+        case .redNosePenguin:   return String(localized: "Red-Nose Penguin")
+        case .santaPenguin:     return String(localized: "Santa Penguin")
+        case .elfPenguin:       return String(localized: "Elf Penguin")
+        case .giftBoxPenguin:   return String(localized: "Gift Box Penguin")
+        case .snowmanSlime:     return String(localized: "Snowman Slime")
+        case .littleEmber:      return String(localized: "Little Ember")
+        case .arcticFox:        return String(localized: "Arctic Fox")
+        case .gingerbreadChick: return String(localized: "Gingerbread Chick")
+        case .snowyOwl:         return String(localized: "Snowy Owl")
+        case .polarBear:        return String(localized: "Polar Bear")
         }
     }
 
@@ -54,6 +87,10 @@ enum CreatureSpecies: String, CaseIterable, Identifiable {
         case .dino:                   return .uncommon
         case .blackCat, .goldChick:   return .rare
         case .whiteTiger, .phoenix:   return .legendary
+        case .redNosePenguin, .santaPenguin, .elfPenguin, .giftBoxPenguin: return .common
+        case .snowmanSlime, .littleEmber, .arcticFox:                      return .uncommon
+        case .gingerbreadChick, .snowyOwl:                                 return .rare
+        case .polarBear:                                                   return .legendary
         }
     }
 
@@ -69,6 +106,10 @@ enum CreatureSpecies: String, CaseIterable, Identifiable {
         case .goldChick:  return 3
         case .whiteTiger: return 1
         case .phoenix:    return 1
+        // 크리스마스: 등급 안 균등(1마리당 12·10·8·6%).
+        case .redNosePenguin, .santaPenguin, .elfPenguin, .giftBoxPenguin,
+             .snowmanSlime, .littleEmber, .arcticFox, .gingerbreadChick, .snowyOwl, .polarBear:
+            return 1
         }
     }
 
@@ -84,6 +125,16 @@ enum CreatureSpecies: String, CaseIterable, Identifiable {
         case .goldChick:  return ["GoldChick"]
         case .whiteTiger: return ["WhiteTiger"]
         case .phoenix:    return ["Phoenix"]
+        case .redNosePenguin:   return ["RedNosePenguin"]
+        case .santaPenguin:     return ["SantaPenguin"]
+        case .elfPenguin:       return ["ElfPenguin"]
+        case .giftBoxPenguin:   return ["GiftBoxPenguin"]
+        case .snowmanSlime:     return ["SnowmanSlime"]
+        case .littleEmber:      return ["LittleEmber"]
+        case .arcticFox:        return ["ArcticFox"]
+        case .gingerbreadChick: return ["GingerbreadChick"]
+        case .snowyOwl:         return ["SnowyOwl"]
+        case .polarBear:        return ["PolarBear"]
         }
     }
 
@@ -108,6 +159,28 @@ enum CreatureSpecies: String, CaseIterable, Identifiable {
         case "ChickenAngry":   return String(localized: "Angry Hen")
         default:               return name
         }
+    }
+
+    /// shortcut: 그림 도착 전 임시 표시(이모지). 번들에 그림이 생기면 화면은 자동으로 그림을 쓴다 → 그림 반영 후 이 속성 삭제.
+    var artPlaceholder: String? {
+        switch self {
+        case .redNosePenguin:   return "🐧"
+        case .santaPenguin:     return "🎅"
+        case .elfPenguin:       return "🧝"
+        case .giftBoxPenguin:   return "🎁"
+        case .snowmanSlime:     return "⛄️"
+        case .littleEmber:      return "🔥"
+        case .arcticFox:        return "🦊"
+        case .gingerbreadChick: return "🍪"
+        case .snowyOwl:         return "🦉"
+        case .polarBear:        return "🐻‍❄️"
+        default:                return nil
+        }
+    }
+
+    /// 이미지 변형명으로 종 찾기(렌더 쪽 자리표시용).
+    static func species(forImageName name: String) -> CreatureSpecies? {
+        allCases.first { $0.imageVariants.contains(name) }
     }
 
     /// 실루엣(미발견 표시)에 사용할 대표 이미지.
@@ -135,6 +208,16 @@ enum CreatureSpecies: String, CaseIterable, Identifiable {
         case .dino:       return .dino
         case .blackCat:   return .blackCat
         case .goldChick:  return .goldChick
+        case .redNosePenguin:   return .redNosePenguin
+        case .santaPenguin:     return .santaPenguin
+        case .elfPenguin:       return .elfPenguin
+        case .giftBoxPenguin:   return .giftBoxPenguin
+        case .snowmanSlime:     return .snowmanSlime
+        case .littleEmber:      return .littleEmber
+        case .arcticFox:        return .arcticFox
+        case .gingerbreadChick: return .gingerbreadChick
+        case .snowyOwl:         return .snowyOwl
+        case .polarBear:        return .polarBear
         }
     }
 
@@ -142,38 +225,72 @@ enum CreatureSpecies: String, CaseIterable, Identifiable {
 
     /// 한 종을 뽑는다: ① 등급(`Rarity.tierWeight`, 합 100) ② 그 등급 안의 종(`weight` 상대가중).
     /// 주입형 RNG로 테스트 가능. **새 종을 추가해도 다른 등급의 확률은 불변**(해당 등급 내부만 재분배).
+    /// 기본 월드 전용(하위호환). 월드를 고르려면 `rollForm(in:draws:counts:using:)`.
     static func roll<G: RandomNumberGenerator>(using generator: inout G) -> CreatureSpecies {
         roll(draws: 1, using: &generator)
     }
 
     /// best-of-N 추첨: 등급을 `draws`번 굴려 **최고 등급**을 채택한 뒤, 그 등급 안에서 종을 뽑는다.
     /// 집중 길이 보상(FocusReward)이 이 draw 횟수로만 작동한다 — 등급/종 weight는 그대로.
-    /// draws=1이면 기존 단일 추첨과 완전히 동일(하위호환).
+    /// draws=1이면 기존 단일 추첨과 완전히 동일(하위호환). 기본 월드 전용.
     static func roll<G: RandomNumberGenerator>(draws: Int, using generator: inout G) -> CreatureSpecies {
-        let n = max(1, draws)
-        var best = rollRarity(using: &generator)
-        for _ in 1..<n {
-            let r = rollRarity(using: &generator)
+        let allowed = World.classic.forms
+        return pickSpecies(tier: bestTier(.classic, allowed, draws: draws, using: &generator),
+                           .classic, allowed, using: &generator)
+    }
+
+    /// 월드 규칙대로 도감 한 칸을 뽑는다. `counts` = 이미 가진 칸별 개수(imageName → 개수).
+    /// - 기본 규칙: 등급 best-of-N → 등급 안 종 → 변형. 기본 월드는 기존 부화와 난수 소비까지 같다.
+    /// - `prefersUndiscovered`: 칸 단위로 `draws`번 굴려 **아직 없는 칸**을(그중 등급 높은 것) 먼저 준다.
+    /// - `repeatCap`: 도감 미완성 동안 천장에 닿은 칸은 후보에서 빠진다(남은 칸끼리 비중대로).
+    static func rollForm<G: RandomNumberGenerator>(in world: World, draws: Int,
+                                                   counts: [String: Int] = [:],
+                                                   using generator: inout G) -> CreatureForm {
+        let allowed = world.drawableForms(counts: counts)
+        guard world.prefersUndiscovered else {
+            let tier = bestTier(world, allowed, draws: draws, using: &generator)
+            return pickForm(tier: tier, world, allowed, using: &generator)
+        }
+        let results = (0..<max(1, draws)).map { _ in
+            pickForm(tier: rollTier(world, allowed, using: &generator), world, allowed, using: &generator)
+        }
+        let fresh = results.filter { counts[$0.imageName, default: 0] == 0 }
+        let pool = fresh.isEmpty ? results : fresh
+        // max(by:)는 동률이면 앞의 것을 유지한다(기존 best-of-N과 같은 규칙).
+        return pool.max { $0.rarity < $1.rarity } ?? results[0]
+    }
+
+    /// 등급을 draws번 굴려 가장 높은 등급(최소 1번).
+    private static func bestTier<G: RandomNumberGenerator>(_ world: World, _ allowed: [CreatureForm],
+                                                          draws: Int, using generator: inout G) -> Rarity {
+        var best = rollTier(world, allowed, using: &generator)
+        for _ in 1..<max(1, draws) {
+            let r = rollTier(world, allowed, using: &generator)
             if r > best { best = r }
         }
-        let pool = allCases.filter { $0.rarity == best }
-        return weightedPick(pool, using: &generator) ?? allCases[0]
+        return best
     }
 
-    /// 1단계: 등급 추첨(tierWeight 가중, 전 등급 합 100).
-    private static func rollRarity<G: RandomNumberGenerator>(using generator: inout G) -> Rarity {
-        let total = Rarity.allCases.reduce(0) { $0 + $1.tierWeight }
+    /// 1단계: 후보 칸이 남은 등급만으로 월드 등급 확률 가중 추첨.
+    private static func rollTier<G: RandomNumberGenerator>(_ world: World, _ allowed: [CreatureForm],
+                                                          using generator: inout G) -> Rarity {
+        let tiers = Rarity.allCases.filter { r in allowed.contains { $0.rarity == r } }
+        let total = tiers.reduce(0) { $0 + world.tierWeight($1) }
+        guard total > 0 else { return tiers.first ?? .common }
         var ticket = Int.random(in: 0..<total, using: &generator)
-        for r in Rarity.allCases {
-            if ticket < r.tierWeight { return r }
-            ticket -= r.tierWeight
+        for r in tiers {
+            if ticket < world.tierWeight(r) { return r }
+            ticket -= world.tierWeight(r)
         }
-        return .common // 도달 불가(합 보장)
+        return tiers.last ?? .common // 도달 불가(합 보장)
     }
 
-    /// 2단계: 같은 등급 종 풀에서 weight 가중으로 하나 선택.
-    private static func weightedPick<G: RandomNumberGenerator>(_ pool: [CreatureSpecies], using generator: inout G) -> CreatureSpecies? {
-        guard !pool.isEmpty else { return nil }
+    /// 2단계: 그 등급의 후보 종 중 weight 가중으로 하나.
+    private static func pickSpecies<G: RandomNumberGenerator>(tier: Rarity, _ world: World,
+                                                             _ allowed: [CreatureForm],
+                                                             using generator: inout G) -> CreatureSpecies {
+        let pool = world.species.filter { sp in sp.rarity == tier && allowed.contains { $0.species == sp } }
+        guard !pool.isEmpty else { return allowed.first?.species ?? world.species[0] }
         let total = pool.reduce(0) { $0 + max(1, $1.weight) }
         var ticket = Int.random(in: 0..<total, using: &generator)
         for s in pool {
@@ -181,7 +298,16 @@ enum CreatureSpecies: String, CaseIterable, Identifiable {
             if ticket < w { return s }
             ticket -= w
         }
-        return pool.last
+        return pool[pool.count - 1]
+    }
+
+    /// 2+3단계: 종을 뽑고 그 종의 후보 변형 중 균등으로 하나.
+    private static func pickForm<G: RandomNumberGenerator>(tier: Rarity, _ world: World,
+                                                          _ allowed: [CreatureForm],
+                                                          using generator: inout G) -> CreatureForm {
+        let species = pickSpecies(tier: tier, world, allowed, using: &generator)
+        let variants = allowed.filter { $0.species == species }
+        return variants.randomElement(using: &generator) ?? CreatureForm(species: species, imageName: species.silhouetteImageName)
     }
 
     /// 시스템 RNG로 한 종을 뽑는 편의 메서드.
@@ -201,12 +327,4 @@ struct CreatureForm: Identifiable, Hashable {
     var id: String { imageName }
     var name: String { species.variantName(imageName: imageName) }
     var rarity: Rarity { species.rarity }
-
-    /// 도감에 등장하는 전체 폼. allCases 선언 순서가 이미 등급 오름차순(common→legendary)이라
-    /// 별도 정렬 없이 그대로 등급순 + 변형 선언순이 유지된다.
-    static var all: [CreatureForm] {
-        CreatureSpecies.allCases.flatMap { sp in
-            sp.imageVariants.map { CreatureForm(species: sp, imageName: $0) }
-        }
-    }
 }

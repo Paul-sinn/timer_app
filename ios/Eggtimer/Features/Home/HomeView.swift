@@ -37,6 +37,10 @@ struct HomeView: View {
     /// 현재 동료의 id(영속). 콜드런치(앱 재Start) 후 컬렉션에서 같은 개체를 복원해 홈에 다시 표시.
     /// 빈 문자열 = 동료 없음(첫 부화 전 또는 'Get new egg' 직후).
     @AppStorage("companionCreatureID") private var companionID = ""
+    /// 고른 월드(영속). 미구매·환불이면 `world`가 기본 월드로 되돌린다.
+    @AppStorage("selectedWorld") private var worldRaw = World.classic.rawValue
+    /// 유료 월드 소유 확인(앱 루트에서 주입).
+    @Environment(ProAccess.self) private var pro
     /// 부화 버스트 영상 재생 중(캐릭터 등장 시점에 false).
     @State private var bornEffect = false
     /// 화면 전체 섬광 오버레이 활성. 영상보다 조금 더 오래 남아 캐릭터를 빛 속에서 드러낸다.
@@ -119,7 +123,7 @@ struct HomeView: View {
     private func triggerHatch() {
         guard hatchling == nil, !bornEffect else { return }   // 중복 방지(버스트 중 재진입 차단)
         let draws = FocusReward.draws(focusSeconds: session.activeSecondsLive)  // 집중 길이 보상(best-of-N)
-        let born = store.hatch(draws: draws)          // 확률 부화 + 컬렉션 반영(영속)
+        let born = store.hatch(in: world, draws: draws)   // 고른 월드 규칙으로 부화 + 컬렉션 반영(영속)
         logHatchForDebug(focusSeconds: session.activeSecondsLive, draws: draws, born: born)
         sync?.pushNewCreature(born)                   // 로그인 시 원격 동기화
         bornEffect = true                             // 알 자리에 버스트 영상 재생(몬스터 아직 X)
@@ -511,6 +515,10 @@ struct HomeView: View {
             Text("Home")
                 .font(.title.weight(.bold))
                 .foregroundStyle(theme.onPagePrimary)
+            // 어느 월드의 알을 키울지. 바꾸면 키우던 알·동료는 경고 후 리셋.
+            WorldPicker(selection: worldBinding,
+                        switchResets: hasCompanion || !session.isIdle,
+                        reset: takeNewEgg)
             Spacer()
             // 최종 진화 상태에선 집중이 끊김없이 이어지므로, 새 종을 받고 싶은 유저용
             // 작은 "New egg" 토글을 기어 옆에 둔다. 기어를 대체하면 세션 중 설정에 못 들어간다.
@@ -634,6 +642,13 @@ struct HomeView: View {
 
     /// 부화한 동료가 화면에 있는지(부화 후 알 자리를 영구히 차지하고 집중 세션 내내 유지·진화).
     private var hasCompanion: Bool { hatchling != nil }
+
+    /// 지금 부화에 쓰는 월드(소유 확인을 거친 값).
+    private var world: World { World.resolved(worldRaw, owns: pro.owns) }
+
+    private var worldBinding: Binding<World> {
+        Binding(get: { world }, set: { worldRaw = $0.rawValue })
+    }
     /// 방금 부화해 쉬는 중(축하 카드·탄생 문구 노출 — 집중 중에는 숨김).
     private var justHatched: Bool { hatchling != nil && session.isIdle }
 
@@ -1120,10 +1135,12 @@ private struct ZapBurstView: View {
 
 #Preview("초기 알") {
     HomeView(session: .preview(progress: 0))
+        .environment(ProAccess())
         .preferredColorScheme(.dark)
 }
 
 #Preview("부화 임박") {
     HomeView(session: .preview(progress: 0.95))
+        .environment(ProAccess())
         .preferredColorScheme(.dark)
 }

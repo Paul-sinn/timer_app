@@ -85,5 +85,6 @@ private struct GalleryLink<Destination: View>: View {
 
 #Preview {
     ReviewGalleryView()
+        .environment(ProAccess())
 }
 #endif

@@ -228,6 +228,57 @@ enum DialogueCatalog {
             "Rare things start quietly.",
             "Worth building, you are.",
         ])
+        // 크리스마스 월드 (docs/CREATURES.md §2-3)
+        + creaturePool(.redNosePenguin, [
+            "See my nose glow? I'm lighting your focus path today.",
+            "Front of the sled. Obviously.",
+            "Relax. I know the way.",
+        ])
+        + creaturePool(.santaPenguin, [
+            "Compliment delivery! ...I'll be just like Chief Bear someday.",
+            "Ho ho... ho? Did I do it right?",
+            "This hat's a little big. I'll grow into it!",
+        ])
+        + creaturePool(.elfPenguin, [
+            "Like wrapping a gift. One piece at a time, carefully.",
+            "Workbench is ready. Let's build.",
+            "Measure twice. Focus once.",
+        ])
+        + creaturePool(.giftBoxPenguin, [
+            "...Thanks for staying with me today. (ducks back in)",
+            "...Oh. H-hi.",
+            "Is it okay if I just peek for now?",
+        ])
+        + creaturePool(.snowmanSlime, [
+            "Don't turn on the heater... let's just focus. I melt, okay?",
+            "Brr. Perfect. Let's begin.",
+            "Squish. Cold squish. Hi.",
+        ])
+        + creaturePool(.littleEmber, [
+            "Cold? I'm right here. Let's do one more round!",
+            "Crackle! Let's warm things up.",
+            "Tiny flame, big cheer. Let's go!",
+        ])
+        + creaturePool(.arcticFox, [
+            "Get distracted and I'm eating your snack~ For real.",
+            "Heh. Found you.",
+            "Don't mind me. Just guarding your snacks.",
+        ])
+        + creaturePool(.gingerbreadChick, [
+            "Careful, I'm crispy. So keep your focus crispy today.",
+            "Freshly baked. Handle with care.",
+            "Icing's perfect. Naturally.",
+        ])
+        + creaturePool(.snowyOwl, [
+            "Tonight's constellation is named 'Sit Until the End.'",
+            "Hoo. The stars said you'd come.",
+            "Quiet night. Good for thinking.",
+        ])
+        + creaturePool(.polarBear, [
+            "...Good. Keep going.",
+            "...Here.",
+            "...I'll watch.",
+        ])
         // generic — 폴백(미매핑 종 공용)
         + creaturePool(.generic, [
             "Oh. It's you again.",
@@ -358,6 +409,106 @@ enum DialogueCatalog {
             "Stay golden. Stay focused.",
             "Even treasure needs time buried before it shines.",
         ])
+        + tickPool(.redNosePenguin, [
+            "Stay behind my nose. I know where we're going.",
+            "This path? I lit it. You're welcome.",
+            "Front of the sled feels good, huh? I'd know.",
+            "Nose still glowing. That means you're on track.",
+            "Fog's thick out there. Good thing I'm shining.",
+            "Keep pace. The sled doesn't pull itself.",
+            "Not bad. You almost keep up with me.",
+            "My nose gets brighter every minute. Coincidence? No.",
+        ])
+        + tickPool(.santaPenguin, [
+            "A present for you: you're doing amazing!",
+            "Unwrap this: three more focused minutes. Great job!",
+            "Chief Bear barely talks and still gets it done. Like you!",
+            "My beard keeps slipping. Your focus isn't!",
+            "Another gift for the sack: you stayed. Nice!",
+            "Is this how the big boss feels? So proud!",
+            "Bonus compliment: you're steady as a sleigh!",
+            "I'm practicing my ho-ho-ho. You keep practicing focus!",
+        ])
+        + tickPool(.elfPenguin, [
+            "Steady hands. Steady mind.",
+            "One piece fits. Now the next.",
+            "Good work hides in the small details.",
+            "No rushing in the workshop. Rushed toys break.",
+            "Tap, tap. Another piece finished.",
+            "Sand the edges. Then move on.",
+            "The process is the present.",
+            "Neat corners, tight ribbon. Just like this session.",
+        ])
+        + tickPool(.giftBoxPenguin, [
+            "...I'm peeking. Just a little.",
+            "It's quiet in here. Quiet is nice with you.",
+            "I came out a tiny bit more. Don't look. Okay, look.",
+            "You're still here. ...That makes me brave.",
+            "Um. You're doing really well. (hides)",
+            "The ribbon feels lighter today. Maybe I'm less nervous.",
+            "I like focusing together. Is that weird?",
+            "One more peek... still here. Good.",
+        ])
+        + tickPool(.snowmanSlime, [
+            "Cool head, steady focus. Literally.",
+            "Is it warm in here? It feels warm. Keep going anyway.",
+            "Slow and chilly. My favorite pace.",
+            "If that ember shows up, tell it I'm busy.",
+            "Still frozen. Still focused. Good.",
+            "Stay cool. Panic melts things.",
+            "Little Ember keeps offering hugs. Hard no.",
+            "Drip... no wait, false alarm. Keep going.",
+        ])
+        + tickPool(.littleEmber, [
+            "You're glowing. That's my job, but okay!",
+            "Crackle crackle. That means 'great job.'",
+            "Stay cozy. Stay focused.",
+            "I tried to hug the snowman again. Still no.",
+            "Every minute is another log on the fire.",
+            "Warm hands, warm heart, warm focus!",
+            "The snowman says I'm 'too much.' I say I'm toasty.",
+            "Keep it burning. I'll keep you warm.",
+        ])
+        + tickPool(.arcticFox, [
+            "Your snack is still safe. For now.",
+            "Wandering eyes? I'll notice. I always notice.",
+            "Still here? Aw, no prank today then.",
+            "I had a whole prank ready. You're too focused.",
+            "Your phone looks lonely. Let's keep it that way.",
+            "My tail's bigger than me, and even I'm sitting still.",
+            "Stay sharp. Foxes can smell a distraction.",
+            "Nice focus. My candy cane and I approve.",
+        ])
+        + tickPool(.gingerbreadChick, [
+            "Crisp edges, crisp focus.",
+            "Golden brown takes patience. So does this.",
+            "Fine work. Not a crumb out of place.",
+            "I don't crumble under pressure. Neither do you.",
+            "Good things come out of a slow oven.",
+            "Stay crispy. Stay sharp.",
+            "Proudly fragile. Quietly focused.",
+            "My icing lines are extra straight today. Thanks to you.",
+        ])
+        + tickPool(.snowyOwl, [
+            "One more star just lit up. That was you.",
+            "The night is long. There's no hurry.",
+            "Hoo... the sky is clear. So is your mind.",
+            "Stars don't rush, and they still arrive.",
+            "I'm reading the sky. It says: keep going.",
+            "Each quiet minute is a star on your map.",
+            "Even the moon takes its time to fill.",
+            "Soft wings, steady eyes. You're doing well.",
+        ])
+        + tickPool(.polarBear, [
+            "...Good.",
+            "...Steady.",
+            "Mm. Keep going.",
+            "...I'm here.",
+            "...No rush.",
+            "...Warm enough?",
+            "...Proud.",
+            "...The sleigh waits. Finish this.",
+        ])
 
     // MARK: - 연타 투덜 (동료를 연달아 탭) · 유저 탓 X, 귀엽게 삐짐
 
@@ -427,6 +578,66 @@ enum DialogueCatalog {
             "Rare things are handled gently.",
             "Fingerprints lower my value.",
             "Please. I'm polished.",
+        ])
+        + pesteredPool(.redNosePenguin, [
+            "Hey! The nose isn't a button.",
+            "Poke it again and the glow dims. Probably.",
+            "Lead penguins don't get poked. It's a rule.",
+            "Easy. I'm navigating here.",
+        ])
+        + pesteredPool(.santaPenguin, [
+            "My beard! You'll knock off my beard!",
+            "Careful, the hat's already crooked.",
+            "Pokes aren't presents, you know.",
+            "Chief Bear never gets poked like this!",
+        ])
+        + pesteredPool(.elfPenguin, [
+            "Please. I'm holding a hammer.",
+            "You just made me miss a nail.",
+            "Fingers off the workbench.",
+            "That's not on my checklist.",
+        ])
+        + pesteredPool(.giftBoxPenguin, [
+            "Eep! Back in the box!",
+            "T-too much! Lid's closing.",
+            "...I'll come out when the poking stops.",
+            "Please knock first. It's a box.",
+        ])
+        + pesteredPool(.snowmanSlime, [
+            "Warm fingers! Warm fingers!",
+            "You're melting my carrot nose.",
+            "Every poke costs me a snowflake.",
+            "Hands are toasty. Please stop.",
+        ])
+        + pesteredPool(.littleEmber, [
+            "Hey, I'm hot! ...Like, actually. Careful.",
+            "Pokes make me sparkle. Stop it, hehe.",
+            "Too many pokes and I'll pop like popcorn!",
+            "Easy, I'm still a tiny flame!",
+        ])
+        + pesteredPool(.arcticFox, [
+            "Hey! I'm the one who pranks here.",
+            "Tail grab? Rude. Fluffy, but rude.",
+            "Keep poking and I'll hide your pencil.",
+            "You found my ticklish spot. Stop!",
+        ])
+        + pesteredPool(.gingerbreadChick, [
+            "Crumbs! You're making crumbs!",
+            "Gently. I snap.",
+            "My candy buttons are not for pressing.",
+            "This icing took hours. Please.",
+        ])
+        + pesteredPool(.snowyOwl, [
+            "Hoo! You ruffled my feathers.",
+            "Shh. I lost my place in the sky.",
+            "Even wise owls get ticklish.",
+            "I can turn my head all the way around. Still see you.",
+        ])
+        + pesteredPool(.polarBear, [
+            "...Hm.",
+            "...Gently.",
+            "...That tickles.",
+            "...Still here. No need to poke.",
         ])
         + pesteredPool(.generic, [
             "Okay, that's enough.",

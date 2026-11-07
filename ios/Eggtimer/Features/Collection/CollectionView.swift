@@ -2,8 +2,8 @@
 //  CollectionView.swift
 //  Eggtimer
 //
-//  컬렉션 탭 = 해금 도감. 다크+골드 톤. "Friends discovered n/12" + 3열 그리드.
-//  도감 전체 12폼(CreatureForm)을 항상 나열한다.
+//  컬렉션 탭 = 해금 도감. 다크+골드 톤. 월드 탭 + "Friends discovered n/전체" + 그리드.
+//  고른 월드의 전체 폼(CreatureForm)을 항상 나열한다(기본 12 · 크리스마스 10). 잠긴 월드는 실루엣 + 구매 입구.
 //  - 발견한 폼: 실제 캐릭터 카드(도달한 최고 진화 단계 아트).
 //  - 미발견 폼: 검은 실루엣 + "?" (픽셀 톤).
 //  아무 카드나 탭하면 **3단계 진화 스트립** 상세가 열린다 — 도달한 단계는 실제 아트,
@@ -23,9 +23,21 @@ struct CollectionView: View {
     @State private var selected: CreatureForm?
     /// 그리드 등장 애니메이션 토글.
     @State private var appeared = false
+    @Environment(ProAccess.self) private var pro
+    /// 홈에서 고른 월드. 도감은 처음에 이 월드를 보여준다.
+    @AppStorage("selectedWorld") private var selectedWorldRaw = World.classic.rawValue
+    /// 도감 탭에서 직접 고른 월드(nil = 홈에서 고른 월드).
+    @State private var shownWorld: World?
+    /// 잠긴 월드의 구매 화면.
+    @State private var shopWorld: World?
 
-    /// 도감 전체 폼(변형 단위). 닭은 표정마다 별도 칸으로 수집된다.
-    private let allForms = CreatureForm.all
+    private var world: World { shownWorld ?? World.resolved(selectedWorldRaw, owns: pro.owns) }
+
+    /// 지금 월드의 도감 폼(변형 단위). 닭은 표정마다 별도 칸으로 수집된다.
+    private var allForms: [CreatureForm] { world.forms }
+
+    /// 지금 월드에서 발견한 칸 수(다른 월드 캐릭터는 세지 않는다).
+    private var discoveredCount: Int { allForms.filter { discovered[$0.imageName] != nil }.count }
 
     init(creatures: [Creature] = MockData.populated.creatures,
          completedSessionsSinceHatch: @escaping (Creature) -> Int = { _ in 0 }) {
@@ -100,7 +112,7 @@ struct CollectionView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: AppSpacing.section) {
                     header
-                    if discovered.isEmpty { emptyHint }
+                    if !pro.owns(world) { unlockCard } else if discoveredCount == 0 { emptyHint }
                     grid
                 }
                 .padding(.horizontal, AppSpacing.section)
@@ -115,6 +127,7 @@ struct CollectionView: View {
                             creature: discovered[form.imageName],
                             reachedStage: reachedStage(form))
         }
+        .sheet(item: $shopWorld) { WorldPackSheet(world: $0) }
         .onAppear { withAnimation(.easeOut(duration: 0.4)) { appeared = true } }
     }
 
@@ -125,16 +138,20 @@ struct CollectionView: View {
             Text("Collection")
                 .font(.title.weight(.bold))
                 .foregroundStyle(theme.onPagePrimary)
+            Picker("World", selection: Binding(get: { world }, set: { shownWorld = $0 })) {
+                ForEach(World.allCases) { Text($0.name).tag($0) }
+            }
+            .pickerStyle(.segmented)
             HStack {
                 Text("Friends discovered")
                     .font(AppFont.cardTitle)
                     .foregroundStyle(theme.onPageSecondary)
                 Spacer()
-                Text("\(discovered.count)/\(allForms.count)")
+                Text("\(discoveredCount)/\(allForms.count)")
                     .font(AppFont.cardTitle.weight(.bold))
                     .foregroundStyle(theme.onPageAccent)
             }
-            DiscoveryBar(fraction: allForms.isEmpty ? 0 : Double(discovered.count) / Double(allForms.count))
+            DiscoveryBar(fraction: allForms.isEmpty ? 0 : Double(discoveredCount) / Double(allForms.count))
         }
     }
 
@@ -155,6 +172,24 @@ struct CollectionView: View {
             }
             .frame(maxWidth: .infinity)
             .padding(.vertical, AppSpacing.elementTight)
+        }
+    }
+
+    // MARK: - 잠긴 월드 안내
+
+    /// 아직 안 산 월드. 실루엣 도감 위에 놓여 "무엇이 들어 있는지" 보러 가는 입구가 된다.
+    private var unlockCard: some View {
+        AppCard {
+            VStack(spacing: AppSpacing.elementTight) {
+                Text("\(world.name) World")
+                    .font(AppFont.cardTitle.weight(.bold))
+                    .foregroundStyle(AppColor.textPrimary)
+                Text("\(allForms.count) new friends to hatch")
+                    .font(AppFont.body)
+                    .foregroundStyle(AppColor.textSecondary)
+                PrimaryButton("See what's inside") { shopWorld = world }
+            }
+            .frame(maxWidth: .infinity)
         }
     }
 
@@ -395,10 +430,12 @@ private struct EvolutionStageStrip: View {
 
 #Preview("populated") {
     CollectionView(creatures: MockData.populated.creatures)
+        .environment(ProAccess())
         .preferredColorScheme(.dark)
 }
 
 #Preview("empty") {
     CollectionView(creatures: MockData.empty.creatures)
+        .environment(ProAccess())
         .preferredColorScheme(.dark)
 }

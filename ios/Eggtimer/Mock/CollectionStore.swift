@@ -33,11 +33,11 @@ final class CollectionStore {
         self.creatures = creatures
     }
 
-    /// 확률표에 따라 새 생명체를 부화시켜 컬렉션 맨 앞에 추가하고 반환한다(영속 저장).
-    /// `draws`(집중 길이 보상)만큼 best-of-N으로 등급을 굴린다. 기본 1.
+    /// 월드 규칙에 따라 새 생명체를 부화시켜 컬렉션 맨 앞에 추가하고 반환한다(영속 저장).
+    /// `draws`(집중 길이 보상)만큼 굴린다. 보유 칸 수를 넘겨 천장·새 캐릭터 우선을 적용한다.
     @discardableResult
-    func hatch(draws: Int = 1) -> Creature {
-        let creature = Creature.hatch(draws: draws)
+    func hatch(in world: World = .classic, draws: Int = 1) -> Creature {
+        let creature = Creature.hatch(in: world, draws: draws, counts: formCounts)
         creatures.insert(creature, at: 0)
         if let context {
             context.insert(HatchedCreatureRecord(from: creature))
@@ -58,6 +58,11 @@ final class CollectionStore {
         }
         creatures.sort { $0.hatchedAt > $1.hatchedAt }
         try? context?.save()
+    }
+
+    /// 도감 칸별 보유 개수(imageName → 개수). 부화 추첨의 천장·새 캐릭터 우선 입력.
+    var formCounts: [String: Int] {
+        creatures.reduce(into: [:]) { $0[$1.imageName, default: 0] += 1 }
     }
 
     /// 이미 발견한 종 집합(컬렉션의 발견/미발견 판정용).

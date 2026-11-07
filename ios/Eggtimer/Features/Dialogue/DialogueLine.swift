@@ -31,6 +31,17 @@ enum CreaturePersonality: String, CaseIterable, Sendable {
     case dino           // 아기 공룡: 힘차고 에너지
     case blackCat       // 검은 고양이: 신비·쿨·행운
     case goldChick      // 황금 병아리: 귀하고 조용한 자부심
+    // 크리스마스 월드 (docs/CREATURES.md §2-3)
+    case redNosePenguin   // 빨간코 펭귄: 건방진 길잡이, 생색
+    case santaPenguin     // 산타 펭귄: 북극곰 동경, 칭찬을 선물처럼
+    case elfPenguin       // 엘프 펭귄: 공방 장인, 꼼꼼함
+    case giftBoxPenguin   // 선물상자 펭귄: 수줍음, 함께할수록 마음을 엶
+    case snowmanSlime     // 눈사람 슬라임: 느긋 + 녹을까 걱정
+    case littleEmber      // 꼬마 불씨: 따뜻한 응원, 눈사람의 앙숙 겸 절친
+    case arcticFox        // 북극여우: 장난꾸러기, 딴짓하면 놀림
+    case gingerbreadChick // 진저브레드 병아리: 바삭한 자존심
+    case snowyOwl         // 눈올빼미: 별 읽는 조용한 현자
+    case polarBear        // 북극곰: 말 적은 든든한 대장 = 진짜 산타
     case generic        // 폴백(미매핑 종)
 }
 

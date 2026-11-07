@@ -68,6 +68,7 @@ struct EggtimerApp: App {
                     // 이미 로그인된 채 앱을 켜면(세션 복원) 즉시 동기화.
                     if auth.isAuthenticated { await sync.syncOnLogin() }
                 }
+                .task { await pro.start() }   // 팩 보유 확인 + 결제 변경(환불·다른 기기 구매) 반영
         }
     }
 }

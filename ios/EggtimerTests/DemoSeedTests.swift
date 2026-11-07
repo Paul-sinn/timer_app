@@ -67,7 +67,7 @@ struct DemoSeedTests {
     /// 모든 종·변형이 한 번씩 → 도감 12칸이 다 찬다.
     @Test func creatureSeedCoversEveryVariant() {
         let creatures = DemoSeed.creatures()
-        let expected = CreatureSpecies.allCases.flatMap(\.imageVariants)
+        let expected = World.classic.forms.map(\.imageName)
         #expect(creatures.count == expected.count)
         #expect(Set(creatures.map(\.imageName)) == Set(expected))
     }
