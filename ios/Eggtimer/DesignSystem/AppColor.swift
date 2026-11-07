@@ -38,4 +38,7 @@ enum AppColor {
     // 순백(0xFFFFFF)이 아니라 살짝 따뜻한 흰색이라 앰버와 이어질 때 경계가 안 진다.
     static let hatchFlashCore = Color(hex: 0xFFFBF0)
     static let hatchFlashEdge = Color(hex: 0xF2B44E)
+
+    // 눈 내리기(크리스마스 월드). 살짝 푸른 흰색 — 따뜻한 배경 위에서도 "눈"으로 읽힌다.
+    static let snowflake = Color(hex: 0xF4F8FF)
 }

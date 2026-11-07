@@ -43,6 +43,11 @@
 - [x] (11/7 추가) 크리스마스 부화 그릇 = 선물상자: `World.vesselStageAssets`(기본=알 crack 6장 그대로, 크리스마스=`giftbox_stage1~6`)
       + `vesselAsset(stage:exists:)` — 상자 그림이 번들에 없으면 알로 대신. `EggView(world:)`, 홈에서 선택 월드 전달 (TDD)
 - [x] (11/7 추가) 설정 화면 "Restore purchases" 행(구매 화면 밖에서도 복원 — 심사 3.1.1)
+- [x] (11/7 추가) 눈 내리기 `SnowfallView`(코드 연출, 그림 없음): `World.hasSnowfall`(크리스마스만), 홈 배경 위·UI 아래.
+      네모 픽셀 눈 70개 · 초당 20프레임 제한(집중 중 배터리) · 동작 줄이기면 멈춘 눈. 위치는 시각의 순수 함수(`SnowfallTests` 6개)
+- [ ] 크리스마스 배경 2종(초안 `images/christmas-draft/backgrounds/`): A 이브 방 · B 눈 덮인 밤.
+      v2(B: 오른쪽 보름달 + 산타 썰매 실루엣 / A: 가운데 벽난로) 18:41 codex 자동 실행 예약.
+      확정 후: 270×480 격자·24색·4배 확대 → 테마/월드 배경 연결 · 아이패드 가로판 · `AppThemeTests` 대비 확인
 - [ ] 선물상자 그림 6장 확정 → 배경 제거·알과 같은 941×1672 캔버스·바닥선 → `Assets.xcassets/giftbox_stage{1-6}`
 - [ ] 선물상자 열리는 순간(뚜껑 펑 + 리본·눈송이·금빛) 6프레임 → 크리스마스용 부화 버스트.
       **지금은 크리스마스도 알 폭발 영상이 나온다**(상자 → 알 파편, 그림 오기 전 임시)

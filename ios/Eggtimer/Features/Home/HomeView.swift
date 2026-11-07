@@ -241,6 +241,7 @@ struct HomeView: View {
     var body: some View {
         ZStack {
             ThemedBackground()
+            if world.hasSnowfall { SnowfallView() }   // 배경 위·UI 아래
 
             // 크기 판단은 기기 종류가 아니라 실제 받은 창 크기로(아이패드 Split View도 아이폰만큼 좁아진다).
             GeometryReader { proxy in

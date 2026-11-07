@@ -69,6 +69,14 @@ enum World: String, CaseIterable, Identifiable, Sendable {
         }
     }
 
+    /// 홈 배경에 눈이 내리는지(SnowfallView).
+    var hasSnowfall: Bool {
+        switch self {
+        case .classic:   return false
+        case .christmas: return true
+        }
+    }
+
     /// 부화 그릇의 진행 6단계 이미지(EggState.visualStages). 기본 = 알 금 가기, 크리스마스 = 선물상자 뚜껑 열기.
     var vesselStageAssets: [String] {
         switch self {
