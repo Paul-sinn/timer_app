@@ -223,3 +223,8 @@ xcrun xcresulttool get test-results summary --path /tmp/res.xcresult
   - 증상: 1.0 (9)가 Guideline 2.3.3으로 반려. "Product Page Header screenshots do not show the actual app in use."
   - 원인: 크리에이티브 체크리스트가 Header를 "세계관 중심, 앱 UI는 보조로만"으로 설계했다. Apple 가이드 문구("express your brand")는 허용처럼 읽히지만 **심사관은 헤더도 스크린샷처럼 실제 앱 화면을 요구**했다.
   - 교훈: 스토어 노출 이미지(헤더·검색결과 포함)는 **실제 앱 화면이 주인공**이어야 한다. 마케팅 아트는 보조 장식까지만. 문서 문구보다 심사 실례를 따른다.
+
+- **2026-11-07 · 테스트 앱 설치 멈춤을 16분 동안 못 알아챔 → 사용자 "왜 이렇게 오래 걸려?"**
+  - 증상: `xcodebuild test`가 빌드 후 로그가 멈춘 채 진행 없음. 클론 시뮬(1회차)·본 시뮬(2회차, CoreSimulator 재시작 후) 둘 다 `Installing app`에서 정지. 컴파일은 통과.
+  - 원인: 시뮬레이터 설치 단계 행(2026-07-22와 같은 증상). 디스크 97% 사용(14GB 남음)도 의심. 코드 문제 아님.
+  - 교훈: 빌드가 끝났는데 테스트 출력이 없으면 **결과번들 `Staging/**/Session-*.log` 마지막 줄**을 본다. `Installing app`에서 3분 넘게 멈춰 있으면 행으로 판정하고 바로 멈춘 뒤 보고(재시도 최대 2번). 툴 타임아웃보다 긴 sleep 폴링 루프 금지.
