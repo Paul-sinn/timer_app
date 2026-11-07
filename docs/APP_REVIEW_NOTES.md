@@ -11,96 +11,75 @@
 ## 붙여넣을 영문 답변
 
 ```text
+Hatcho — Response to Guideline 4 (Design, iPad) and Guideline 2.1 (Information Needed)
+Build under review: 1.0 (9)
+
+── 0. GUIDELINE 4 — IPAD LAYOUT FIX ──
+Thank you for the September 2 review on iPad Air 11-inch (M3), build 1.0 (5).
+Build 5 was iPhone-only, so it ran in iPad compatibility mode and some screens were
+cut off at the bottom. Since then:
+- Hatcho is now a universal app with native iPad layouts, supporting all
+  orientations and Split View.
+- Every screen adapts to the actual window size. Home switches to a two-column
+  layout in landscape, and any content taller than the window now scrolls instead
+  of being cropped.
+- Verified on the iPad Air 11-inch Simulator and on a physical iPad.
+
 ── 1. SCREEN RECORDING ──
-A screen recording is attached, captured on a physical ⟨DEVICE⟩ running iOS ⟨VERSION⟩.
+Video attached (hatcho_review_final.mp4).
+Recorded on a physical iPhone. It shows app launch, onboarding, the notification
+permission prompt, a focus session, hatching, the collection, Sign in with Apple, and
+account deletion. To save time, the middle of the 25-min session is fast-forwarded
+(labeled on screen); the session start and the hatch itself are uncut.
+The video was recorded on build 5. Build 9 adds background themes (brush icon on
+Home; the default is now a light "Butter" theme, so colors differ from the video),
+a new app icon, and iPad layouts. The core flow shown is unchanged.
 
-Please note: the app's core reward — an egg hatching into a creature — is earned by
-completing a full 25-minute focus session. That commitment is the entire point of the
-app: the reward exists precisely because the session is not trivial to finish.
+── 2. DEVICES & OS TESTED ──
+- iPhone 17 — iOS 26.6 (physical device)
+- iPhone 17 Pro — iOS 26.5 (Simulator)
+- iPad (A16), 11-inch — iPadOS ⟨version⟩ (physical device)
+Target: iPhone (portrait) and iPad (all orientations), iOS 26.5 or later.
 
-So that the reviewer does not have to wait 25 minutes in real time, the middle of the
-focus session in the recording is fast-forwarded (marked on screen). The session start,
-the egg cracking through its stages, and the hatch itself are all shown at normal speed
-and are uncut.
+── 3. WHAT THE APP DOES & TARGET AUDIENCE ──
+Hatcho is a gamified focus timer for students and workers. Completing focus sessions
+cracks and hatches virtual eggs into pixel-art creatures that evolve with more sessions.
+Features: 25/50/75 min & Pomodoro timers, egg hatching/evolution, creature collection,
+focus stats/streaks, and local notifications. General audience (no age-restricted
+content).
 
-── 2. DEVICES AND OS VERSIONS TESTED ──
-- iPhone ⟨MODEL⟩ — iOS ⟨VERSION⟩ (physical device, full manual testing)
-- iPhone 17 Pro — iOS 26.5 (Simulator, automated unit test suite)
+── 4. HOW TO ACCESS MAIN FEATURES ──
+NO ACCOUNT REQUIRED. All core features work locally out of the box.
+1. Launch app and complete onboarding.
+2. Home → "Normal" → 25 min → "Start".
+3. Session runs, egg cracks progressively.
+4. On completion, egg hatches and is added to the Collection tab.
 
-The app is iPhone-only, portrait orientation, and requires iOS 26.5 or later.
+Optional Sign in with Apple (MyPage) only backs up/syncs data across devices (unlocks
+no extra features; reviewer may test with own Apple ID).
+Account Deletion: MyPage → "Delete account" permanently deletes account and server data
+(Guideline 5.1.1(v)).
 
-── 3. WHAT THE APP DOES, AND WHO IT IS FOR ──
-Hatcho is a focus timer for people who struggle to stay off their phone while
-studying or working.
-
-Problem: ordinary countdown timers give you nothing for finishing, so it costs
-nothing to quit early.
-
-Solution: while the timer runs, an egg on screen visibly cracks in stages. If you
-finish the session, the egg hatches into a pixel-art creature that you keep. Keep
-completing sessions with that creature and it evolves through three forms. Quitting
-early means no reward, which gives a small concrete reason to stay in the session.
-
-Target audience: students and knowledge workers who want longer uninterrupted focus
-blocks. No age-restricted content; the app is suitable for general audiences.
-
-Core features:
-- Focus timer with two modes: Normal (25 / 50 / 75 minutes) and Pomodoro
-  (25 min focus / 5 min break / 15 min long break every 4 blocks)
-- Egg hatching with rarity tiers (common / rare / legendary) determined by a
-  probability table; longer sessions improve the odds
-- Collection tab showing every creature hatched
-- Progress tab with focus statistics and streaks
-- Optional local notifications when a break or session ends
-- Screen stays awake during a focus session
-
-── 4. HOW TO SET UP AND ACCESS THE MAIN FEATURES ──
-NO ACCOUNT IS REQUIRED. Every feature above works immediately after install with
-no sign-up, no login, and no demo credentials. All data is stored locally on device.
-
-To reach the core feature:
-1. Launch the app and page through the 4 onboarding screens.
-2. On the Home tab, choose "Normal" mode and a duration (25 min is the shortest).
-3. Tap "Start". The egg cracks progressively as the session advances.
-4. When the timer completes, the egg hatches and the creature is added to the
-   Collection tab.
-
-Optional sign-in (Sign in with Apple) is offered on the MyPage tab. Its ONLY purpose
-is to back up and sync the collection across the user's own devices. It unlocks no
-content. The reviewer can sign in with their own Apple ID; no demo account exists
-because accounts hold nothing but the user's own focus history.
-
-Account deletion: MyPage → "Delete account". This permanently deletes the account
-and all associated server-side data (Guideline 5.1.1(v)).
-
-── 5. EXTERNAL SERVICES USED ──
-- Supabase (supabase.com) — Authentication and Postgres database. Used ONLY when a
-  user chooses to sign in, to mirror their own focus history and collection for
-  cross-device sync and backup. Signed-out users never contact this service.
-- Sign in with Apple (Apple) — the only sign-in provider in this version.
-
-No other third-party services. Specifically, the app contains NO advertising SDKs,
-NO analytics SDKs, NO AI or machine-learning services, NO payment processors, and
-NO user-generated content, messaging, or social features.
+── 5. EXTERNAL SERVICES ──
+- Supabase: Auth & Postgres database used solely for optional cloud backup/sync when
+  signed in. Signed-out users do not contact this service.
+- Sign in with Apple: Only sign-in provider.
+No ads, analytics, AI services, or third-party payment SDKs.
+No user-generated content, messaging, or social features.
 
 ── 6. REGIONAL DIFFERENCES ──
-None. The app ships in English only and behaves identically in every region. There
-is no region-gated content, no region-specific pricing, and no geo-based logic.
+None. Operates identically worldwide in English with no geo-restrictions.
 
-── 7. REGULATED INDUSTRY / THIRD-PARTY MATERIAL ──
-Not applicable. The app is not in a regulated industry and makes no health, medical,
-financial, or educational-accreditation claims.
-
-All artwork (eggs, creatures, backgrounds) is original work created for this app by
-the developer. No licensed or third-party protected material is included.
+── 7. REGULATED INDUSTRY / PROTECTED MATERIAL ──
+N/A. No health, medical, or financial claims. All assets (eggs, creatures, UI) are
+original artwork created by the developer.
 
 ── ADDITIONAL NOTES ──
-- Permissions: the app requests only Notifications (local notifications for
-  break/session end). It never requests location, contacts, camera, microphone,
-  photos, or App Tracking Transparency, and collects no advertising identifiers.
-- In-app purchases: none in version 1.0. The app is free with no paid tier,
-  no subscriptions, and no locked content.
-- Encryption: uses only standard HTTPS (ITSAppUsesNonExemptEncryption = NO).
+- In-App Purchases: None in version 1.0. The app is free, with no paid tier, no
+  subscriptions, and no locked content.
+- Permissions: Local Notifications only (session/break alerts). No camera, mic, photos,
+  tracking, or ad IDs.
+- Encryption: Standard HTTPS only (ITSAppUsesNonExemptEncryption = NO).
 ```
 
 ---
@@ -135,8 +114,9 @@ the developer. No licensed or third-party protected material is included.
 - `10 sec (test)`가 보인다 → **Debug다. 녹화 중단.** 스킴 Run 구성을 Release로 바꾼다
 - `25 min / 50 min / 75 min`만 보인다 → Release다. 녹화해도 된다
 
-⚠️ **녹화는 반드시 "이번에 올릴 새 빌드"로 찍는다.** build 2로 찍으면 부화 연출이 옛날 것
-(PNG 7프레임)이라 새 바이너리(60fps 영상 + 화면 섬광)와 화면이 달라진다 — 같은 불일치 문제다.
+⚠️ **녹화는 반드시 업로드한 `1.0 (5)`와 같은 코드로 찍는다.** 예전 build 2로 찍으면 부화 연출이
+옛날 것(PNG 7프레임)이라 새 바이너리(60fps 영상 + 화면 섬광)와 화면이 달라진다 — 같은 불일치 문제다.
+현재 HEAD(`e62e604`)가 곧 build 5의 코드이므로, 지금 Release로 빌드해 설치하면 된다.
 
 | 순서 | 보여줄 것 | 왜 필요한가 |
 |---|---|---|
@@ -147,14 +127,38 @@ the developer. No licensed or third-party protected material is included.
 | 5 | 타이머 도는 중 알에 금 가는 것 | 핵심 메커니즘 |
 | 6 | **부화 순간 (알 깨짐 → 캐릭터 등장)** | 앱의 존재 이유. 절대 빼면 안 됨 |
 | 7 | Collection 탭 — 부화한 캐릭터 | 보상이 남는다는 증거 |
+| 7-b | 캐릭터 탭 → **진화 3칸 스트립**(Just hatched / 실루엣 2칸) | 진화를 시연하지 않고 시스템만 보여준다. 진화 1단계는 25분 세션이 하나 더 필요하므로 **찍지 않는다** |
 | 8 | Progress 탭 — 통계 | |
-| 9 | MyPage → **Sign in with Apple 로그인** | "login flow" 항목 |
-| 10 | MyPage → **Delete account → 삭제 완료** | "account deletion flow" 항목 — Apple이 특히 본다 |
-| 11 | Settings — 알림/소리/진동/테마 | |
+| 9 | MyPage → **Sign in with Apple 로그인** | "login flow" 항목. **순서는 자유** — 세션 시작 전에 먼저 로그인해도 된다 |
+| 10 | Settings — 알림/소리/진동/테마 | 필수 항목은 아니다. 잠긴 테마가 없어(`AppTheme.isPro`가 전부 false) 화면에 "Coming soon"도 안 뜬다 |
+| 11 | MyPage → **Delete account → 삭제 완료** | "account deletion flow" — **반드시 맨 마지막.** 먼저 지우면 뒤 화면이 비로그인으로 찍힌다 |
 
-**6번 부화 장면 처리:** 25분을 실시간으로 다 찍을 수는 없다. 두 가지 방법:
-- **권장**: 25분 세션을 실제로 돌리며 녹화 → 중간을 빨리감기(타임랩스)로 편집하고, 부화 순간은 **등속으로** 남긴다. 영상에 "fast-forwarded" 자막을 넣으면 심사자가 오해하지 않는다.
-- 대안: 영상을 두 개로 나눠 제출(① 전체 UI 투어 ② 부화 순간만).
+**11번 촬영 요령**
+- 확인 알럿을 **1~2초 머문다.** 문구가 이미 `Local data on this device remains.`라고
+  밝히고 있어, 삭제 후 컬렉션이 남아 있어도 심사자가 오해하지 않는다(설계대로다 —
+  5.1.1(v)가 요구하는 건 서버 데이터 삭제이고, 로컬은 앱 삭제로 사라진다)
+- 삭제 후 MyPage에 **2~3초 머문다.** `Sign in with Apple` 버튼이 다시 나타나는 것이
+  계정이 실제로 사라졌다는 시각적 증거다
+
+**6번 부화 장면 처리 — 빨리감기 편집**
+
+25분을 실시간으로 다 보여줄 수는 없다. 세션 하나를 통으로 녹화한 뒤 **가운데만** 빨리감고
+부화 순간은 등속으로 남긴다. `scripts/review_timelapse.sh`가 이걸 한 번에 한다.
+
+```bash
+./scripts/review_timelapse.sh <녹화파일> <빨리감기_시작> <빨리감기_끝> <배속> <출력파일>
+
+# 예: 2분 지점부터 26분 지점까지 30배속
+./scripts/review_timelapse.sh ~/Desktop/rec.mp4 00:02:00 00:26:00 30 hatcho_review.mp4
+```
+
+- 앞뒤(앱 실행~Start / 부화~계정삭제)는 **등속** 유지
+- 가운데만 N배속 + 하단에 `FAST-FORWARDED xN` 자막 자동 삽입 (심사자 오해 방지)
+- ⚠️ **부화 순간을 빨리감기 구간에 넣지 말 것.** 여유 있게 부화 30초 전에서 끊는다
+- 25분을 30배속 → 50초. 최종 영상 5~6분
+
+아이폰 "타임랩스"는 **촬영 모드**라 이미 찍은 영상엔 못 쓴다. 사진 앱에도 배속 조절이 없다.
+맥 없이 하려면 CapCut(무료, 100배속까지). iMovie는 최대 2배속이라 부족하다.
 
 ---
 
@@ -203,36 +207,38 @@ Apple 로그인 단독이다. 기능상 문제없다 — Apple 로그인만 제�
 
 ---
 
-## 제출 체크리스트 (새 빌드를 같이 올리는 경우)
+## 제출 체크리스트
 
 2.1 Information Needed는 **원래는 답변만 달면** 같은 빌드로 재심사된다.
-다만 이번엔 그동안 수정한 것(부화 연출 교체, 동기화 잘림 버그 등)을 새 빌드로 올리기로 했으므로
-**"새 빌드 업로드 + 답변"을 같이** 한다. 새 빌드를 올리면 심사는 처음부터 다시 돈다.
+다만 이번엔 그동안 수정한 것(부화 연출 교체, 동기화 잘림 버그 등)을 새 빌드로 올렸으므로
+**"새 빌드 + 답변"을 같이** 제출한다. 새 빌드를 올리면 심사는 처음부터 다시 돈다.
 
-**빌드 올리기 전**
+**빌드 업로드 — ✅ 완료 (2026-08-15)**
 
-- [ ] `CURRENT_PROJECT_VERSION`을 **2 → 3**으로 올린다.
-      같은 빌드 번호는 업로드 자체가 거부된다
-- [ ] `MARKETING_VERSION`은 **`1.0` 그대로 둔다.**
-      1.0이 승인된 적이 없으니 1.0.1로 갈 이유가 없다 — 이건 "1.0의 새 빌드"다
-      (`NEXT_RELEASE.md`는 1.0이 통과했을 경우를 전제로 쓰여 있다)
-- [ ] Archive → App Store Connect 업로드
+- [x] App Store Connect에 **`1.0 (5)`** 업로드 · 바이너리 검증됨
+- [x] `MARKETING_VERSION`은 `1.0` 유지 (1.0이 승인된 적이 없으니 1.0.1로 갈 이유가 없다)
+- 로컬 `CURRENT_PROJECT_VERSION`은 **3**이지만, Xcode가 업로드 시 자동으로 **5**로 올렸다
+  (아카이브 Info.plist의 `uploadedBuildNumber = "5"`가 증거). 코드는 커밋 `e62e604`와 동일.
+  **다음 업로드는 6 이상**이어야 한다
 
 **녹화**
 
-- [ ] 올린 것과 같은 코드의 **Release 빌드**를 실기기에 설치 (Xcode 직접 설치 OK, TestFlight도 OK)
-- [ ] 집중 시간 칩을 탭해 `10 sec (test)`가 **안 보이는지** 확인 (보이면 Debug — 중단)
-- [ ] 위 11단계 순서로 화면 녹화 — **부화 순간 · 로그인 · 계정 삭제** 반드시 포함
-- [ ] 25분 구간 타임랩스 편집 + 영상에 `fast-forwarded` 자막
+- [ ] 스킴 `Run` 구성이 **Release**인지 확인 (Debug면 `10 sec (test)`가 찍힌다)
+- [ ] 계정 삭제 → 앱 삭제 → 재설치로 **완전 초기 상태** 만들기
+      (앱만 지우면 키체인에 세션이 남아 재설치 직후 서버에서 데이터가 되돌아온다)
+- [ ] 집중 시간 칩을 탭해 `10 sec (test)`가 **안 보이는지** 확인
+- [ ] 위 11단계로 화면 녹화 — **부화 순간 · 로그인 · 계정 삭제** 반드시 포함
+- [ ] `scripts/review_timelapse.sh`로 가운데 구간 빨리감기 + 자막
 
 **제출**
 
-- [ ] 영문 답변의 `⟨…⟩` 채우기 — 기기 모델, iOS 버전
+- [ ] 영문 답변의 `⟨MODEL⟩` `⟨VERSION⟩` 채우기 (설정 → 일반 → 정보)
 - [ ] 개인정보처리방침 URL · 지원 URL이 실제로 열리는지 확인
 - [ ] **Resolution Center에 답변 + 영상 첨부**
       — 새 빌드만 올리면 Apple의 질문 7개는 그대로 남는다. 답변은 반드시 따로 달아야 한다
 - [ ] 같은 내용을 `App Review Information → Notes`에도 붙여넣기
       (Apple이 "for future submissions"라고 요청 — 다음 제출부터 이 단계가 생략된다)
+- [ ] 영상이 용량 때문에 안 붙으면 비공개 링크(Drive 등)를 답변에 넣는다
 
 ---
 

@@ -82,6 +82,28 @@
 > **심사 영상 주의**: build 2에는 이 연출이 없다. 화면 녹화는 반드시 **build 3**으로 찍어야
 > 영상과 바이너리가 일치한다. (`APP_REVIEW_NOTES.md`)
 
+### A6. 🟢 프로필의 가짜 데이터 제거 *(2026-08-30)*
+
+`MyPageView.swift` · `ProfileName.swift` · `AppSettings.swift`
+
+마이페이지 프로필 헤더가 Phase 0의 더미 데이터를 그대로 보여주고 있었다.
+
+| | 이전 | 이후 |
+|---|---|---|
+| 이름 | `MockData.populated.displayName` = **모든 유저가 "Focused Racoon"** | 유저가 직접 입력한 닉네임(연필 아이콘 탭 → 입력). 미설정이면 "Guest" |
+| 가입일 | `Text("Joined · May 1, 2026")` — **하드코딩 문자열** | **줄 삭제** (신뢰할 수 있는 출처가 없다) |
+
+- 저장은 `@AppStorage`(UserDefaults) — SwiftData `@Model`을 건드리지 않아 마이그레이션 위험 0
+- trim·최대 20자·공백만 입력 시 미설정 처리 규칙은 `ProfileName`이 단일 출처(순수 함수)
+- 이모지를 1글자로 세도록 `Character` 단위로 자른다(UTF-16으로 자르면 이모지가 깨진다)
+
+> 심사 영상(build 5)에는 "Focused Racoon / Joined · May 1, 2026"이 그대로 찍혀 있다.
+> **반려 사유가 아니라** 재촬영하지 않았다. 다음 빌드부터 화면이 달라진다.
+
+**남은 것:** `credential.fullName`(Apple 로그인이 첫 로그인 때 주는 실명)을 `handleApple`이
+받아놓고 버리고 있다. 닉네임 미설정 유저의 초기값으로 쓸 수 있다. 그리고 Supabase
+`public.profiles.display_name` 컬럼이 이미 있는데 앱이 안 쓴다 — 기기 간 동기화하려면 연결 필요.
+
 ---
 
 ## B. 화면 연결
@@ -191,12 +213,13 @@ CORS 제한·POST 강제·예외 메시지 비노출까지 고쳐뒀지만 **배
 
 ## 릴리스 전 체크리스트
 
-- [ ] `CURRENT_PROJECT_VERSION` **2 → 3** (같은 번호는 업로드 거부)
+- [ ] `CURRENT_PROJECT_VERSION`을 **6 이상**으로 (App Store Connect에 이미 `1.0 (5)`가 올라가 있다.
+      로컬 pbxproj는 3이지만 Xcode가 업로드 시 자동 증가시켰다 — 같은 번호는 업로드 거부)
 - [ ] `MARKETING_VERSION`은 **`1.0` 유지** — 1.0이 아직 승인 전이라 이건 1.0의 새 빌드다
 - [ ] `xcodebuild build` 통과
 - [ ] `xcodebuild test -only-testing:EggtimerTests` 통과 — **build 통과 ≠ 테스트 코드 컴파일 통과**
 - [ ] 실기기에서 로그인 → 동기화 → 부화 1회
 - [ ] 실기기에서 **부화 햅틱** 확인 (시뮬레이터엔 진동 하드웨어가 없어 검증 불가)
-- [ ] 심사용 화면 녹화 — **build 3의 Release 빌드로** (`APP_REVIEW_NOTES.md` 체크리스트)
+- [ ] 심사용 화면 녹화 — **제출할 빌드와 같은 코드의 Release 빌드로** (`APP_REVIEW_NOTES.md` 체크리스트)
 - [ ] 킬스위치 실동작 확인: `app_config.sync_enabled`를 false로 바꾸고 앱에서 동기화가 멈추는지 → 다시 true
 - [ ] 계정 삭제 1회 (D1 배포했다면 필수)
