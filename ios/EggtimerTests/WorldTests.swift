@@ -252,4 +252,34 @@ struct WorldTests {
         }
         #expect(store.creatures.count == 50)
     }
+
+    // MARK: - 부화 그릇(알 / 선물상자)
+
+    @Test func classicVesselIsTheEggCrackSequenceUnchanged() {
+        #expect(World.classic.vesselStageAssets == [
+            "fullegg", "firstcrack_egg", "secondcrack_egg",
+            "thirdcrack_egg", "fourthcrack_egg", "abouttocrack_egg",
+        ])
+    }
+
+    @Test func christmasVesselIsSixGiftBoxStages() {
+        let names = World.christmas.vesselStageAssets
+        #expect(names == (1...6).map { "giftbox_stage\($0)" })
+    }
+
+    @Test func everyVesselHasOneImagePerProgressStage() {
+        for world in World.allCases {
+            #expect(world.vesselStageAssets.count == EggState.visualStages)
+            #expect(Set(world.vesselStageAssets).count == EggState.visualStages)
+        }
+    }
+
+    @Test func vesselFallsBackToEggWhenItsArtIsMissing() {
+        // 그림이 아직 번들에 없으면 알을 보여준다(빈 화면 방지).
+        #expect(World.christmas.vesselAsset(stage: 2, exists: { _ in false }) == "secondcrack_egg")
+        #expect(World.christmas.vesselAsset(stage: 2, exists: { _ in true }) == "giftbox_stage3")
+        // 범위 밖 단계는 양 끝으로 고정.
+        #expect(World.christmas.vesselAsset(stage: -1, exists: { _ in true }) == "giftbox_stage1")
+        #expect(World.christmas.vesselAsset(stage: 99, exists: { _ in true }) == "giftbox_stage6")
+    }
 }

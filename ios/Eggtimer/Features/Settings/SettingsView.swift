@@ -12,6 +12,11 @@ import UserNotifications
 
 struct SettingsView: View {
     @Environment(\.dismiss) private var dismiss
+    @Environment(ProAccess.self) private var pro
+
+    /// 구매 복원 결과 문구(행 오른쪽). 빈 값 = 아직 안 누름.
+    @State private var restoreStatus = ""
+    @State private var restoring = false
 
     @AppStorage(AppSettings.notificationsKey) private var notificationsOn = AppSettings.defaultOn
     @AppStorage(AppSettings.hapticsKey) private var hapticsOn = AppSettings.defaultOn
@@ -50,6 +55,15 @@ struct SettingsView: View {
                                 }
                             }
                             .buttonStyle(.plain)
+                            SettingDivider()
+                            // 새 기기·재설치에서 산 월드 팩을 되찾는다(심사 3.1.1: 복원 수단 필수).
+                            Button {
+                                Task { await restorePurchases() }
+                            } label: {
+                                SettingInfoRow(title: "Restore purchases", systemImage: "arrow.clockwise", value: restoreStatus)
+                            }
+                            .buttonStyle(.plain)
+                            .disabled(restoring)
                             SettingDivider()
                             SettingInfoRow(title: "Version", systemImage: "info.circle", value: appVersion)
                             #if DEBUG
@@ -104,6 +118,15 @@ struct SettingsView: View {
             }
             #endif
         }
+    }
+
+    private func restorePurchases() async {
+        restoring = true
+        restoreStatus = String(localized: "Restoring…")
+        await pro.restore()
+        let ownsAPack = World.allCases.contains { $0.productID != nil && pro.owns($0) }
+        restoreStatus = ownsAPack ? String(localized: "Restored") : String(localized: "Nothing to restore")
+        restoring = false
     }
 
     /// 번들 버전(CFBundleShortVersionString). 없으면 "1.0".

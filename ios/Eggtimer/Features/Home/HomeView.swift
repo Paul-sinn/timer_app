@@ -690,7 +690,7 @@ struct HomeView: View {
                     }
                 }
         } else {
-            EggView(stageIndex: session.stageIndex, height: height)   // 알은 첫 부화 전까지만(진행도 → crack 6단계)
+            EggView(stageIndex: session.stageIndex, height: height, world: world)   // 첫 부화 전까지만(진행도 → 그릇 6단계)
                 .transition(.opacity)
         }
     }

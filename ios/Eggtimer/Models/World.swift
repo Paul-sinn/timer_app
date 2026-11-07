@@ -69,6 +69,24 @@ enum World: String, CaseIterable, Identifiable, Sendable {
         }
     }
 
+    /// 부화 그릇의 진행 6단계 이미지(EggState.visualStages). 기본 = 알 금 가기, 크리스마스 = 선물상자 뚜껑 열기.
+    var vesselStageAssets: [String] {
+        switch self {
+        case .classic:
+            return ["fullegg", "firstcrack_egg", "secondcrack_egg",
+                    "thirdcrack_egg", "fourthcrack_egg", "abouttocrack_egg"]
+        case .christmas:
+            return (1...6).map { "giftbox_stage\($0)" }
+        }
+    }
+
+    /// 화면에 띄울 그릇 이미지. 이 월드 그림이 번들에 없으면 기본 월드의 알로 대신한다.
+    func vesselAsset(stage: Int, exists: (String) -> Bool) -> String {
+        let i = min(max(stage, 0), EggState.visualStages - 1)
+        let name = vesselStageAssets[i]
+        return exists(name) ? name : World.classic.vesselStageAssets[i]
+    }
+
     /// 천장이 있으면 운이 가장 나빠도 이 횟수 안에 도감이 완성된다: 천장 × (칸 − 1) + 1.
     var guaranteedCompletionHatches: Int? {
         repeatCap.map { $0 * (forms.count - 1) + 1 }

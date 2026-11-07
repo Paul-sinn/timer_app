@@ -16,6 +16,8 @@ struct EggView: View {
     let stageIndex: Int
     /// 알 높이 기준 크기(pt).
     var height: CGFloat = 240
+    /// 그릇 종류를 정하는 월드(기본 = 알, 크리스마스 = 선물상자).
+    var world: World = .classic
 
     /// 흔들림 루프 토글.
     @State private var wobbling = false
@@ -24,19 +26,16 @@ struct EggView: View {
     /// 마지막 단계 두근두근(심장박동) 펄스.
     @State private var beat = false
 
-    /// crack 6단계 에셋(무결 → 금 확장 → 벌어지기 직전). README 순서 그대로.
-    private static let crackNames = [
-        "fullegg", "firstcrack_egg", "secondcrack_egg",
-        "thirdcrack_egg", "fourthcrack_egg", "abouttocrack_egg",
-    ]
-
-    private static var stageCount: Int { crackNames.count }
+    private static var stageCount: Int { EggState.visualStages }
 
     private var clampedStage: Int { min(max(stageIndex, 0), Self.stageCount - 1) }
     /// 부화 임박(마지막 단계) — 두근두근 강조.
     private var isFinalStage: Bool { clampedStage >= Self.stageCount - 1 }
 
-    private var assetName: String { Self.crackNames[clampedStage] }
+    /// 단계 이미지(World가 단일 출처). 월드 그림이 아직 번들에 없으면 알로 대신한다.
+    private var assetName: String {
+        world.vesselAsset(stage: clampedStage) { UIImage(named: $0) != nil }
+    }
 
     /// 후반 단계일수록 더 크게/빠르게 흔들린다(부화 임박감).
     private var wobbleAmplitude: Double { 1.3 + Double(clampedStage) * 0.55 }
