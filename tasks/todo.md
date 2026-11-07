@@ -29,17 +29,32 @@
 - [ ] 실기기 Sandbox 구매·복원 확인
 
 ### Claude (로직·연결) — 진행 기록은 아래 체크
-- [ ] `World`(기본·크리스마스): 캐릭터 목록·등급 확률·천장·새 캐릭터 우선·상품 ID 단일 출처 (TDD)
-- [ ] `CreatureSpecies` 10종 + 소속 월드, 월드별 추첨. **기본 월드 결과 불변**(같은 시드 = 같은 결과 테스트)
-- [ ] 성격 10개 + 대사(인사 3 · 집중 중 8 · 연타 4)
-- [ ] 부화가 선택한 월드·보유 칸 수를 반영
-- [ ] 팩 소유 확인(StoreKit 2) + 구매·복원, DEBUG 잠금 해제 토글
-- [ ] 홈 월드 드롭다운(잠김 → 구매 화면), 바꿀 때 경고 후 리셋
-- [ ] 구매 화면: 10종 미리보기 + 확률표(3.1.1) + "최대 28번 안에 전부 획득 보장"
-- [ ] 도감 월드별 보기
-- [ ] 그림 도착 전 임시 표시(이모지 자리표시)
-- [ ] `DRAW_ODDS.md` 크리스마스 표
+- [x] `World`(기본·크리스마스): 캐릭터 목록·등급 확률·천장·새 캐릭터 우선·상품 ID 단일 출처 (TDD)
+- [x] `CreatureSpecies` 10종 + 소속 월드, 월드별 추첨. **기본 월드 결과 불변**(같은 시드 = 같은 결과 테스트)
+- [x] 성격 10개 + 대사(인사 3 · 집중 중 8 · 연타 4)
+- [x] 부화가 선택한 월드·보유 칸 수를 반영
+- [x] 팩 소유 확인(StoreKit 2) + 구매·복원, DEBUG 잠금 해제 토글
+- [x] 홈 월드 드롭다운(잠김 → 구매 화면), 바꿀 때 경고 후 리셋
+- [x] 구매 화면: 10종 미리보기 + 확률표(3.1.1) + "최대 28번 안에 전부 획득 보장"
+- [x] 도감 월드별 보기
+- [x] 그림 도착 전 임시 표시(이모지 자리표시)
+- [x] `DRAW_ODDS.md` 크리스마스 표
 - [ ] 그림·배경·BGM 도착 후: 에셋 반영 · `CreatureArtTests` · 배경 테마 · 눈 효과 · BGM 재생
+
+### 리뷰 (2026-11-07, Claude 자율 진행분 — 커밋 `610db7d`)
+- **검증 상태**: 앱·테스트 타깃 **컴파일 통과**(에러 0). **유닛 테스트 실행은 못 함** — 시뮬레이터에 테스트 앱을
+  설치하는 단계에서 2번 다 멈춤(16분·8분+). 2026-07-22 기록과 같은 증상, 디스크 97% 사용(14GB 남음)도 의심.
+  → 사용자: Xcode에서 **Cmd+U**로 돌리거나, 맥 재시동 후 알려주면 다시 돌림
+- 새 테스트 `WorldTests`(18개) + `ProAccessTests` 3개 추가. 기존 테스트는 "기본 월드" 범위로 바꾸기만 했고 숫자는 그대로
+- 정정: `CREATURES.md` 25분 평균 22.4 → **23.0**(앱과 같은 규칙으로 재계산, `DRAW_ODDS.md`에 표)
+- 상품 ID: **`com.paulsin.hatchly.world.christmas`** (App Store Connect에 이 ID로 비소모성 등록)
+- 로컬 결제 테스트: Xcode → File > New > StoreKit Configuration File → 위 ID로 Non-Consumable 추가 →
+  Scheme > Run > Options > StoreKit Configuration 선택 (스킴 파일은 사용자 미커밋 변경이 있어 손대지 않음)
+- 결제 없이 미리보기: 설정 > 배경 화면의 "🛠 Pro unlocked (DEBUG)" 토글 = 모든 팩 해제
+- 그림 반영 때 할 일: `CreatureArt.animatedBases`/`assetPrefix`에 10종 추가 → `CreatureArtTests.christmasFormsHaveAnimatedArt`
+  의 `.disabled` 제거 → `CreatureSpecies.artPlaceholder`(이모지 자리표시) 삭제
+- 남은 것: 크리스마스 배경 테마 · 눈 효과 · BGM 재생(에셋 대기) · 설정 화면 "구매 복원"(지금은 구매 화면 안에만)
+  · 한국어 번역(새 문자열은 영어만)
 
 ### 확인해서 안전한 것
 - 구버전 앱은 모르는 캐릭터를 건너뜀(크래시 없음) — `HatchedCreatureRecord.swift:40`, `SyncModels.swift:113`
