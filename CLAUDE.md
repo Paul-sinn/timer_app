@@ -218,3 +218,8 @@ xcrun xcresulttool get test-results summary --path /tmp/res.xcresult
   - 증상: 동료 반응 점프용 `.onChange(of: dialogue.currentLine?.id)`를 body 끝 `.onChange` 묶음에 붙였더니 `HomeView.swift:364`에서 타입 체크 시간 초과(TEST BUILD FAILED).
   - 원인: `HomeView.body`는 `.onChange`·`.sensoryFeedback`·`.sheet`·`.overlay`가 이미 한계까지 이어진 단일 식이다. 하나만 더해도 타입체커가 포기한다.
   - 교훈: `HomeView.body` 사슬에 수식어를 더하지 말 것. 그 상태를 실제로 그리는 **하위 뷰(예: `dialogueBubble`)에 붙이거나** 별도 `ViewModifier`/computed view로 쪼갠다.
+
+- **2026-11-06 · Product Page Header를 "브랜드 아트"로 만들라고 안내 → 2.3.3 반려**
+  - 증상: 1.0 (9)가 Guideline 2.3.3으로 반려. "Product Page Header screenshots do not show the actual app in use."
+  - 원인: 크리에이티브 체크리스트가 Header를 "세계관 중심, 앱 UI는 보조로만"으로 설계했다. Apple 가이드 문구("express your brand")는 허용처럼 읽히지만 **심사관은 헤더도 스크린샷처럼 실제 앱 화면을 요구**했다.
+  - 교훈: 스토어 노출 이미지(헤더·검색결과 포함)는 **실제 앱 화면이 주인공**이어야 한다. 마케팅 아트는 보조 장식까지만. 문서 문구보다 심사 실례를 따른다.
