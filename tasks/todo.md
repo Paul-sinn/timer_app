@@ -45,7 +45,7 @@
 - **검증 상태**: 앱·테스트 타깃 **컴파일 통과**(에러 0). **유닛 테스트 실행은 못 함** — 시뮬레이터에 테스트 앱을
   설치하는 단계에서 2번 다 멈춤(16분·8분+). 2026-07-22 기록과 같은 증상, 디스크 97% 사용(14GB 남음)도 의심.
   → 사용자: Xcode에서 **Cmd+U**로 돌리거나, 맥 재시동 후 알려주면 다시 돌림
-- 새 테스트 `WorldTests`(18개) + `ProAccessTests` 3개 추가. 기존 테스트는 "기본 월드" 범위로 바꾸기만 했고 숫자는 그대로
+- 새 테스트 `WorldTests`(21개) + `ProAccessTests` 3개 추가. 기존 테스트는 "기본 월드" 범위로 바꾸기만 했고 숫자는 그대로
 - 정정: `CREATURES.md` 25분 평균 22.4 → **23.0**(앱과 같은 규칙으로 재계산, `DRAW_ODDS.md`에 표)
 - 상품 ID: **`com.paulsin.hatchly.world.christmas`** (App Store Connect에 이 ID로 비소모성 등록)
 - 로컬 결제 테스트: Xcode → File > New > StoreKit Configuration File → 위 ID로 Non-Consumable 추가 →
