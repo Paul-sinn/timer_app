@@ -9,6 +9,12 @@
 | Light | 03_Butter_Yellow.png | Butter yellow / warm cream / pale honey |
 | Light | 04_Mint_Cream.png | Pastel mint / warm ivory / muted sage |
 | Light | 05_Lavender_Milk.png | Pale lavender / lilac / warm ivory |
+| Dark | 06_Christmas_Eve.png | 크리스마스 월드 — 벽난로 방 (원본 `source/06_Christmas_Eve_iPad_raw.png`) |
+| Dark | 07_Snowy_Night.png | 크리스마스 월드 — 보름달·산타 썰매 눈 덮인 밤 (원본 `source/07_Snowy_Night_iPad_raw.png`) |
+
+크리스마스 2장(2026-11-07)은 codex 내장 image_gen으로 아이폰 v2를 가로로 다시 구성했다(지시서 `BRIEF_XMAS.md`, 프롬프트 `PROMPTS.md`).
+가공은 `scripts/make_christmas_backgrounds.py`가 아이폰 것과 같이 한다: 4:3 자르기 → 480×360 → 24색,
+그리고 아이폰 그림의 벽(위)·바닥 색에 채널별로 맞춰서 아이패드를 돌려도(세로=아이폰 그림, 가로=이 그림) 색이 안 튄다.
 
 ## Export specification
 

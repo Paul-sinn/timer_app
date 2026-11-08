@@ -13,6 +13,9 @@ enum World: String, CaseIterable, Identifiable, Sendable {
     case classic      // 기본 7종(무료)
     case christmas    // 크리스마스 10종(유료, 평생 소장)
 
+    /// 선택한 월드 저장 키(@AppStorage / UserDefaults 공용).
+    static let storageKey = "selectedWorld"
+
     var id: String { rawValue }
 
     var name: String {
@@ -66,6 +69,17 @@ enum World: String, CaseIterable, Identifiable, Sendable {
         switch self {
         case .classic:   return nil
         case .christmas: return "com.paulsin.hatchly.world.christmas"
+        }
+    }
+
+    /// 이 월드에서 고를 수 있는 배경. `AppTheme` 선언 순서를 따른다.
+    var themes: [AppTheme] { AppTheme.allCases.filter { $0.world == self } }
+
+    /// 이 월드를 처음 고르면 나오는 배경.
+    var defaultTheme: AppTheme {
+        switch self {
+        case .classic:   return AppTheme.defaultTheme
+        case .christmas: return .christmasEve
         }
     }
 

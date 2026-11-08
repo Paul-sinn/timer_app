@@ -63,3 +63,49 @@ No text, numbers, characters, animals, UI, furniture, windows, lamps, plants, ro
 ```
 
 
+
+## Christmas (2026-11-07)
+
+Mode: built-in image_gen; reference-based landscape recomposition. Exact prompts, including correction passes, follow.
+
+### A — initial recomposition
+
+```text
+Use case: compositing.
+Create ONE 1536x1024 landscape iPad pixel-art background by recomposing the attached portrait reference. Reference role: exact scene, palette and pixel-style reference. Do not stretch or rotate the portrait.
+Same dark burgundy wallpaper and tiny low-contrast pattern marks, same pine garland with red/gold ornaments draped across the wall, extended across the full landscape width. Same wooden horizontal plank floor. Flat frontal view, no perspective.
+Top 30% (y=0–307) calm, nearly empty flat burgundy, reserved for a timer; render no timer or UI. Garland below this area around y=435–485.
+ONE straight horizontal wall/floor boundary at 72% height, y=737. Brick fireplace exactly CENTERED horizontally at x=768, standing on that floor line. Preserve its size relative to image HEIGHT from the reference: approximately 338 pixels wide and 205 pixels tall, mantel near y=532, base at y=737. Do not enlarge the fireplace to fill the width. Same warm crackling fire and warm hard-edged light tiles on the floor immediately in front. Still dark overall.
+Match the reference palette and crisp square pixel scale. Maximum approximately 24 flat colors. Uniform crisp square pixels; no dithering, anti-aliasing, blur, glow gradients, painterly or photographic texture. All shading is hard-edged flat color tiles.
+Keep every important object inside the central 4:3 crop-safe region x=85–1451. Garland and floor extend to the canvas edges. No text, logo, UI, watermark, characters, animals or extra props.
+```
+
+### A — proportion and palette correction
+
+```text
+Correct this landscape background to the following exact composition while preserving its scene and colors. Output 1536x1024. Fireplace must be smaller: bounding box x=599–937, y=532–737, centered x=768, including mantel. Wall/floor boundary must be ONE straight horizontal line at y=737 (72%), across full width. Keep warm hard-edged floor light tiles in front of fireplace. Preserve full-width pine garland, red/gold ornaments, burgundy wall, tiny wallpaper marks, wooden planks. Top 30% stays empty. Crucial style correction: use at most 24 solid flat colors total, truly uniform burgundy wall, no grain, no texture, no gradients, no glow, no dithering, no antialiasing; sharp square-pixel edges and flat color clusters everywhere. Flat frontal view. No text, UI, watermark, animals or characters. Do not add objects.
+```
+
+### A — final floor-line correction
+
+```text
+Make a precise layout correction to this 1536x1024 pixel art wallpaper. Move the entire horizontal wall/floor boundary UP by 30 pixels, from y=767 to y=737. Move the centered fireplace and its three orange floor-light tiles UP by exactly 30 pixels too, keeping their current size. Extend the wooden floor upward to meet the new line. Keep the garland, pattern marks, dark burgundy palette, centered fireplace, flat frontal composition, empty top 30%, and everything else in place. All regions must be solid flat colors, no texture or gradients. Crisp square pixel art, maximum 24 colors, no antialiasing. No text, logos, people, animals, UI or watermark. Output one 1536x1024 landscape image.
+```
+
+### B — initial recomposition
+
+```text
+Use case: compositing.
+Create ONE 1536x1024 landscape iPad pixel-art background by recomposing the attached portrait reference. Reference role: exact scene, palette and pixel-style reference. Do not stretch or rotate the portrait.
+Same deep navy night sky with only a few sparse single-pixel stars. Top 30% (y=0–307) calm and nearly empty, reserved for a timer; render no timer or UI.
+Same dark teal pine silhouettes extending along the full-width horizon, and pale blue snow ground with gentle stepped flat-color drifts. ONE perfectly straight horizontal snow horizon at 72% height, y=737. Flat frontal view, no perspective.
+The full moon is right of center, centered at x=1152 (75% width), y=461 (45% height). Preserve the moon's diameter relative to image HEIGHT from the portrait reference, approximately 168 pixels diameter. Fully visible below the empty top 30%. Same pale cream disc with sparse muted crater tiles. A small single near-black silhouette of Santa's sleigh pulled by THREE flying reindeer crosses IN FRONT of the moon, flying LEFT; deer on left, sleigh on right. The WHOLE silhouette group, including antlers, reins, runners and Santa, is INSIDE the moon disc, about 80% of its diameter wide (134 pixels), with a visible cream margin around every part. No colors within the silhouette.
+Match the reference palette and crisp square pixel scale. Maximum approximately 24 flat colors. Uniform crisp square pixels; no dithering, anti-aliasing, blur, glow gradients, painterly or photographic texture. All shading is hard-edged flat color tiles; stepped drifts, never smooth gradients.
+Keep every important object inside the central 4:3 crop-safe region x=85–1451. Trees and snow extend to the canvas edges. No text, logo, UI, watermark, extra characters or animals; the Santa and three reindeer silhouette is the only exception.
+```
+
+### B — moon and palette correction
+
+```text
+Correct this landscape background to the following exact composition while preserving its scene and colors. Output 1536x1024. Shrink moon AND enclosed Santa/reindeer silhouette together: moon must be 168 pixels diameter, centered x=1152, y=461, bounding box x=1068–1236, y=377–545. Entire near-black Santa sleigh and THREE leftward-flying reindeer group stays INSIDE moon disc, only 134 pixels wide, with cream margin around every part. Keep all silhouettes one near-black flat color. Snow horizon ONE straight horizontal line at y=737 (72%). Preserve full-width dark teal pine silhouettes, navy sky, pale blue snow and stepped drifts. Top 30% nearly empty with only sparse square stars. Crucial style correction: use at most 24 solid flat colors total, truly uniform navy sky and snow fields, no grain, texture, gradients, glow, dithering or antialiasing; sharp square-pixel edges and flat color clusters everywhere. Flat frontal view. No text, UI, logo or watermark. No new objects.
+```

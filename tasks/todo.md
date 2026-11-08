@@ -45,9 +45,13 @@
 - [x] (11/7 추가) 설정 화면 "Restore purchases" 행(구매 화면 밖에서도 복원 — 심사 3.1.1)
 - [x] (11/7 추가) 눈 내리기 `SnowfallView`(코드 연출, 그림 없음): `World.hasSnowfall`(크리스마스만), 홈 배경 위·UI 아래.
       네모 픽셀 눈 70개 · 초당 20프레임 제한(집중 중 배터리) · 동작 줄이기면 멈춘 눈. 위치는 시각의 순수 함수(`SnowfallTests` 6개)
-- [ ] 크리스마스 배경 2종(초안 `images/christmas-draft/backgrounds/`): A 이브 방 · B 눈 덮인 밤.
-      v2(B: 오른쪽 보름달 + 산타 썰매 실루엣 / A: 가운데 벽난로) 18:41 codex 자동 실행 예약.
-      확정 후: 270×480 격자·24색·4배 확대 → 테마/월드 배경 연결 · 아이패드 가로판 · `AppThemeTests` 대비 확인
+- [x] (11/7) 크리스마스 배경 2종 연결 — A 이브 방(벽난로) · B 눈 덮인 밤(보름달+산타 썰매), 둘 다 v2 · 다크
+      · 가공: `scripts/make_christmas_backgrounds.py`(9:16 → 270×480 · 24색 · 4배 보관본). 원본은 `images/backgrounds/source/`
+      · 아이패드 가로판 2장: codex 생성(`images/backgrounds/iPad/source/`) → 같은 스크립트, 아이폰 색에 맞춤
+      · 동작: `AppTheme.world` + `World.themes/defaultTheme`. 크리스마스 월드면 전 화면 배경 = 크리스마스(처음엔 이브 방),
+        설정 Theme·홈 붓 버튼엔 그 월드 배경만. 기본 월드 선택은 기존 키 그대로 → 돌아가면 원래 배경
+      · 눈 덮인 밤 눈밭은 원본보다 어둡게(크림 글자 대비 1.4 → 3.5). `AppThemeTests`가 실제 그림 픽셀로 바닥 대비·상단 색 검사
+      · 남은 것: B를 v3(썰매가 달 안쪽)로 바꿀지 사용자 결정 → 바꾸면 README의 2줄만 실행
 - [x] (11/7) 크리스마스 캐릭터 60장 + 선물상자 6장 에셋 반영 — `scripts/make_christmas_assets.py`
       (테두리 flood fill + 고리 안쪽처럼 막힌 배경도 제거 · 캐릭터별 공통 캔버스 높이 660 · 상자는 알과 같은 590×566·바닥선 548).
       원본: `images/final-character/{slug}/`(북극곰 = v2 강화판), `images/eggs/giftbox_opening_6_stage/`.

@@ -10,6 +10,9 @@
 //  - 파스텔(.butter/.mint/.lavender)은 colorScheme = .light → 상태바·시스템 UI가 어둡게 바뀌고,
 //    배경 위 글자는 onPage* 진갈색을 쓴다. 대비 4.5:1 이상은 AppThemeTests가 강제한다.
 //  - 그림 원본: images/backgrounds/ (270×480 픽셀 원본을 Assets에 넣고 .interpolation(.none)로 키운다)
+//  - 월드마다 배경 묶음이 따로 있다(`world`). 지금 월드의 배경만 고를 수 있고, 월드를 바꾸면 배경도 따라 바뀐다.
+//    기본 월드 선택은 기존 키(`storageKey`), 팩 월드 선택은 `worldStorageKey`에 따로 저장 → 기본 월드로 돌아가면 원래 배경.
+//    크리스마스 배경 가공: scripts/make_christmas_backgrounds.py
 //
 //  Pro(잠금) 테마는 실제 콘텐츠가 준비되면 isPro=true인 case로 추가한다(피커가 "출시 예정" 잠금 처리).
 //
@@ -23,13 +26,26 @@ enum AppTheme: String, CaseIterable, Identifiable {
     case butter      // Butter Yellow 그림(파스텔·라이트). 무료.
     case mint        // Mint Cream 그림(파스텔·라이트). 무료.
     case lavender    // Lavender Milk 그림(파스텔·라이트). 무료.
+    case christmasEve // 크리스마스 월드: 벽난로 방(다크).
+    case snowyNight   // 크리스마스 월드: 보름달·산타 썰매가 뜬 눈 덮인 밤(다크).
 
     /// 선택 저장 키(@AppStorage / UserDefaults 공용).
     static let storageKey = "selectedTheme"
+    /// 팩 월드(크리스마스 등)에서 고른 배경. 기본 월드 선택(`storageKey`)과 따로 둬서 돌아가면 원래 배경이 나온다.
+    // shortcut: 팩 월드끼리는 이 키 하나를 같이 쓴다 → 팩이 둘 이상이면 다른 팩으로 갔다 오면 그 팩 기본 배경. 팩이 늘면 월드별 키로.
+    static let worldStorageKey = "selectedWorldTheme"
     /// 아직 고른 적 없는 유저의 배경(앱 아이콘과 같은 버터크림 톤).
     nonisolated static let defaultTheme: AppTheme = .butter   // @Entry 기본값(nonisolated)에서도 읽는다
 
     var id: String { rawValue }
+
+    /// 이 배경이 속한 월드.
+    var world: World {
+        switch self {
+        case .nest, .midnight, .cocoa, .butter, .mint, .lavender: return .classic
+        case .christmasEve, .snowyNight:                          return .christmas
+        }
+    }
 
     /// 배경 그림 에셋 이름. 단색 테마는 nil.
     var backgroundImage: String? {
@@ -40,6 +56,8 @@ enum AppTheme: String, CaseIterable, Identifiable {
         case .butter:   return "BackgroundButterYellow"
         case .mint:     return "BackgroundMintCream"
         case .lavender: return "BackgroundLavenderMilk"
+        case .christmasEve: return "BackgroundChristmasEve"
+        case .snowyNight:   return "BackgroundSnowyNight"
         }
     }
 
@@ -60,6 +78,8 @@ enum AppTheme: String, CaseIterable, Identifiable {
         case .butter:   return Color(hex: 0xFDEEB7)
         case .mint:     return Color(hex: 0xE3F2DA)
         case .lavender: return Color(hex: 0xEEE0F9)
+        case .christmasEve: return Color(hex: 0x5B2D39)
+        case .snowyNight:   return Color(hex: 0x1C2C50)
         }
     }
 
@@ -67,7 +87,7 @@ enum AppTheme: String, CaseIterable, Identifiable {
     var colorScheme: ColorScheme {
         switch self {
         case .butter, .mint, .lavender: return .light
-        case .nest, .midnight, .cocoa:  return .dark
+        case .nest, .midnight, .cocoa, .christmasEve, .snowyNight: return .dark
         }
     }
 
@@ -80,7 +100,8 @@ enum AppTheme: String, CaseIterable, Identifiable {
     var onPageSecondary: Color {
         switch self {
         case .butter, .mint, .lavender: return Self.inkSecondary
-        case .cocoa:                    return Color(hex: 0xD6C7B2)   // 기본 보조색은 Cocoa 위 대비 3.3 → 밝게
+        // 기본 보조색은 Cocoa 위 대비 3.3·이브 방 벽 4.0·눈 덮인 밤 바닥(눈밭) 2:1 → 밝게
+        case .cocoa, .christmasEve, .snowyNight: return Color(hex: 0xD6C7B2)
         case .nest, .midnight:          return AppColor.textSecondary
         }
     }
@@ -90,7 +111,7 @@ enum AppTheme: String, CaseIterable, Identifiable {
         switch self {
         case .butter, .mint, .lavender: return Color(hex: 0x8F520A)   // 진한 앰버(파스텔 위 대비 4.9+)
         case .cocoa:                    return AppColor.legendary     // 기본 앰버는 Cocoa 위 대비 4.3
-        case .nest, .midnight:          return AppColor.eggAccent
+        case .nest, .midnight, .christmasEve, .snowyNight: return AppColor.eggAccent
         }
     }
 
@@ -105,6 +126,8 @@ enum AppTheme: String, CaseIterable, Identifiable {
         case .butter:   return Color(hex: 0x2E2312)   // 진한 꿀갈색
         case .mint:     return Color(hex: 0x1A271F)   // 진한 숲색
         case .lavender: return Color(hex: 0x271F33)   // 진한 자두색
+        case .christmasEve: return Color(hex: 0x2B171C)   // 진한 와인색
+        case .snowyNight:   return Color(hex: 0x141D33)   // 하늘보다 깊은 남색
         }
     }
 
@@ -117,6 +140,8 @@ enum AppTheme: String, CaseIterable, Identifiable {
         case .butter:   return Color(hex: 0x261D0F)
         case .mint:     return Color(hex: 0x15201A)
         case .lavender: return Color(hex: 0x201A2B)
+        case .christmasEve: return Color(hex: 0x231216)
+        case .snowyNight:   return Color(hex: 0x10172A)
         }
     }
 
@@ -129,6 +154,8 @@ enum AppTheme: String, CaseIterable, Identifiable {
         case .butter:   return Color(hex: 0x4A3A22)
         case .mint:     return Color(hex: 0x2F4637)
         case .lavender: return Color(hex: 0x3F3352)
+        case .christmasEve: return Color(hex: 0x4A2A32)
+        case .snowyNight:   return Color(hex: 0x2C3A5E)
         }
     }
 
@@ -153,6 +180,8 @@ enum AppTheme: String, CaseIterable, Identifiable {
         case .butter:   return "Butter"
         case .mint:     return "Mint"
         case .lavender: return "Lavender"
+        case .christmasEve: return "Christmas Eve"
+        case .snowyNight:   return "Snowy Night"
         }
     }
 
@@ -161,15 +190,42 @@ enum AppTheme: String, CaseIterable, Identifiable {
     /// 잠금(Pro) 테마.
     static var locked: [AppTheme] { allCases.filter(\.isPro) }
 
-    /// 저장된 선택 테마(없거나 무효면 defaultTheme). 테스트 위해 defaults 주입 가능.
-    static func current(_ defaults: UserDefaults = .standard) -> AppTheme {
-        AppTheme(rawValue: defaults.string(forKey: storageKey) ?? "") ?? defaultTheme
+    /// 이 월드에서 쓸 배경: 후보 저장값 중 이 월드 배경인 첫 값, 없으면 월드 기본 배경.
+    /// 호출 순서 = (팩 월드 선택, 기본 월드 선택) — 각 월드는 자기 배경만 알아본다.
+    static func resolved(_ candidates: String..., in world: World) -> AppTheme {
+        candidates.lazy.compactMap(AppTheme.init(rawValue:)).first { $0.world == world } ?? world.defaultTheme
+    }
+
+    /// 이 배경을 고른 값으로 저장. 자기 월드의 키에 쓰므로 다른 월드의 선택은 그대로 남는다.
+    func select(in defaults: UserDefaults = .standard) {
+        defaults.set(rawValue, forKey: world == .classic ? Self.storageKey : Self.worldStorageKey)
+    }
+
+    /// 저장된 선택 테마(없거나 다른 월드 것이면 그 월드 기본). 테스트 위해 defaults 주입 가능.
+    static func current(_ defaults: UserDefaults = .standard, world: World = .classic) -> AppTheme {
+        resolved(defaults.string(forKey: worldStorageKey) ?? "", defaults.string(forKey: storageKey) ?? "", in: world)
     }
 }
 
 extension EnvironmentValues {
     /// 현재 테마. 앱 루트(EggtimerApp)가 @AppStorage 값으로 주입 → 하위 화면·시트가 상속.
     @Entry var appTheme: AppTheme = AppTheme.defaultTheme
+}
+
+/// 앱 루트에서 지금 월드의 배경을 골라 하위 화면에 주입하고 colorScheme을 정한다.
+/// App이 아니라 View 수식어 안에서 읽어야 팩 소유 확인(ProAccess)이 늦게 끝나도 바로 다시 그린다.
+struct WorldThemeRoot: ViewModifier {
+    @Environment(ProAccess.self) private var pro
+    @AppStorage(AppTheme.storageKey) private var classicRaw = AppTheme.defaultTheme.rawValue
+    @AppStorage(AppTheme.worldStorageKey) private var worldThemeRaw = ""
+    @AppStorage(World.storageKey) private var worldRaw = World.classic.rawValue
+
+    func body(content: Content) -> some View {
+        let theme = AppTheme.resolved(worldThemeRaw, classicRaw, in: World.resolved(worldRaw, owns: pro.owns))
+        content
+            .environment(\.appTheme, theme)
+            .preferredColorScheme(theme.colorScheme)   // 파스텔 테마만 라이트(상태바가 어두워짐), 나머지 다크
+    }
 }
 
 /// 화면 루트 배경. 선택된 테마의 단색 위에 픽셀 그림을 깐다.

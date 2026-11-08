@@ -4,14 +4,16 @@
 //
 //  배경 테마 선택(SettingsView에서 push). 무료 테마는 즉시 적용, 잠금(Pro) 테마는
 //  "출시 예정"으로만 노출(선택 불가). ProAccess가 해제되면(1.1 결제/DEBUG 토글) 잠금 테마도 선택 가능.
-//  선택은 @AppStorage(AppTheme.storageKey)에 저장 → ThemedBackground가 전 화면에 즉시 반영.
+//  지금 월드의 배경만 보여준다(크리스마스 월드 = 이브 방·눈 덮인 밤). 선택은 AppTheme.select()로 그 월드 키에 저장
+//  → 앱 루트(WorldThemeRoot)가 다시 골라 전 화면에 즉시 반영.
 //
 
 import SwiftUI
 
 struct ThemePickerView: View {
     @Environment(ProAccess.self) private var pro
-    @AppStorage(AppTheme.storageKey) private var selectedRaw = AppTheme.defaultTheme.rawValue
+    /// 지금 적용된 배경(월드까지 반영된 값).
+    @Environment(\.appTheme) private var selected
 
     private let columns = [GridItem(.flexible(), spacing: AppSpacing.element),
                            GridItem(.flexible(), spacing: AppSpacing.element)]
@@ -19,7 +21,7 @@ struct ThemePickerView: View {
     var body: some View {
         ScrollView {
             LazyVGrid(columns: columns, spacing: AppSpacing.element) {
-                ForEach(AppTheme.allCases) { theme in
+                ForEach(selected.world.themes) { theme in
                     card(for: theme)
                 }
             }
@@ -35,8 +37,6 @@ struct ThemePickerView: View {
         .navigationBarTitleDisplayMode(.inline)
     }
 
-    private var selected: AppTheme { AppTheme(rawValue: selectedRaw) ?? AppTheme.defaultTheme }
-
     /// 선택 가능 여부: 무료거나 Pro 해제 시.
     private func isUnlocked(_ theme: AppTheme) -> Bool { !theme.isPro || pro.isPro }
 
@@ -47,7 +47,7 @@ struct ThemePickerView: View {
 
         Button {
             guard unlocked else { return }   // 잠금 테마는 무시(출시 예정)
-            selectedRaw = theme.rawValue
+            theme.select()
         } label: {
             VStack(spacing: AppSpacing.elementTight) {
                 ThemeSwatch(theme: theme, isSelected: isSelected, isLocked: !unlocked)
@@ -117,7 +117,6 @@ struct ThemeSwatch: View {
 /// 아이패드는 버튼에 붙은 팝오버, 아이폰(좁은 창)은 내용 높이에 맞춘 낮은 시트로 뜬다.
 struct ThemeQuickPicker: View {
     @Environment(\.appTheme) private var theme
-    @AppStorage(AppTheme.storageKey) private var selectedRaw = AppTheme.defaultTheme.rawValue
     /// 시트 높이 = 내용 높이(글자 크기 설정이 커져도 안 잘리게 실측).
     @State private var contentHeight: CGFloat = 360
 
@@ -130,9 +129,9 @@ struct ThemeQuickPicker: View {
                 .font(AppFont.cardTitle)
                 .foregroundStyle(theme.onPageSecondary)
             LazyVGrid(columns: columns, spacing: AppSpacing.element) {
-                // shortcut: 잠금(Pro) 테마는 빼고 무료만 보여준다. 잠금 테마가 생기면 여기도 "출시 예정" 표시를 넣을 것.
-                ForEach(AppTheme.free) { option in
-                    Button { selectedRaw = option.rawValue } label: {
+                // 지금 월드의 배경만. shortcut: 잠금(Pro) 테마는 뺀다. 잠금 테마가 생기면 여기도 "출시 예정" 표시를 넣을 것.
+                ForEach(theme.world.themes.filter { !$0.isPro }) { option in
+                    Button { option.select() } label: {
                         VStack(spacing: 6) {
                             ThemeSwatch(theme: option, isSelected: option == theme)
                                 .frame(width: Self.tileSize, height: Self.tileSize)

@@ -25,7 +25,7 @@ struct CollectionView: View {
     @State private var appeared = false
     @Environment(ProAccess.self) private var pro
     /// 홈에서 고른 월드. 도감은 처음에 이 월드를 보여준다.
-    @AppStorage("selectedWorld") private var selectedWorldRaw = World.classic.rawValue
+    @AppStorage(World.storageKey) private var selectedWorldRaw = World.classic.rawValue
     /// 도감 탭에서 직접 고른 월드(nil = 홈에서 고른 월드).
     @State private var shownWorld: World?
     /// 잠긴 월드의 구매 화면.

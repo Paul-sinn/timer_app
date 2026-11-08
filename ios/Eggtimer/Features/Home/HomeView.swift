@@ -38,7 +38,7 @@ struct HomeView: View {
     /// 빈 문자열 = 동료 없음(첫 부화 전 또는 'Get new egg' 직후).
     @AppStorage("companionCreatureID") private var companionID = ""
     /// 고른 월드(영속). 미구매·환불이면 `world`가 기본 월드로 되돌린다.
-    @AppStorage("selectedWorld") private var worldRaw = World.classic.rawValue
+    @AppStorage(World.storageKey) private var worldRaw = World.classic.rawValue
     /// 유료 월드 소유 확인(앱 루트에서 주입).
     @Environment(ProAccess.self) private var pro
     /// 부화 버스트 영상 재생 중(캐릭터 등장 시점에 false).
