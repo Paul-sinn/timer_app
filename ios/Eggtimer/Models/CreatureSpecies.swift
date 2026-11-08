@@ -161,28 +161,6 @@ enum CreatureSpecies: String, CaseIterable, Identifiable {
         }
     }
 
-    /// shortcut: 그림 도착 전 임시 표시(이모지). 번들에 그림이 생기면 화면은 자동으로 그림을 쓴다 → 그림 반영 후 이 속성 삭제.
-    var artPlaceholder: String? {
-        switch self {
-        case .redNosePenguin:   return "🐧"
-        case .santaPenguin:     return "🎅"
-        case .elfPenguin:       return "🧝"
-        case .giftBoxPenguin:   return "🎁"
-        case .snowmanSlime:     return "⛄️"
-        case .littleEmber:      return "🔥"
-        case .arcticFox:        return "🦊"
-        case .gingerbreadChick: return "🍪"
-        case .snowyOwl:         return "🦉"
-        case .polarBear:        return "🐻‍❄️"
-        default:                return nil
-        }
-    }
-
-    /// 이미지 변형명으로 종 찾기(렌더 쪽 자리표시용).
-    static func species(forImageName name: String) -> CreatureSpecies? {
-        allCases.first { $0.imageVariants.contains(name) }
-    }
-
     /// 실루엣(미발견 표시)에 사용할 대표 이미지.
     var silhouetteImageName: String { imageVariants.first ?? rawValue }
 

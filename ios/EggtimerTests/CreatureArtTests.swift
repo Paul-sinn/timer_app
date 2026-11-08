@@ -3,7 +3,7 @@
 //  EggtimerTests
 //
 //  "변형 × 진화 단계 × 모션 프레임" → 에셋명 해석과 모션 타이밍 규칙 검증.
-//  이미지가 실제로 번들에 들어갔는지(12폼 × 3단계 × 2프레임 = 72장)도 함께 확인한다.
+//  이미지가 실제로 번들에 들어갔는지(22폼 × 3단계 × 2프레임 = 132장)도 함께 확인한다.
 //
 
 import Testing
@@ -55,9 +55,8 @@ struct CreatureArtTests {
         #expect(World.classic.forms.count == 12)
     }
 
-    /// 크리스마스 10종 그림(60장)이 들어오면 켠다. 출시 전에 반드시 통과해야 한다.
-    @Test(.disabled("크리스마스 그림 60장 대기 중 — 에셋 반영 후 활성화"))
-    func christmasFormsHaveAnimatedArt() {
+    /// 크리스마스 10종 그림(60장). 번들 포함·캔버스 일치는 아래 공통 테스트가 animatedBases 전체로 검사한다.
+    @Test func christmasFormsHaveAnimatedArt() {
         #expect(Set(World.christmas.forms.map(\.imageName)).isSubset(of: Set(CreatureArt.animatedBases)))
     }
 
@@ -109,7 +108,7 @@ struct CreatureArtTests {
                 }
             }
         }
-        #expect(names.count == 72)   // 12폼 × 3단계 × 2프레임
+        #expect(names.count == 132)   // (기본 12 + 크리스마스 10)폼 × 3단계 × 2프레임
     }
 
     // MARK: - 번들 리소스

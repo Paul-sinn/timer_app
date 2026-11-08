@@ -225,15 +225,6 @@ struct WorldTests {
         #expect(World.resolved("not-a-world", owns: { _ in true }) == .classic)
     }
 
-    @Test func artPlaceholdersOnlyForChristmas() {
-        // 자리표시는 그림 대기 중인 크리스마스 종에만. 기본 월드는 그림이 이미 있다.
-        for species in CreatureSpecies.allCases {
-            #expect((species.artPlaceholder != nil) == (species.world == .christmas), "\(species)")
-        }
-        #expect(CreatureSpecies.species(forImageName: "PolarBear") == .polarBear)
-        #expect(CreatureSpecies.species(forImageName: "ChickenBro") == .chicken)
-    }
-
     // MARK: - 보유 칸 수 (부화 입력)
 
     @Test func storeCountsFormsForTheRoll() {

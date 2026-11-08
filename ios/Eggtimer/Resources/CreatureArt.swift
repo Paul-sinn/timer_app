@@ -78,12 +78,25 @@ nonisolated enum CreatureArt {
         "WhiteTigerEvolved": "WhiteTiger",
         "Phoenix":           "Phoenix",
         "PhoenixEvolved":    "Phoenix",
+        // 크리스마스 월드 10종(원본 images/final-character/{slug}/, 가공 scripts/make_christmas_assets.py)
+        "RedNosePenguin":    "RedNosePenguin",
+        "SantaPenguin":      "SantaPenguin",
+        "ElfPenguin":        "ElfPenguin",
+        "GiftBoxPenguin":    "GiftBoxPenguin",
+        "SnowmanSlime":      "SnowmanSlime",
+        "LittleEmber":       "LittleEmber",
+        "ArcticFox":         "ArcticFox",
+        "GingerbreadChick":  "GingerbreadChick",
+        "SnowyOwl":          "SnowyOwl",
+        "PolarBear":         "PolarBear",
     ]
 
-    /// 3단계 진화 아트를 가진 폼(도감 12폼). 진화 전용 별칭은 제외 — 검수 갤러리·테스트용.
+    /// 3단계 진화 아트를 가진 폼(기본 12 + 크리스마스 10). 진화 전용 별칭은 제외 — 검수 갤러리·테스트용.
     static let animatedBases: [String] = [
         "ChickenAngry", "ChickenAnnoyed", "ChickenSleepy", "ChickenSmart", "ChickenBro",
         "Chicken1", "Slime", "Dino", "BlackCat", "GoldChick", "WhiteTiger", "Phoenix",
+        "RedNosePenguin", "SantaPenguin", "ElfPenguin", "GiftBoxPenguin", "SnowmanSlime",
+        "LittleEmber", "ArcticFox", "GingerbreadChick", "SnowyOwl", "PolarBear",
     ]
 
     /// 게임 진화 단계(0…`Creature.maxEvolutionStage`=2) → 아트 단계(1…3) 대응표.

@@ -57,22 +57,7 @@ struct AnimatedCreatureView: View {
         animated && !reduceMotion && scenePhase == .active && resolvedFrames != nil
     }
 
-    /// 그림이 아직 번들에 없는 종의 임시 이모지(크리스마스 그림 대기). 그림이 들어오면 nil.
-    private var missingArtGlyph: String? {
-        guard UIImage(named: base) == nil, resolvedFrames == nil else { return nil }
-        return CreatureSpecies.species(forImageName: base)?.artPlaceholder
-    }
-
-    var body: some View {
-        if let glyph = missingArtGlyph {
-            Text(glyph)
-                .font(.system(size: 160))
-                .minimumScaleFactor(0.05)
-                .lineLimit(1)
-        } else {
-            artwork
-        }
-    }
+    var body: some View { artwork }
 
     private var artwork: some View {
         let frames = resolvedFrames
