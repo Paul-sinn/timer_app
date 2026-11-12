@@ -10,8 +10,8 @@
 바닥 밝기가 FLOOR_MAX_LUM을 넘으면 바닥만 같은 색조로 어둡게 낮춘다(눈밭 → 달빛 눈밭).
 기준은 기존 배경 중 가장 어두운 바닥 대비(Cocoa ≈ 3:1)와 같다 → AppThemeTests가 앱 번들 그림으로 다시 검사한다.
 
-원본 바꾸기(예: 눈 덮인 밤 v3): 아래 BACKGROUNDS의 원본 파일을 덮어쓰고 다시 실행하면 된다.
-  cp images/christmas-draft/backgrounds/xmas_bg_B_snowy_night_v3.png images/backgrounds/source/07_Snowy_Night_iPhone_raw.png
+원본 바꾸기(현재 눈 덮인 밤 = v4: v2에 달 부분만 v4로 교체, 산타가 아이폰 보이는 영역 안): 아래 BACKGROUNDS의 원본 파일을 덮어쓰고 다시 실행하면 된다.
+  cp images/christmas-draft/backgrounds/xmas_bg_B_snowy_night_v4.png images/backgrounds/source/07_Snowy_Night_iPhone_raw.png
   python3 scripts/make_christmas_backgrounds.py
 그다음 출력된 "top color"가 AppTheme.pageBackground와 다르면 그 값으로 고친다(테스트가 알려준다).
 
@@ -109,6 +109,24 @@ def match_colors(rgb: np.ndarray, ref: np.ndarray) -> np.ndarray:
     return np.clip(out, 0, 255)
 
 
+def merge_near_duplicates(im: Image.Image, min_dist: float = 6) -> Image.Image:
+    """kmeans가 넓은 면(하늘)에 거의 같은 두 색을 주면 눈에 안 띄는 잡티 얼룩이 된다 → 드문 색을 흔한 색으로 합친다.
+    (눈 덮인 밤 v4: 달만 바꿨는데 하늘이 0x1D2C51/0x1C2B4F 두 색으로 갈라짐)"""
+    idx = np.asarray(im)                      # 팔레트(P) 이미지의 색 번호
+    pal = np.array(im.getpalette(), dtype=np.float64).reshape(-1, 3)
+    used, counts = np.unique(idx, return_counts=True)
+    target = np.arange(256)
+    order = used[np.argsort(-counts)]
+    for i, a in enumerate(order):
+        for b in order[:i]:
+            if target[b] == b and np.linalg.norm(pal[a] - pal[b]) < min_dist:
+                target[a] = b
+                break
+    out = Image.frombytes("P", im.size, target[idx].astype(np.uint8).tobytes())
+    out.putpalette(im.getpalette())
+    return out
+
+
 PHONE_ANCHORS: dict[str, np.ndarray] = {}
 
 
@@ -128,6 +146,7 @@ def make(keep_name: str, asset: str, source: str, screen: dict) -> None:
     # MAXCOVERAGE+kmeans: 넓은 벽·하늘이 색을 독차지하지 않아 불꽃·장식·달 크레이터 색이 남는다(MEDIANCUT은 뭉갬)
     im = Image.fromarray(np.round(rgb).astype(np.uint8)).quantize(
         colors=COLORS, method=Image.Quantize.MAXCOVERAGE, kmeans=5, dither=Image.Dither.NONE)
+    im = merge_near_duplicates(im)
 
     # 자체 검사: 격자 크기·색 수·바닥 밝기
     flat = np.asarray(im.convert("RGB"))
